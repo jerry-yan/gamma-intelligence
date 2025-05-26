@@ -13,6 +13,7 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = [
     'gamma-intelligence.herokuapp.com',
+    '.herokuapp.com',
     '127.0.0.1',
     'localhost',
 ]
