@@ -1,3 +1,50 @@
+# accounts/admin.py
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import User
+from .models import UserProfile
 
-# Register your models here.
+
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    can_delete = False
+    verbose_name_plural = 'Profile'
+    fields = ('last_read_time',)
+
+
+class CustomUserAdmin(UserAdmin):
+    inlines = (UserProfileInline,)
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'date_joined', 'get_last_read_time')
+    list_filter = ('is_staff', 'is_superuser', 'is_active', 'date_joined')
+    search_fields = ('username', 'email', 'first_name', 'last_name')
+
+    def get_last_read_time(self, obj):
+        if hasattr(obj, 'profile') and obj.profile.last_read_time:
+            return obj.profile.last_read_time.strftime('%Y-%m-%d %H:%M')
+        return 'Never'
+
+    get_last_read_time.short_description = 'Last Read Time'
+    get_last_read_time.admin_order_field = 'profile__last_read_time'
+
+
+# Re-register UserAdmin
+admin.site.unregister(User)
+admin.site.register(User, CustomUserAdmin)
+
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'last_read_time', 'created_at', 'updated_at')
+    list_filter = ('created_at', 'updated_at', 'last_read_time')
+    search_fields = ('user__username', 'user__email')
+    readonly_fields = ('created_at', 'updated_at')
+
+    fieldsets = (
+        (None, {
+            'fields': ('user', 'last_read_time')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
