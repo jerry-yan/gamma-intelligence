@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block title %}Research Summaries - Gamma Intelligence{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Research Summaries</h2>
+            <button class="btn btn-primary">+ Upload New Research</button>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3">
+        <!-- Filters Sidebar -->
+        <div class="card">
+            <div class="card-header">
+                <h5>Filters</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Source</label>
+                    <select class="form-select">
+                        <option>All Sources</option>
+                        <option>JP Morgan</option>
+                        <option>Goldman Sachs</option>
+                        <option>Morgan Stanley</option>
+                        <option>Bank of America</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Report Type</label>
+                    <select class="form-select">
+                        <option>All Types</option>
+                        <option>Company Update</option>
+                        <option>Industry Report</option>
+                        <option>Market Analysis</option>
+                        <option>Earnings Preview</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Status</label>
+                    <select class="form-select">
+                        <option>All Status</option>
+                        <option>Downloaded</option>
+                        <option>Preprocessed</option>
+                        <option>Summarized</option>
+                    </select>
+                </div>
+                <button class="btn btn-outline-primary btn-sm w-100">Apply Filters</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <!-- Sample Research Items -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h5 class="card-title">Apple Inc. - Q4 2024 Earnings Preview</h5>
+                        <p class="card-text text-muted">
+                            <strong>Source:</strong> JP Morgan |
+                            <strong>Author:</strong> Samik Chatterjee |
+                            <strong>Ticker:</strong> AAPL
+                        </p>
+                        <p class="card-text">
+                            Comprehensive analysis of Apple's upcoming Q4 earnings with revenue projections,
+                            iPhone sales estimates, and Services growth outlook. Key focus on iPhone 15
+                            adoption rates and China market performance.
+                        </p>
+                        <small class="text-muted">Downloaded: January 15, 2025 | Pages: 12</small>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <span class="badge bg-success mb-2">Summarized</span><br>
+                        <button class="btn btn-outline-primary btn-sm mb-1">View PDF</button><br>
+                        <button class="btn btn-primary btn-sm">View Summary</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h5 class="card-title">Technology Sector Outlook 2025</h5>
+                        <p class="card-text text-muted">
+                            <strong>Source:</strong> Goldman Sachs |
+                            <strong>Author:</strong> Kash Rangan |
+                            <strong>Companies:</strong> Multiple (15)
+                        </p>
+                        <p class="card-text">
+                            Annual technology sector report covering AI trends, cloud computing growth,
+                            semiconductor market dynamics, and top stock picks for 2025. Includes
+                            analysis of major tech giants and emerging players.
+                        </p>
+                        <small class="text-muted">Downloaded: January 12, 2025 | Pages: 45</small>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <span class="badge bg-warning text-dark mb-2">Preprocessed</span><br>
+                        <button class="btn btn-outline-primary btn-sm mb-1">View PDF</button><br>
+                        <button class="btn btn-outline-secondary btn-sm" disabled>Processing...</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h5 class="card-title">Microsoft Corporation - Cloud Revenue Analysis</h5>
+                        <p class="card-text text-muted">

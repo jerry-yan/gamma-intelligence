@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - Gamma Intelligence{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="jumbotron bg-light p-5 rounded">
+            <h1 class="display-4">Welcome to Gamma Intelligence</h1>
+            <p class="lead">Your comprehensive research summaries platform for financial analysis and market intelligence.</p>
+            <hr class="my-4">
+            {% if user.is_authenticated %}
+                <p>Welcome back, <strong>{{ user.username }}</strong>! Ready to dive into your research summaries?</p>
+                <a class="btn btn-primary btn-lg" href="{% url 'research_summaries' %}" role="button">
+                    View Research Summaries
+                </a>
+            {% else %}
+                <p>Get started by creating an account or logging in to access your research summaries.</p>
+                <a class="btn btn-primary btn-lg" href="{% url 'login_register' %}" role="button">
+                    Get Started
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Automated Analysis</h5>
+                <p class="card-text">Automatically download and process research reports from various financial sources.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Smart Summaries</h5>
+                <p class="card-text">AI-powered summaries of complex financial documents and research reports.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Secure Storage</h5>
+                <p class="card-text">All your research files are securely stored and easily accessible whenever you need them.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
