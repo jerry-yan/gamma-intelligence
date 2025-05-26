@@ -1,6 +1,7 @@
 asgiref==3.8.1
 boto3==1.38.23
 botocore==1.38.23
+dj-database-url==2.3.0
 Django==5.2.1
 django-storages==1.14.6
 gunicorn==23.0.0
@@ -12,5 +13,6 @@ python-decouple==3.8
 s3transfer==0.13.0
 six==1.17.0
 sqlparse==0.5.3
+typing_extensions==4.13.2
 urllib3==2.4.0
 whitenoise==6.9.0
