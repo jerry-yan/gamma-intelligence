@@ -12,7 +12,6 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = [
-    'gamma-intelligence.herokuapp.com',
     '.herokuapp.com',
     '127.0.0.1',
     'localhost',
@@ -110,9 +109,12 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Additional locations of static files
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
-]
+STATICFILES_DIRS = []
+
+# Only add if the directory exists
+static_dir = os.path.join(BASE_DIR, 'static')
+if os.path.exists(static_dir):
+    STATICFILES_DIRS = [static_dir]
 
 # WhiteNoise configuration for static files
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

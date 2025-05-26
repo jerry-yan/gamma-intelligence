@@ -5,12 +5,15 @@ from django.conf import settings
 from django.conf.urls.static import static
 from accounts.views import HomeView, ResearchSummariesView
 
+admin.site.site_header = "Gamma Intelligence Admin"
+admin.site.site_title = "Gamma Intelligence"
+admin.site.index_title = "Welcome to Gamma Intelligence Administration"
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', HomeView.as_view(), name='home'),
     path('accounts/', include('accounts.urls')),
     path('research-summaries/', ResearchSummariesView.as_view(), name='research_summaries'),
-    path('research/', include('research_summaries.urls')),  # For future research-specific URLs
 ]
 
 # Serve media files during development
