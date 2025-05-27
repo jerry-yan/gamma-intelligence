@@ -52,8 +52,8 @@ def make_chrome(download_dir: Path) -> webdriver.Chrome:
     opts.add_argument("--disable-dev-shm-usage")
     opts.add_argument("--disable-gpu")
     opts.add_argument("--disable-web-security")
-    opts.add_argument("--disable-features=VizDisplayCompositor")
-    opts.add_argument("--window-size=1920,1080")
+    # opts.add_argument("--disable-features=VizDisplayCompositor")
+    # opts.add_argument("--window-size=1920,1080")
 
     # Use Chrome profile directory for persistent cookies/session
     opts.add_argument(f"--user-data-dir={CHROME_PROFILE_DIR}")
@@ -73,8 +73,8 @@ def make_chrome(download_dir: Path) -> webdriver.Chrome:
     opts.add_experimental_option("useAutomationExtension", False)
 
     # User agent
-    opts.add_argument(
-        "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+    # opts.add_argument(
+    #     "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
     return webdriver.Chrome(options=opts)
 
