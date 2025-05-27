@@ -1,12 +1,20 @@
+# research_summaries/views.py
 from django.shortcuts import render
 from django.http import JsonResponse, StreamingHttpResponse
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.views.generic import TemplateView
 from .email_parser import fetch_research_summaries
 from .models import ResearchNote
 import json
 import time
+
+
+class ResearchSummariesView(LoginRequiredMixin, TemplateView):
+    template_name = 'research_summaries/research_summaries.html'
+    login_url = '/accounts/login/'
 
 
 @login_required

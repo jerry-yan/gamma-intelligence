@@ -11,7 +11,7 @@
             <hr class="my-4">
             {% if user.is_authenticated %}
                 <p>Welcome back, <strong>{{ user.username }}</strong>! Ready to dive into your research summaries?</p>
-                <a class="btn btn-primary btn-lg" href="{% url 'research_summaries' %}" role="button">
+                <a class="btn btn-primary btn-lg" href="{% url 'research_summaries:research_summaries' %}" role="button">
                     View Research Summaries
                 </a>
             {% else %}

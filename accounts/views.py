@@ -4,7 +4,6 @@ from django.contrib.auth import login, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.generic import TemplateView
-from django.contrib.auth.mixins import LoginRequiredMixin
 from .forms import CustomUserCreationForm, CustomAuthenticationForm, UserProfileForm
 
 
@@ -73,8 +72,3 @@ def account_view(request):
         'user_profile': user_profile,
     }
     return render(request, 'accounts/account.html', context)
-
-
-class ResearchSummariesView(LoginRequiredMixin, TemplateView):
-    template_name = 'research_summaries/research_summaries.html'
-    login_url = '/accounts/login/'

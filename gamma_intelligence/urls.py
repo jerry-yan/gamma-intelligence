@@ -13,7 +13,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', HomeView.as_view(), name='home'),
     path('accounts/', include('accounts.urls')),
-    path('research/', include('research_summaries.urls')),  # Changed to include research_summaries urls
+    path('research/', include('research_summaries.urls')),
 ]
 
 # Serve media files during development
