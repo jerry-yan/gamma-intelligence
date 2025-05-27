@@ -68,18 +68,22 @@ def process_downloads_stream(request):
     """GET endpoint for Server-Sent Events file downloading"""
 
     def generate_updates():
-        yield "data: " + json.dumps({"status": "info", "message": "🚀 Starting file download process..."}) + "\n\n"
-
         try:
+            yield "data: " + json.dumps({"status": "info", "message": "🚀 Starting download process..."}) + "\n\n"
+
             for update in download_documents():
                 yield "data: " + json.dumps(update) + "\n\n"
-                time.sleep(0.1)  # Small delay to make updates visible
+                # Reduced sleep time to avoid timeouts
 
+        except GeneratorExit:
+            # Handle case where client disconnects
+            yield "data: " + json.dumps({"status": "info", "message": "🔌 Connection closed by client"}) + "\n\n"
+            return
         except Exception as e:
             yield "data: " + json.dumps({"status": "error", "message": f"🚨 Unexpected error: {str(e)}"}) + "\n\n"
 
         # Final completion message
-        yield "data: " + json.dumps({"status": "complete", "message": "✨ File download process finished"}) + "\n\n"
+        yield "data: " + json.dumps({"status": "complete", "message": "✨ Download process finished"}) + "\n\n"
 
     response = StreamingHttpResponse(generate_updates(), content_type='text/event-stream')
     response['Cache-Control'] = 'no-cache'

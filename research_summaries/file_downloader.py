@@ -239,11 +239,11 @@ def download_single_file(driver, download_link, download_dir, file_id):
 def download_documents():
     """
     Generator function that yields status updates during file downloading
-    Memory-optimized version that processes files in small batches
+    Ultra-conservative version for Heroku free tier
     """
     try:
-        # Process only 3 files at a time to avoid memory issues on free tier
-        BATCH_SIZE = 3
+        # Process only 1 file at a time to minimize memory issues
+        BATCH_SIZE = 1
         queue = ResearchNote.objects.filter(status=0).order_by("id")[:BATCH_SIZE]
 
         if not queue.exists():
@@ -251,32 +251,32 @@ def download_documents():
             return
 
         total_pending = ResearchNote.objects.filter(status=0).count()
-        yield {"status": "info", "message": f"📑 Processing {queue.count()} files (batch of {BATCH_SIZE})"}
+        yield {"status": "info", "message": f"📑 Processing {queue.count()} file"}
         yield {"status": "info", "message": f"📊 Total pending downloads: {total_pending}"}
 
         downloaded_count = 0
         failed_count = 0
 
-        # Process each file individually to minimize memory usage
+        # Process one file to minimize memory usage
         for i, note in enumerate(queue, 1):
-            yield {"status": "info", "message": f"🔄 Processing {i}/{queue.count()}: {note.file_id}"}
+            yield {"status": "info", "message": f"🔄 Processing: {note.file_id}"}
 
             if not note.download_link:
                 yield {"status": "warning", "message": f"⚠️ {note.file_id} has no download link - skipped"}
                 continue
 
             # Create unique temporary directory for this specific file
-            with tempfile.TemporaryDirectory(prefix=f"download_{note.file_id}_") as temp_dir:
+            with tempfile.TemporaryDirectory(prefix=f"dl_{note.file_id[:8]}_") as temp_dir:
                 temp_path = Path(temp_dir)
                 driver = None
                 start_ts = time.time()
 
                 try:
-                    # Create fresh driver instance for each file to avoid memory buildup
-                    yield {"status": "info", "message": f"🌐 Starting Chrome browser for {note.file_id}"}
+                    # Create fresh driver instance
+                    yield {"status": "info", "message": f"🌐 Starting browser..."}
                     driver = make_chrome(temp_path)
 
-                    # Login for this file
+                    # Login
                     login_success = True
                     for login_update in login_to_alphasense(driver):
                         yield login_update
@@ -285,33 +285,30 @@ def download_documents():
                             break
 
                     if not login_success:
-                        yield {"status": "error", "message": f"❌ Could not login for {note.file_id}"}
+                        yield {"status": "error", "message": f"❌ Could not login"}
                         failed_count += 1
                         continue
 
                     time.sleep(2)  # Brief pause after login
 
-                    # Download the file to its specific directory
+                    # Download the file
                     pdf_path = None
                     for download_update in download_single_file(driver, note.download_link, temp_path, note.file_id):
                         yield download_update
                         if download_update["status"] == "success" and "File downloaded:" in download_update["message"]:
-                            pdf_path = download_update.get("file_path")  # We'll modify this
-                            if not pdf_path:
-                                # Extract the file path from successful download
-                                pdfs = list(temp_path.glob("*.pdf"))
-                                if pdfs:
-                                    pdf_path = pdfs[0]
+                            # Extract the file path from successful download
+                            pdfs = list(temp_path.glob("*.pdf"))
+                            if pdfs:
+                                pdf_path = pdfs[0]
 
                     if not pdf_path:
-                        yield {"status": "error", "message": f"❌ No PDF file found for {note.file_id}"}
+                        yield {"status": "error", "message": f"❌ No PDF file found"}
                         failed_count += 1
                         continue
 
                     # Upload to S3
-                    yield {"status": "info", "message": f"☁️ Uploading {pdf_path.name} to S3"}
+                    yield {"status": "info", "message": f"☁️ Uploading to S3..."}
 
-                    # Create S3 key: documents/file_id/filename.pdf
                     s3_key = f"{S3_DOCUMENTS_PREFIX}{note.file_id}/{pdf_path.name}"
                     s3_url = upload_to_s3(pdf_path, s3_key)
 
@@ -325,44 +322,32 @@ def download_documents():
 
                     downloaded_count += 1
                     yield {"status": "success", "message": f"✅ Successfully processed {note.file_id}"}
-                    yield {"status": "success", "message": f"📂 Saved to: {s3_url}"}
 
                 except Exception as exc:
-                    yield {"status": "error", "message": f"❌ Error with {note.file_id}: {str(exc)}"}
+                    yield {"status": "error", "message": f"❌ Error: {str(exc)[:100]}"}
                     logger.exception(f"Error processing {note.file_id}")
                     failed_count += 1
 
                 finally:
-                    # Always clean up driver immediately to free memory
+                    # Always clean up driver immediately
                     if driver:
                         try:
                             driver.quit()
-                            yield {"status": "info", "message": f"🧹 Cleaned up browser for {note.file_id}"}
+                            yield {"status": "info", "message": f"🧹 Browser closed"}
                         except:
                             pass
 
-                    # Force garbage collection to free memory
+                    # Force garbage collection
                     import gc
                     gc.collect()
 
-                # Rate limiting - longer delay between files to let memory settle
-                total_elapsed = time.time() - start_ts
-                min_wait = max(MIN_CYCLE_SEC, 15)  # At least 15 seconds between files
-                if total_elapsed < min_wait:
-                    sleep_time = min_wait - total_elapsed
-                    yield {"status": "info", "message": f"😴 Memory recovery: sleeping {sleep_time:.1f}s"}
-                    time.sleep(sleep_time)
-
         remaining = ResearchNote.objects.filter(status=0).count()
 
-        yield {"status": "success", "message": f"🏁 Batch completed!"}
-        yield {"status": "success", "message": f"📊 Downloaded: {downloaded_count}, Failed: {failed_count}"}
+        yield {"status": "success", "message": f"🏁 Completed! Downloaded: {downloaded_count}, Failed: {failed_count}"}
 
         if remaining > 0:
-            yield {"status": "info", "message": f"📋 {remaining} files remaining - run again to continue"}
-        else:
-            yield {"status": "success", "message": f"🎉 All downloads complete!"}
+            yield {"status": "info", "message": f"📋 {remaining} files remaining - click 'Start' again"}
 
     except Exception as e:
-        yield {"status": "error", "message": f"🚨 Critical error in download process: {str(e)}"}
+        yield {"status": "error", "message": f"🚨 Critical error: {str(e)[:200]}"}
         logger.exception("Critical error in download_documents")
