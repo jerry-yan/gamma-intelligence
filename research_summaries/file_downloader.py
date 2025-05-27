@@ -208,11 +208,19 @@ def download_single_file(driver, download_link, download_dir, file_id):
             current_files = set(download_dir.glob("*"))
             new_files = current_files - initial_files
 
-            if new_files:
-                # Found a new file!
-                new_file = list(new_files)[0]
+            # Look for completed PDF files (not .crdownload)
+            completed_pdfs = [f for f in new_files if f.suffix.lower() == '.pdf' and not f.name.endswith('.crdownload')]
+
+            if completed_pdfs:
+                # Found a completed PDF file!
+                new_file = completed_pdfs[0]
                 yield {"status": "success", "message": f"📄 File downloaded: {new_file.name}"}
                 return new_file
+
+            # Check if we have .crdownload files (still downloading)
+            crdownload_files = [f for f in new_files if f.name.endswith('.crdownload')]
+            if crdownload_files and elapsed_wait % 20 == 0:  # Report every 20 seconds
+                yield {"status": "info", "message": f"📥 Download in progress: {crdownload_files[0].name}"}
 
             time.sleep(2)
             elapsed_wait += 2
@@ -231,16 +239,20 @@ def download_single_file(driver, download_link, download_dir, file_id):
 def download_documents():
     """
     Generator function that yields status updates during file downloading
-    Memory-optimized version that processes one file at a time
+    Memory-optimized version that processes files in small batches
     """
     try:
-        queue = ResearchNote.objects.filter(status=0).order_by("id")
+        # Process only 3 files at a time to avoid memory issues on free tier
+        BATCH_SIZE = 3
+        queue = ResearchNote.objects.filter(status=0).order_by("id")[:BATCH_SIZE]
 
         if not queue.exists():
             yield {"status": "info", "message": "✅ No documents to download"}
             return
 
-        yield {"status": "info", "message": f"📑 Found {queue.count()} research notes to download"}
+        total_pending = ResearchNote.objects.filter(status=0).count()
+        yield {"status": "info", "message": f"📑 Processing {queue.count()} files (batch of {BATCH_SIZE})"}
+        yield {"status": "info", "message": f"📊 Total pending downloads: {total_pending}"}
 
         downloaded_count = 0
         failed_count = 0
@@ -284,10 +296,12 @@ def download_documents():
                     for download_update in download_single_file(driver, note.download_link, temp_path, note.file_id):
                         yield download_update
                         if download_update["status"] == "success" and "File downloaded:" in download_update["message"]:
-                            # Extract the file path from successful download
-                            pdfs = list(temp_path.glob("*.pdf"))
-                            if pdfs:
-                                pdf_path = pdfs[0]
+                            pdf_path = download_update.get("file_path")  # We'll modify this
+                            if not pdf_path:
+                                # Extract the file path from successful download
+                                pdfs = list(temp_path.glob("*.pdf"))
+                                if pdfs:
+                                    pdf_path = pdfs[0]
 
                     if not pdf_path:
                         yield {"status": "error", "message": f"❌ No PDF file found for {note.file_id}"}
@@ -331,15 +345,23 @@ def download_documents():
                     import gc
                     gc.collect()
 
-                # Rate limiting
+                # Rate limiting - longer delay between files to let memory settle
                 total_elapsed = time.time() - start_ts
-                if total_elapsed < MIN_CYCLE_SEC:
-                    sleep_time = MIN_CYCLE_SEC - total_elapsed
-                    yield {"status": "info", "message": f"😴 Rate limiting: sleeping {sleep_time:.1f}s"}
+                min_wait = max(MIN_CYCLE_SEC, 15)  # At least 15 seconds between files
+                if total_elapsed < min_wait:
+                    sleep_time = min_wait - total_elapsed
+                    yield {"status": "info", "message": f"😴 Memory recovery: sleeping {sleep_time:.1f}s"}
                     time.sleep(sleep_time)
 
-        yield {"status": "success", "message": f"🏁 Download task finished!"}
+        remaining = ResearchNote.objects.filter(status=0).count()
+
+        yield {"status": "success", "message": f"🏁 Batch completed!"}
         yield {"status": "success", "message": f"📊 Downloaded: {downloaded_count}, Failed: {failed_count}"}
+
+        if remaining > 0:
+            yield {"status": "info", "message": f"📋 {remaining} files remaining - run again to continue"}
+        else:
+            yield {"status": "success", "message": f"🎉 All downloads complete!"}
 
     except Exception as e:
         yield {"status": "error", "message": f"🚨 Critical error in download process: {str(e)}"}
