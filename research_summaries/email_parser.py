@@ -15,7 +15,7 @@ USERNAME = "gamma.invest@gmx.com"
 PASSWORD = os.getenv("GMX_PW", "Premiumyield1")  # export GMX_PW=…
 
 # ── FILTERS ─────────────────────────────────────────────────────────
-LOOKBACK_HOURS = 24
+LOOKBACK_HOURS = 28
 SENDER_EMAIL = None  # set to an address later if desired
 
 

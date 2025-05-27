@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+
+{% block title %}Download Test - Gamma Intelligence{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>File Download Test</h2>
+        <p class="text-muted">Test the file downloading functionality to download PDFs from AlphaSense and upload to S3.</p>
+    </div>
+</div>
+
+<!-- Status Overview Cards -->
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <h6 class="card-title text-primary mb-0">{{ status_counts.total }}</h6>
+                <small class="text-muted">Total</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <h6 class="card-title text-secondary mb-0">{{ status_counts.not_downloaded }}</h6>
+                <small class="text-muted">Not Downloaded</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <h6 class="card-title text-info mb-0">{{ status_counts.downloaded }}</h6>
+                <small class="text-muted">Downloaded</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <h6 class="card-title text-warning mb-0">{{ status_counts.preprocessed }}</h6>
+                <small class="text-muted">Preprocessed</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <h6 class="card-title text-success mb-0">{{ status_counts.summarized }}</h6>
+                <small class="text-muted">Summarized</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>File Downloader</h5>
+            </div>
+            <div class="card-body">
+                <p>Ready to download <strong id="pendingCount">{{ status_counts.not_downloaded }}</strong> PDF files.</p>
+                <button id="startDownloading" type="button" class="btn btn-primary">
+                    📥 Start File Downloads
+                </button>
+                <button id="stopDownloading" type="button" class="btn btn-danger" style="display: none;">
+                    ⏹️ Stop Downloads
+                </button>
+                <button id="refreshNotes" type="button" class="btn btn-outline-secondary">
+                    🔄 Refresh Notes
+                </button>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6>Pending Downloads</h6>
+            </div>
+            <div class="card-body" style="max-height: 200px; overflow-y: auto;">
+                <div id="pendingNotes">
+                    {% for note in pending_downloads %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <strong>{{ note.raw_title|default:"Untitled"|truncatechars:40 }}</strong>
+                        <span class="badge bg-secondary ms-1">Not Downloaded</span>
+                        <br>
+                        <small class="text-muted">
+                            <strong>ID:</strong> {{ note.file_id|default:"No ID" }} | 
+                            <strong>Source:</strong> {{ note.source|default:"Unknown" }}
+                        </small>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No files pending download.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6>Recent Downloads</h6>
+            </div>
+            <div class="card-body" style="max-height: 200px; overflow-y: auto;">
+                <div id="recentDownloads">
+                    {% for note in recent_downloads %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <strong>{{ note.raw_title|default:"Untitled"|truncatechars:40 }}</strong>
+                        <span class="badge bg-info ms-1">Downloaded</span>
+                        <br>
+                        <small class="text-muted">
+                            <strong>ID:</strong> {{ note.file_id|default:"No ID" }}<br>
+                            <strong>S3:</strong> {{ note.file_directory|truncatechars:50 }}<br>
+                            {{ note.file_download_time|date:"M d, H:i" }}
+                        </small>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No recent downloads.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5>Download Log</h5>
+                <button id="clearLog" type="button" class="btn btn-sm btn-outline-secondary">Clear</button>
+            </div>
+            <div class="card-body">
+                <div id="logContainer" style="height: 500px; overflow-y: auto; background-color: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px;">
+                    <div class="text-muted">Ready to download files...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const startBtn = document.getElementById('startDownloading');
+    const stopBtn = document.getElementById('stopDownloading');
+    const refreshBtn = document.getElementById('refreshNotes');
+    const clearLogBtn = document.getElementById('clearLog');
+    const logContainer = document.getElementById('logContainer');
+    let eventSource = null;
+
+    function addLogMessage(message, status = 'info') {
+        const timestamp = new Date().toLocaleTimeString();
+        const statusColors = {
+            'info': '#666',
+            'success': '#28a745',
+            'warning': '#ffc107',
+            'error': '#dc3545',
+            'complete': '#007bff'
+        };
+
+        const logEntry = document.createElement('div');
+        logEntry.style.color = statusColors[status] || '#666';
+        logEntry.style.marginBottom = '2px';
+        logEntry.innerHTML = `[${timestamp}] ${message}`;
+
+        logContainer.appendChild(logEntry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    function refreshNotes() {
+        // Refresh the page to get updated counts and lists
+        window.location.reload();
+    }
+
+    startBtn.addEventListener('click', function() {
+        startBtn.style.display = 'none';
+        stopBtn.style.display = 'inline-block';
+
+        addLogMessage('Initiating file download process...', 'info');
+
+        eventSource = new EventSource('/research/process-downloads/');
+
+        eventSource.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                addLogMessage(data.message, data.status);
+
+                if (data.status === 'complete') {
+                    eventSource.close();
+                    startBtn.style.display = 'inline-block';
+                    stopBtn.style.display = 'none';
+                    setTimeout(refreshNotes, 2000); // Refresh after 2 seconds
+                }
+            } catch (e) {
+                addLogMessage('Error parsing server response', 'error');
+            }
+        };
+
+        eventSource.onerror = function(event) {
+            addLogMessage('Connection error occurred', 'error');
+            eventSource.close();
+            startBtn.style.display = 'inline-block';
+            stopBtn.style.display = 'none';
+        };
+    });
+
+    stopBtn.addEventListener('click', function() {
+        if (eventSource) {
+            eventSource.close();
+            addLogMessage('Download process stopped by user', 'warning');
+        }
+        startBtn.style.display = 'inline-block';
+        stopBtn.style.display = 'none';
+    });
+
+    refreshBtn.addEventListener('click', refreshNotes);
+
+    clearLogBtn.addEventListener('click', function() {
+        logContainer.innerHTML = '<div class="text-muted">Log cleared...</div>';
+    });
+});
+</script>
+{% endblock %}

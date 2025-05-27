@@ -7,6 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
 from .email_parser import fetch_research_summaries
+from .file_downloader import download_documents
 from .models import ResearchNote
 import json
 import time
@@ -36,6 +37,55 @@ def email_test_view(request):
         'status_counts': status_counts,
     }
     return render(request, 'research_summaries/email_test.html', context)
+
+
+@login_required
+def download_test_view(request):
+    """Test page for file downloading"""
+    # Get notes that need downloading
+    pending_downloads = ResearchNote.objects.filter(status=0).order_by('-created_at')[:10]
+    recent_downloads = ResearchNote.objects.filter(status=1).order_by('-file_download_time')[:10]
+
+    # Get status counts
+    status_counts = {
+        'total': ResearchNote.objects.count(),
+        'not_downloaded': ResearchNote.objects.filter(status=0).count(),
+        'downloaded': ResearchNote.objects.filter(status=1).count(),
+        'preprocessed': ResearchNote.objects.filter(status=2).count(),
+        'summarized': ResearchNote.objects.filter(status=3).count(),
+    }
+
+    context = {
+        'pending_downloads': pending_downloads,
+        'recent_downloads': recent_downloads,
+        'status_counts': status_counts,
+    }
+    return render(request, 'research_summaries/download_test.html', context)
+
+
+@login_required
+def process_downloads_stream(request):
+    """GET endpoint for Server-Sent Events file downloading"""
+
+    def generate_updates():
+        yield "data: " + json.dumps({"status": "info", "message": "🚀 Starting file download process..."}) + "\n\n"
+
+        try:
+            for update in download_documents():
+                yield "data: " + json.dumps(update) + "\n\n"
+                time.sleep(0.1)  # Small delay to make updates visible
+
+        except Exception as e:
+            yield "data: " + json.dumps({"status": "error", "message": f"🚨 Unexpected error: {str(e)}"}) + "\n\n"
+
+        # Final completion message
+        yield "data: " + json.dumps({"status": "complete", "message": "✨ File download process finished"}) + "\n\n"
+
+    response = StreamingHttpResponse(generate_updates(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['Connection'] = 'keep-alive'
+    response['X-Accel-Buffering'] = 'no'  # Disable nginx buffering
+    return response
 
 
 @login_required
