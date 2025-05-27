@@ -14,7 +14,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 # ── CONSTANTS ────────────────────────────────────────────────────────
 MAX_WAIT_SEC = 80  # seconds to wait for PDF
 MIN_CYCLE_SEC = 12  # min time per iteration
@@ -35,38 +34,58 @@ def get_s3_client():
 
 # ── CHROME OPTIONS FOR HEROKU ───────────────────────────────────────
 def make_chrome(download_dir: Path) -> webdriver.Chrome:
-    """Create Chrome webdriver configured for Heroku"""
+    """Create Chrome webdriver configured for Heroku with memory optimization"""
     download_dir.mkdir(parents=True, exist_ok=True)
 
     opts = Options()
 
-    # Heroku-specific options
+    # Heroku-specific options with memory optimization
     opts.add_argument("--headless=new")
     opts.add_argument("--no-sandbox")
     opts.add_argument("--disable-dev-shm-usage")
     opts.add_argument("--disable-gpu")
     opts.add_argument("--disable-web-security")
     opts.add_argument("--disable-features=VizDisplayCompositor")
-    opts.add_argument("--window-size=1920,1080")
-    opts.add_argument("--remote-debugging-port=9222")  # Required for new buildpack
+
+    # Memory optimization arguments
+    opts.add_argument("--memory-pressure-off")
+    opts.add_argument("--max_old_space_size=256")
+    opts.add_argument("--disable-background-timer-throttling")
+    opts.add_argument("--disable-renderer-backgrounding")
+    opts.add_argument("--disable-backgrounding-occluded-windows")
+    opts.add_argument("--disable-extensions")
+    opts.add_argument("--disable-plugins")
+    opts.add_argument("--disable-images")  # Don't load images to save memory
+    # Note: Don't disable JavaScript as it's needed for login
+
+    # Reduce window size to save memory
+    opts.add_argument("--window-size=800,600")
+    opts.add_argument("--remote-debugging-port=9222")
 
     # Download preferences - each file gets its own directory
     opts.add_experimental_option("prefs", {
         "download.default_directory": str(download_dir.absolute()),
         "download.prompt_for_download": False,
         "download.directory_upgrade": True,
-        "safebrowsing.enabled": True,
-        "plugins.always_open_pdf_externally": True
+        "safebrowsing.enabled": False,  # Disable to save memory
+        "plugins.always_open_pdf_externally": True,
+        "profile.default_content_setting_values": {
+            "images": 2,  # Block images
+            "plugins": 2,  # Block plugins
+            "popups": 2,  # Block popups
+            "geolocation": 2,  # Block location sharing
+            "notifications": 2,  # Block notifications
+            "media_stream": 2,  # Block media stream
+        }
     })
 
-    # Anti-detection
+    # Anti-detection (minimal)
     opts.add_argument("--disable-blink-features=AutomationControlled")
     opts.add_experimental_option("excludeSwitches", ["enable-automation"])
-    opts.add_experimental_option("useAutomationExtension", False)
 
-    # User agent
+    # Simplified user agent
     opts.add_argument(
-        "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
     # For Heroku, Chrome binary path might need to be specified
     chrome_binary = os.getenv('GOOGLE_CHROME_BIN')
@@ -212,6 +231,7 @@ def download_single_file(driver, download_link, download_dir, file_id):
 def download_documents():
     """
     Generator function that yields status updates during file downloading
+    Memory-optimized version that processes one file at a time
     """
     try:
         queue = ResearchNote.objects.filter(status=0).order_by("id")
@@ -225,10 +245,7 @@ def download_documents():
         downloaded_count = 0
         failed_count = 0
 
-        # Create one driver instance and login once
-        driver = None
-        logged_in = False
-
+        # Process each file individually to minimize memory usage
         for i, note in enumerate(queue, 1):
             yield {"status": "info", "message": f"🔄 Processing {i}/{queue.count()}: {note.file_id}"}
 
@@ -239,29 +256,28 @@ def download_documents():
             # Create unique temporary directory for this specific file
             with tempfile.TemporaryDirectory(prefix=f"download_{note.file_id}_") as temp_dir:
                 temp_path = Path(temp_dir)
+                driver = None
                 start_ts = time.time()
 
                 try:
-                    # Create driver if not exists
-                    if driver is None:
-                        yield {"status": "info", "message": f"🌐 Starting Chrome browser..."}
-                        driver = make_chrome(temp_path)
+                    # Create fresh driver instance for each file to avoid memory buildup
+                    yield {"status": "info", "message": f"🌐 Starting Chrome browser for {note.file_id}"}
+                    driver = make_chrome(temp_path)
 
-                    # Login once if not already logged in
-                    if not logged_in:
-                        login_success = True
-                        for login_update in login_to_alphasense(driver):
-                            yield login_update
-                            if login_update["status"] == "error":
-                                login_success = False
-                                break
-
-                        if not login_success:
-                            yield {"status": "error", "message": "❌ Could not login to AlphaSense"}
+                    # Login for this file
+                    login_success = True
+                    for login_update in login_to_alphasense(driver):
+                        yield login_update
+                        if login_update["status"] == "error":
+                            login_success = False
                             break
 
-                        logged_in = True
-                        time.sleep(3)  # Brief pause after login
+                    if not login_success:
+                        yield {"status": "error", "message": f"❌ Could not login for {note.file_id}"}
+                        failed_count += 1
+                        continue
+
+                    time.sleep(2)  # Brief pause after login
 
                     # Download the file to its specific directory
                     pdf_path = None
@@ -302,19 +318,25 @@ def download_documents():
                     logger.exception(f"Error processing {note.file_id}")
                     failed_count += 1
 
+                finally:
+                    # Always clean up driver immediately to free memory
+                    if driver:
+                        try:
+                            driver.quit()
+                            yield {"status": "info", "message": f"🧹 Cleaned up browser for {note.file_id}"}
+                        except:
+                            pass
+
+                    # Force garbage collection to free memory
+                    import gc
+                    gc.collect()
+
                 # Rate limiting
                 total_elapsed = time.time() - start_ts
                 if total_elapsed < MIN_CYCLE_SEC:
                     sleep_time = MIN_CYCLE_SEC - total_elapsed
                     yield {"status": "info", "message": f"😴 Rate limiting: sleeping {sleep_time:.1f}s"}
                     time.sleep(sleep_time)
-
-        # Clean up driver
-        if driver:
-            try:
-                driver.quit()
-            except:
-                pass
 
         yield {"status": "success", "message": f"🏁 Download task finished!"}
         yield {"status": "success", "message": f"📊 Downloaded: {downloaded_count}, Failed: {failed_count}"}
