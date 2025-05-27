@@ -38,6 +38,31 @@ def email_test_view(request):
     return render(request, 'research_summaries/email_test.html', context)
 
 
+@login_required
+def process_emails_stream(request):
+    """GET endpoint for Server-Sent Events email processing"""
+
+    def generate_updates():
+        yield "data: " + json.dumps({"status": "info", "message": "🚀 Starting email processing..."}) + "\n\n"
+
+        try:
+            for update in fetch_research_summaries():
+                yield "data: " + json.dumps(update) + "\n\n"
+                time.sleep(0.1)  # Small delay to make updates visible
+
+        except Exception as e:
+            yield "data: " + json.dumps({"status": "error", "message": f"🚨 Unexpected error: {str(e)}"}) + "\n\n"
+
+        # Final completion message
+        yield "data: " + json.dumps({"status": "complete", "message": "✨ Email processing finished"}) + "\n\n"
+
+    response = StreamingHttpResponse(generate_updates(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['Connection'] = 'keep-alive'
+    response['X-Accel-Buffering'] = 'no'  # Disable nginx buffering
+    return response
+
+
 @csrf_exempt
 @require_POST
 @login_required
