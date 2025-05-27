@@ -15,7 +15,7 @@ USERNAME = "gamma.invest@gmx.com"
 PASSWORD = os.getenv("GMX_PW", "Premiumyield1")  # export GMX_PW=…
 
 # ── FILTERS ─────────────────────────────────────────────────────────
-LOOKBACK_HOURS = 6
+LOOKBACK_HOURS = 24
 SENDER_EMAIL = None  # set to an address later if desired
 
 
@@ -65,7 +65,20 @@ def fetch_research_summaries():
             imap.select_folder("INBOX")
 
             yield {"status": "info", "message": "🔍 Searching for emails..."}
-            search_keys = ["FROM", SENDER_EMAIL] if SENDER_EMAIL else ["ALL"]
+
+            # Calculate date 24 hours ago for IMAP search
+            since_date = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=LOOKBACK_HOURS)
+            since_date_str = since_date.strftime('%d-%b-%Y')  # Format: "26-May-2025"
+
+            # Build search criteria with date filter
+            if SENDER_EMAIL:
+                search_keys = ["FROM", SENDER_EMAIL, "SINCE", since_date_str]
+                yield {"status": "info",
+                       "message": f"🔍 Searching for emails from {SENDER_EMAIL} since {since_date_str}"}
+            else:
+                search_keys = ["SINCE", since_date_str]
+                yield {"status": "info", "message": f"🔍 Searching for emails since {since_date_str}"}
+
             uids = imap.search(search_keys)
 
             if not uids:
