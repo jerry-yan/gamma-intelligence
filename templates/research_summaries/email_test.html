@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+
+{% block title %}Email Test - Gamma Intelligence{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Email Processing Test</h2>
+        <p class="text-muted">Test the email scanning functionality to import research summaries from GMX.</p>
+    </div>
+</div>
+
+<!-- Status Overview Cards -->
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <h6 class="card-title text-primary mb-0">{{ status_counts.total }}</h6>
+                <small class="text-muted">Total</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <h6 class="card-title text-secondary mb-0">{{ status_counts.not_downloaded }}</h6>
+                <small class="text-muted">Not Downloaded</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <h6 class="card-title text-info mb-0">{{ status_counts.downloaded }}</h6>
+                <small class="text-muted">Downloaded</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <h6 class="card-title text-warning mb-0">{{ status_counts.preprocessed }}</h6>
+                <small class="text-muted">Preprocessed</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <h6 class="card-title text-success mb-0">{{ status_counts.summarized }}</h6>
+                <small class="text-muted">Summarized</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Email Scanner</h5>
+            </div>
+            <div class="card-body">
+                <p>Database contains <strong id="totalCount">{{ status_counts.total }}</strong> research notes.</p>
+                <button id="startProcessing" type="button" class="btn btn-primary">
+                    🔍 Start Email Scan
+                </button>
+                <button id="stopProcessing" type="button" class="btn btn-danger" style="display: none;">
+                    ⏹️ Stop Processing
+                </button>
+                <button id="refreshNotes" type="button" class="btn btn-outline-secondary">
+                    🔄 Refresh Notes
+                </button>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6>Recent Research Notes</h6>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                <div id="recentNotes">
+                    {% for note in recent_notes %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <strong>{{ note.raw_title|default:"Untitled"|truncatechars:50 }}</strong>
+                        {% if note.status == 0 %}
+                            <span class="badge bg-secondary ms-1">Not Downloaded</span>
+                        {% elif note.status == 1 %}
+                            <span class="badge bg-info ms-1">Downloaded</span>
+                        {% elif note.status == 2 %}
+                            <span class="badge bg-warning ms-1">Preprocessed</span>
+                        {% elif note.status == 3 %}
+                            <span class="badge bg-success ms-1">Summarized</span>
+                        {% endif %}
+                        <br>
+                        <small class="text-muted">
+                            <strong>Source:</strong> {{ note.source|default:"Unknown" }}<br>
+                            <strong>Author:</strong> {{ note.raw_author|default:"Unknown" }}<br>
+                            {% if note.raw_companies %}
+                                <strong>Companies:</strong> {{ note.raw_companies|truncatechars:30 }} ({{ note.raw_company_count|default:0 }})<br>
+                            {% endif %}
+                            <strong>ID:</strong> {{ note.file_id|default:"No ID" }} | 
+                            <strong>Pages:</strong> {{ note.raw_page_count|default:"?" }} |
+                            {{ note.created_at|date:"M d, H:i" }}
+                        </small>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No research notes found.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5>Processing Log</h5>
+                <button id="clearLog" type="button" class="btn btn-sm btn-outline-secondary">Clear</button>
+            </div>
+            <div class="card-body">
+                <div id="logContainer" style="height: 500px; overflow-y: auto; background-color: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px;">
+                    <div class="text-muted">Ready to process emails...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const startBtn = document.getElementById('startProcessing');
+    const stopBtn = document.getElementById('stopProcessing');
+    const refreshBtn = document.getElementById('refreshNotes');
+    const clearLogBtn = document.getElementById('clearLog');
+    const logContainer = document.getElementById('logContainer');
+    let eventSource = null;
+
+    function addLogMessage(message, status = 'info') {
+        const timestamp = new Date().toLocaleTimeString();
+        const statusColors = {
+            'info': '#666',
+            'success': '#28a745',
+            'warning': '#ffc107',
+            'error': '#dc3545',
+            'complete': '#007bff'
+        };
+        
+        const logEntry = document.createElement('div');
+        logEntry.style.color = statusColors[status] || '#666';
+        logEntry.style.marginBottom = '2px';
+        logEntry.innerHTML = `[${timestamp}] ${message}`;
+        
+        logContainer.appendChild(logEntry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    function refreshRecentNotes() {
+        fetch('/research/recent-notes/')
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('recentNotes');
+                if (data.notes.length === 0) {
+                    container.innerHTML = '<p class="text-muted">No research notes found.</p>';
+                } else {
+                    container.innerHTML = data.notes.map(note => {
+                        const statusBadges = {
+                            0: '<span class="badge bg-secondary ms-1">Not Downloaded</span>',
+                            1: '<span class="badge bg-info ms-1">Downloaded</span>',
+                            2: '<span class="badge bg-warning ms-1">Preprocessed</span>',
+                            3: '<span class="badge bg-success ms-1">Summarized</span>'
+                        };
+                        
+                        return `
+                            <div class="border-bottom pb-2 mb-2">
+                                <strong>${note.title}</strong>${statusBadges[note.status_value] || ''}
+                                <br>
+                                <small class="text-muted">
+                                    <strong>Source:</strong> ${note.source}<br>
+                                    <strong>Author:</strong> ${note.author}<br>
+                                    ${note.companies !== 'None' ? `<strong>Companies:</strong> ${note.companies} (${note.company_count})<br>` : ''}
+                                    <strong>ID:</strong> ${note.file_id} | 
+                                    <strong>Pages:</strong> ${note.page_count || '?'} |
+                                    ${note.created_at}
+                                </small>
+                            </div>
+                        `;
+                    }).join('');
+                }
+                
+                // Update status counts
+                if (data.status_counts) {
+                    document.getElementById('totalCount').textContent = data.status_counts.total;
+                    
+                    // Update the status cards
+                    const statusCards = document.querySelectorAll('.card .card-body h6');
+                    if (statusCards.length >= 5) {
+                        statusCards[0].textContent = data.status_counts.total;
+                        statusCards[1].textContent = data.status_counts.not_downloaded;
+                        statusCards[2].textContent = data.status_counts.downloaded;
+                        statusCards[3].textContent = data.status_counts.preprocessed;
+                        statusCards[4].textContent = data.status_counts.summarized;
+                    }
+                }
+            })
+            .catch(error => {
+                addLogMessage('Error refreshing notes: ' + error.message, 'error');
+            });
+    }
+
+    startBtn.addEventListener('click', function() {
+        startBtn.style.display = 'none';
+        stopBtn.style.display = 'inline-block';
+        
+        addLogMessage('Initiating email processing...', 'info');
+        
+        eventSource = new EventSource('/research/process-emails/');
+        
+        eventSource.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                addLogMessage(data.message, data.status);
+                
+                if (data.status === 'complete') {
+                    eventSource.close();
+                    startBtn.style.display = 'inline-block';
+                    stopBtn.style.display = 'none';
+                    refreshRecentNotes();
+                }
+            } catch (e) {
+                addLogMessage('Error parsing server response', 'error');
+            }
+        };
+        
+        eventSource.onerror = function(event) {
+            addLogMessage('Connection error occurred', 'error');
+            eventSource.close();
+            startBtn.style.display = 'inline-block';
+            stopBtn.style.display = 'none';
+        };
+    });
+
+    stopBtn.addEventListener('click', function() {
+        if (eventSource) {
+            eventSource.close();
+            addLogMessage('Processing stopped by user', 'warning');
+        }
+        startBtn.style.display = 'inline-block';
+        stopBtn.style.display = 'none';
+    });
+
+    refreshBtn.addEventListener('click', refreshRecentNotes);
+
+    clearLogBtn.addEventListener('click', function() {
+        logContainer.innerHTML = '<div class="text-muted">Log cleared...</div>';
+    });
+});
+</script>
+{% endblock %}
