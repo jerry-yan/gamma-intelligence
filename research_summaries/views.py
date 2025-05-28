@@ -282,3 +282,94 @@ def get_cleaning_status(request):
         'pending_count': pending_count,
         'cleaned_count': cleaned_count,
     })
+
+
+# Add these new view functions to your existing views.py:
+
+@login_required
+def document_summarizer_page(request):
+    """Render the document summarizer test page"""
+    pending_notes = ResearchNote.objects.filter(status=2)
+    summarized_notes = ResearchNote.objects.filter(status=3)
+
+    context = {
+        'pending_count': pending_notes.count(),
+        'summarized_count': summarized_notes.count(),
+        'pending_notes': pending_notes[:10],  # Show first 10 for preview
+    }
+    return render(request, 'research_summaries/document_summarizer.html', context)
+
+
+@login_required
+def summarize_documents_stream(request):
+    """Stream the document summarization process with real-time updates"""
+
+    def generate_summarization_updates():
+        """Generator that yields real-time updates during summarization"""
+
+        try:
+            # Import here to avoid circular imports
+            from research_summaries.document_summarizer import summarize_documents
+            from django.utils.timezone import now
+
+            # Get initial counts
+            pending_notes = ResearchNote.objects.filter(status=2)
+            total_count = pending_notes.count()
+
+            if total_count == 0:
+                yield f"data: {json.dumps({'type': 'info', 'message': '✅ No documents awaiting summarization.'})}\n\n"
+                yield f"data: {json.dumps({'type': 'complete', 'message': 'No work to do!'})}\n\n"
+                return
+
+            yield f"data: {json.dumps({'type': 'info', 'message': f'📝 Starting to summarize {total_count} research documents...'})}\n\n"
+
+            # We'll need to modify the summarize_documents function to yield updates
+            # For now, let's call it and provide basic progress tracking
+
+            # Process each note individually for better progress tracking
+            success_count = 0
+
+            for i, note in enumerate(pending_notes, 1):
+                try:
+                    yield f"data: {json.dumps({'type': 'progress', 'message': f'🔄 Processing {i}/{total_count}: {note.file_id}', 'current': i, 'total': total_count})}\n\n"
+
+                    # Call individual document processing (we'll need to modify the main function)
+                    from research_summaries.document_summarizer import process_single_document
+
+                    if process_single_document(note):
+                        success_count += 1
+                        yield f"data: {json.dumps({'type': 'success', 'message': f'✅ Summarized {note.file_id}'})}\n\n"
+                    else:
+                        yield f"data: {json.dumps({'type': 'error', 'message': f'❌ Failed to summarize {note.file_id}'})}\n\n"
+
+                except Exception as e:
+                    yield f"data: {json.dumps({'type': 'error', 'message': f'❌ Error processing {note.file_id}: {str(e)}'})}\n\n"
+
+            # Final summary
+            yield f"data: {json.dumps({'type': 'complete', 'message': f'🏁 Summarization completed! {success_count}/{total_count} documents processed successfully.'})}\n\n"
+
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': f'Fatal error during summarization: {str(e)}'})}\n\n"
+
+    response = StreamingHttpResponse(
+        generate_summarization_updates(),
+        content_type='text/event-stream'
+    )
+    response['Cache-Control'] = 'no-cache'
+    response['Connection'] = 'keep-alive'
+    response['X-Accel-Buffering'] = 'no'
+    return response
+
+
+@login_required
+def get_summarization_status(request):
+    """Get current status of document summarization queue"""
+    pending_count = ResearchNote.objects.filter(status=2).count()
+    summarized_count = ResearchNote.objects.filter(status=3).count()
+    error_count = ResearchNote.objects.filter(status=10).count()
+
+    return JsonResponse({
+        'pending_count': pending_count,
+        'summarized_count': summarized_count,
+        'error_count': error_count,
+    })

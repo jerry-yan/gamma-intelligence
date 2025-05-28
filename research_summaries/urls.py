@@ -15,4 +15,7 @@ urlpatterns = [
     path('document-cleaner/', views.document_cleaner_page, name='document_cleaner_page'),
     path('clean-documents-stream/', views.clean_documents_stream, name='clean_documents_stream'),
     path('cleaning-status/', views.get_cleaning_status, name='get_cleaning_status'),
+    path('document-summarizer/', views.document_summarizer_page, name='document_summarizer_page'),
+    path('summarize-documents-stream/', views.summarize_documents_stream, name='summarize_documents_stream'),
+    path('summarization-status/', views.get_summarization_status, name='get_summarization_status'),
 ]

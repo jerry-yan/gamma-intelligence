@@ -256,3 +256,77 @@ def summarize_documents():
                     print(f"⚠️  Failed to delete temp file {temp_pdf_path}: {e}")
 
     print(f"🏁 Summarization task finished. {success_count}/{notes.count()} documents processed successfully.")
+
+
+def process_single_document(note):
+    """Process a single document for real-time streaming"""
+    client = get_openai_client()
+    temp_pdf_path = None
+    file_id = None
+
+    try:
+        # Extract S3 key from file_directory
+        s3_key = note.file_directory
+        if s3_key.startswith('https://'):
+            s3_key = s3_key.split('amazonaws.com/')[-1]
+        elif s3_key.startswith('s3://'):
+            s3_key = s3_key.split('/', 3)[-1]
+
+        # Download and upload to OpenAI
+        temp_pdf_path = download_pdf_from_s3(s3_key)
+        file_response = client.files.create(
+            file=open(temp_pdf_path, 'rb'),
+            purpose="user_data"
+        )
+        file_id = file_response.id
+
+        # Categorize if needed
+        if not note.report_type:
+            note.report_type = categorize_document(
+                client, MODEL, file_id, note.raw_company_count or 0,
+                                        note.raw_companies or "", note.raw_title or ""
+            )
+            note.save(update_fields=["report_type"])
+
+        if note.report_type == "Invalid":
+            return False
+
+        # Summarize
+        summary_instructions = SUMMARY_INSTRUCTIONS.get(note.report_type, DEFAULT_SUMMARY_PROMPT)
+        summary_schema = SCHEMAS.get(note.report_type)
+
+        if not summary_schema:
+            return False
+
+        summary_json = summarize_document(client, MODEL, file_id, summary_instructions, summary_schema)
+
+        ticker = clean_ticker(summary_json.get("stock_ticker"))
+        note.report_summary = summary_json
+        note.parsed_ticker = ticker
+        note.status = 3
+        note.file_summary_time = now()
+        note.save(update_fields=[
+            "report_summary", "parsed_ticker",
+            "status", "file_summary_time"
+        ])
+
+        return True
+
+    except Exception as e:
+        note.status = 10  # Error status
+        note.save(update_fields=["status"])
+        return False
+
+    finally:
+        # Cleanup
+        if file_id:
+            try:
+                client.files.delete(file_id=file_id)
+            except:
+                pass
+
+        if temp_pdf_path and os.path.exists(temp_pdf_path):
+            try:
+                os.unlink(temp_pdf_path)
+            except:
+                pass
