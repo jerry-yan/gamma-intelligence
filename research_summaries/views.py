@@ -190,3 +190,95 @@ def get_recent_notes(request):
         'notes': notes_data,
         'status_counts': status_counts
     })
+
+
+@login_required
+def document_cleaner_page(request):
+    """Render the document cleaner test page"""
+    pending_notes = ResearchNote.objects.filter(status=1)
+    cleaned_notes = ResearchNote.objects.filter(status=2)
+
+    context = {
+        'pending_count': pending_notes.count(),
+        'cleaned_count': cleaned_notes.count(),
+        'pending_notes': pending_notes[:10],  # Show first 10 for preview
+    }
+    return render(request, 'research_summaries/document_cleaner.html', context)
+
+
+@login_required
+def clean_documents_stream(request):
+    """Stream the document cleaning process with real-time updates"""
+
+    def generate_cleaning_updates():
+        """Generator that yields real-time updates during cleaning"""
+
+        try:
+            # Import here to avoid circular imports
+            from research_summaries.management.commands.clean_documents import clean_pdf_from_s3
+            from django.utils.timezone import now
+
+            # Get initial counts
+            pending_notes = ResearchNote.objects.filter(status=1)
+            total_count = pending_notes.count()
+
+            if total_count == 0:
+                yield f"data: {json.dumps({'type': 'info', 'message': '✅ No PDFs awaiting cleaning.'})}\n\n"
+                yield f"data: {json.dumps({'type': 'complete', 'message': 'No work to do!'})}\n\n"
+                return
+
+            yield f"data: {json.dumps({'type': 'info', 'message': f'🧹 Starting to clean {total_count} research PDFs from S3...'})}\n\n"
+
+            # Process each note individually for better progress tracking
+            success_count = 0
+
+            for i, note in enumerate(pending_notes, 1):
+                try:
+                    # Extract S3 key from file_directory
+                    s3_key = note.file_directory
+                    if s3_key.startswith('https://'):
+                        s3_key = s3_key.split('amazonaws.com/')[-1]
+                    elif s3_key.startswith('s3://'):
+                        s3_key = s3_key.split('/', 3)[-1]
+
+                    yield f"data: {json.dumps({'type': 'progress', 'message': f'🔄 Processing {i}/{total_count}: {note.file_id}', 'current': i, 'total': total_count})}\n\n"
+
+                    # Clean the document
+                    if clean_pdf_from_s3(s3_key):
+                        note.status = 2
+                        note.file_update_time = now()
+                        note.save(update_fields=["status", "file_update_time"])
+                        success_count += 1
+                        yield f"data: {json.dumps({'type': 'success', 'message': f'✅ Cleaned & updated {note.file_id}'})}\n\n"
+                    else:
+                        yield f"data: {json.dumps({'type': 'error', 'message': f'❌ Failed to clean {note.file_id}'})}\n\n"
+
+                except Exception as e:
+                    yield f"data: {json.dumps({'type': 'error', 'message': f'❌ Error processing {note.file_id}: {str(e)}'})}\n\n"
+
+            # Final summary
+            yield f"data: {json.dumps({'type': 'complete', 'message': f'🏁 Cleaning completed! {success_count}/{total_count} files processed successfully.'})}\n\n"
+
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': f'Fatal error during cleaning: {str(e)}'})}\n\n"
+
+    response = StreamingHttpResponse(
+        generate_cleaning_updates(),
+        content_type='text/event-stream'
+    )
+    response['Cache-Control'] = 'no-cache'
+    response['Connection'] = 'keep-alive'
+    response['X-Accel-Buffering'] = 'no'
+    return response
+
+
+@login_required
+def get_cleaning_status(request):
+    """Get current status of document cleaning queue"""
+    pending_count = ResearchNote.objects.filter(status=1).count()
+    cleaned_count = ResearchNote.objects.filter(status=2).count()
+
+    return JsonResponse({
+        'pending_count': pending_count,
+        'cleaned_count': cleaned_count,
+    })

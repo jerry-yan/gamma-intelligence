@@ -12,4 +12,7 @@ urlpatterns = [
     path('process-downloads/', views.process_downloads_stream, name='process_downloads'),  # GET for EventSource
     path('process-emails-ajax/', views.process_emails_ajax, name='process_emails_ajax'),  # POST for AJAX
     path('recent-notes/', views.get_recent_notes, name='recent_notes'),
+    path('document-cleaner/', views.document_cleaner_page, name='document_cleaner_page'),
+    path('clean-documents-stream/', views.clean_documents_stream, name='clean_documents_stream'),
+    path('cleaning-status/', views.get_cleaning_status, name='get_cleaning_status'),
 ]
