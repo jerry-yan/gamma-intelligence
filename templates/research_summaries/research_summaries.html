@@ -200,7 +200,7 @@
                             <div class="row">
                                 <div class="col-md-8">
                                     <div class="d-flex align-items-center">
-                                        <div class="flex-grow-1 cursor-pointer" onclick="toggleCard({{ note.id }})">
+                                        <div class="flex-grow-1 cursor-pointer card-expand-trigger">
                                             <strong class="text-primary">{{ note.source|default:"Unknown Source" }}</strong>
                                             <span class="mx-2">•</span>
                                             <span>{{ note.raw_title|default:"Untitled Research Report" }}</span>
@@ -245,7 +245,7 @@
                                                 {% if note.report_type %} • {{ note.report_type }}{% endif %}
                                             </div>
                                         </div>
-                                        <button class="btn btn-sm btn-outline-secondary" onclick="toggleCard({{ note.id }})">
+                                        <button class="btn btn-sm btn-outline-secondary card-collapse-trigger">
                                             ✕ Collapse
                                         </button>
                                     </div>
@@ -498,7 +498,7 @@
                             <div class="row">
                                 <div class="col-md-8">
                                     <div class="d-flex align-items-center">
-                                        <div class="flex-grow-1 cursor-pointer" onclick="toggleCard({{ note.id }})">
+                                        <div class="flex-grow-1 cursor-pointer card-expand-trigger">
                                             <strong class="text-primary">{{ note.source|default:"Unknown Source" }}</strong>
                                             <span class="mx-2">•</span>
                                             <span>{{ note.raw_title|default:"Untitled Research Report" }}</span>
@@ -543,7 +543,7 @@
                                                 {% if note.report_type %} • {{ note.report_type }}{% endif %}
                                             </div>
                                         </div>
-                                        <button class="btn btn-sm btn-outline-secondary" onclick="toggleCard({{ note.id }})">
+                                        <button class="btn btn-sm btn-outline-secondary card-collapse-trigger">
                                             ✕ Collapse
                                         </button>
                                     </div>
@@ -817,6 +817,12 @@
 .text-justify {
     text-align: justify;
 }
+
+.card-expand-trigger:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+    border-radius: 4px;
+    padding: 2px;
+}
 </style>
 
 <script>
@@ -831,19 +837,32 @@ function viewPDF(fileDirectory) {
 
 // Toggle card expand/collapse functionality
 function toggleCard(noteId) {
+    console.log('toggleCard called with noteId:', noteId);
+
     const card = document.querySelector(`[data-note-id="${noteId}"]`);
-    if (!card) return;
+    console.log('Found card:', card);
+
+    if (!card) {
+        console.error('Card not found for noteId:', noteId);
+        return;
+    }
 
     const collapsedView = card.querySelector('.collapsed-view');
     const expandedView = card.querySelector('.expanded-view');
 
+    console.log('collapsedView:', collapsedView);
+    console.log('expandedView:', expandedView);
+    console.log('expandedView current display:', expandedView.style.display);
+
     if (expandedView.style.display === 'none' || expandedView.style.display === '') {
         // Expand the card
+        console.log('Expanding card');
         collapsedView.style.display = 'none';
         expandedView.style.display = 'block';
         card.classList.add('expanded');
     } else {
         // Collapse the card
+        console.log('Collapsing card');
         collapsedView.style.display = 'block';
         expandedView.style.display = 'none';
         card.classList.remove('expanded');
@@ -900,6 +919,8 @@ function getCookie(name) {
 
 // Auto-submit form on select change for better UX
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM Content Loaded - Setting up event listeners');
+
     // Handle select changes
     const selects = document.querySelectorAll('select[name="source"]');
     selects.forEach(select => {
@@ -929,17 +950,44 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Add click handlers for card expansion (alternative to inline onclick)
-    const cardTitles = document.querySelectorAll('.research-card .cursor-pointer');
-    cardTitles.forEach(title => {
-        title.addEventListener('click', function(e) {
-            // Prevent if clicking on buttons
+    // Set up card click handlers - FIXED VERSION
+    const expandTriggers = document.querySelectorAll('.card-expand-trigger');
+    const collapseTriggers = document.querySelectorAll('.card-collapse-trigger');
+
+    console.log('Found', expandTriggers.length, 'expand triggers');
+    console.log('Found', collapseTriggers.length, 'collapse triggers');
+
+    // Handle expand clicks
+    expandTriggers.forEach(trigger => {
+        trigger.addEventListener('click', function(e) {
+            // Prevent event if clicking on buttons or links inside
             if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON') {
+                console.log('Click prevented - target is', e.target.tagName);
                 return;
             }
 
             const card = this.closest('.research-card');
             const noteId = card.getAttribute('data-note-id');
+
+            console.log('Expand trigger clicked for noteId:', noteId);
+
+            if (noteId) {
+                toggleCard(noteId);
+            }
+        });
+    });
+
+    // Handle collapse clicks
+    collapseTriggers.forEach(trigger => {
+        trigger.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const card = this.closest('.research-card');
+            const noteId = card.getAttribute('data-note-id');
+
+            console.log('Collapse trigger clicked for noteId:', noteId);
+
             if (noteId) {
                 toggleCard(noteId);
             }
