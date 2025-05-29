@@ -159,17 +159,20 @@
             <div>
                 <h5>New Research Reports</h5>
                 <small class="text-muted">
-                    {% if page_obj.paginator.count %}
-                        Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }} new reports
+                    {% if results_info.showing_count %}
+                        Showing {{ results_info.showing_count }} reports
+                        {% if results_info.limited %}
+                            (of {{ results_info.total_available }} total)
+                        {% endif %}
                         {% if filter_datetime %}
-                            (since {{ filter_datetime|date:"M d, Y g:i A" }})
+                            since {{ filter_datetime|date:"M d, Y g:i A" }}
                         {% endif %}
                     {% else %}
                         No new reports found
                     {% endif %}
                 </small>
             </div>
-            {% if page_obj.object_list and latest_report_time %}
+            {% if results_info.showing_count and latest_report_time %}
             <button id="markAsReadBtn" class="btn btn-success">
                 📖 Mark All as Read
             </button>
@@ -177,33 +180,42 @@
         </div>
 
         <!-- Research Notes List -->
-        {% for note in research_notes %}
-        <div class="card mb-3">
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-8">
-                        <h5 class="card-title">
-                            {{ note.raw_title|default:"Untitled Research Report" }}
-                            {% if note.parsed_ticker %}
-                                <span class="badge bg-primary ms-2">{{ note.parsed_ticker }}</span>
-                            {% endif %}
-                        </h5>
+        {% if ticker_groups or report_type_groups %}
 
-                        <p class="card-text text-muted mb-2">
-                            <strong>Source:</strong> {{ note.source|default:"Unknown" }}
-                            {% if note.raw_author %}
-                                | <strong>Author:</strong> {{ note.raw_author }}
-                            {% endif %}
-                            {% if note.raw_companies %}
-                                | <strong>Companies:</strong> {{ note.raw_companies|truncatechars:50 }} ({{ note.raw_company_count|default:0 }})
-                            {% endif %}
-                        </p>
+            <!-- Ticker Groups (Companies) -->
+            {% for ticker, notes in ticker_groups.items %}
+            <div class="mb-4">
+                <div class="d-flex align-items-center mb-3">
+                    <h4 class="mb-0">
+                        <span class="badge bg-primary fs-6 me-2">{{ ticker }}</span>
+                        <span class="text-muted fs-6">({{ notes|length }} report{{ notes|length|pluralize }})</span>
+                    </h4>
+                </div>
 
-                        {% if note.report_type %}
-                            <p class="card-text">
-                                <span class="badge bg-secondary">{{ note.report_type }}</span>
+                {% for note in notes %}
+                <div class="card mb-3 ms-3">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h5 class="card-title">
+                                    {{ note.raw_title|default:"Untitled Research Report" }}
+                                    {% if note.report_type %}
+                                        <span class="badge bg-secondary ms-2">{{ note.report_type }}</span>
+                                    {% endif %}
+                                </h5>
+
+                                <p class="card-text text-muted mb-2">
+                                    <strong>Source:</strong> {{ note.source|default:"Unknown" }}
+                                    {% if note.raw_author %}
+                                        | <strong>Author:</strong> {{ note.raw_author }}
+                                    {% endif %}
+                                    {% if note.raw_companies %}
+                                        | <strong>Companies:</strong> {{ note.raw_companies|truncatechars:50 }} ({{ note.raw_company_count|default:0 }})
+                                    {% endif %}
+                                </p>
+
                                 {% if note.report_summary %}
-                                    <span class="ms-2">
+                                    <p class="card-text">
                                         {% if note.report_summary.executive_summary %}
                                             {{ note.report_summary.executive_summary|truncatewords:25 }}
                                         {% elif note.report_summary.summary %}
@@ -213,49 +225,135 @@
                                         {% else %}
                                             Summary available - click to view details
                                         {% endif %}
-                                    </span>
+                                    </p>
                                 {% endif %}
-                            </p>
-                        {% endif %}
 
-                        <small class="text-muted">
-                            <strong>Created:</strong> {{ note.created_at|date:"M d, Y H:i" }}
-                            {% if note.file_download_time %}
-                                | <strong>Downloaded:</strong> {{ note.file_download_time|date:"M d, Y H:i" }}
-                            {% endif %}
-                            {% if note.file_summary_time %}
-                                | <strong>Summarized:</strong> {{ note.file_summary_time|date:"M d, Y H:i" }}
-                            {% endif %}
-                            {% if note.raw_page_count %}
-                                | <strong>Pages:</strong> {{ note.raw_page_count }}
-                            {% endif %}
-                        </small>
-                    </div>
+                                <small class="text-muted">
+                                    <strong>Created:</strong> {{ note.created_at|date:"M d, Y H:i" }}
+                                    {% if note.file_download_time %}
+                                        | <strong>Downloaded:</strong> {{ note.file_download_time|date:"M d, Y H:i" }}
+                                    {% endif %}
+                                    {% if note.file_summary_time %}
+                                        | <strong>Summarized:</strong> {{ note.file_summary_time|date:"M d, Y H:i" }}
+                                    {% endif %}
+                                    {% if note.raw_page_count %}
+                                        | <strong>Pages:</strong> {{ note.raw_page_count }}
+                                    {% endif %}
+                                </small>
+                            </div>
 
-                    <div class="col-md-4 text-end">
-                        <!-- Action Buttons -->
-                        <div class="btn-group-vertical d-grid gap-1">
-                            <a href="{% url 'research_summaries:note_detail' note.id %}" class="btn btn-primary btn-sm">
-                                📄 View Summary
-                            </a>
+                            <div class="col-md-4 text-end">
+                                <!-- Action Buttons -->
+                                <div class="btn-group-vertical d-grid gap-1">
+                                    <a href="{% url 'research_summaries:note_detail' note.id %}" class="btn btn-primary btn-sm">
+                                        📄 View Summary
+                                    </a>
 
-                            {% if note.file_directory %}
-                                <button class="btn btn-outline-primary btn-sm" onclick="viewPDF('{{ note.file_directory }}')">
-                                    📎 View PDF
-                                </button>
-                            {% endif %}
+                                    {% if note.file_directory %}
+                                        <button class="btn btn-outline-primary btn-sm" onclick="viewPDF('{{ note.file_directory }}')">
+                                            📎 View PDF
+                                        </button>
+                                    {% endif %}
 
-                            {% if note.download_link %}
-                                <a href="{{ note.download_link }}" target="_blank" class="btn btn-outline-secondary btn-sm">
-                                    🔗 Original Link
-                                </a>
-                            {% endif %}
+                                    {% if note.download_link %}
+                                        <a href="{{ note.download_link }}" target="_blank" class="btn btn-outline-secondary btn-sm">
+                                            🔗 Original Link
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+                {% endfor %}
             </div>
-        </div>
-        {% empty %}
+            {% endfor %}
+
+            <!-- Report Type Groups (No Ticker) -->
+            {% for report_type, notes in report_type_groups.items %}
+            <div class="mb-4">
+                <div class="d-flex align-items-center mb-3">
+                    <h4 class="mb-0">
+                        <span class="badge bg-secondary fs-6 me-2">{{ report_type }}</span>
+                        <span class="text-muted fs-6">({{ notes|length }} report{{ notes|length|pluralize }})</span>
+                    </h4>
+                </div>
+
+                {% for note in notes %}
+                <div class="card mb-3 ms-3">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h5 class="card-title">
+                                    {{ note.raw_title|default:"Untitled Research Report" }}
+                                </h5>
+
+                                <p class="card-text text-muted mb-2">
+                                    <strong>Source:</strong> {{ note.source|default:"Unknown" }}
+                                    {% if note.raw_author %}
+                                        | <strong>Author:</strong> {{ note.raw_author }}
+                                    {% endif %}
+                                    {% if note.raw_companies %}
+                                        | <strong>Companies:</strong> {{ note.raw_companies|truncatechars:50 }} ({{ note.raw_company_count|default:0 }})
+                                    {% endif %}
+                                </p>
+
+                                {% if note.report_summary %}
+                                    <p class="card-text">
+                                        {% if note.report_summary.executive_summary %}
+                                            {{ note.report_summary.executive_summary|truncatewords:25 }}
+                                        {% elif note.report_summary.summary %}
+                                            {{ note.report_summary.summary|truncatewords:25 }}
+                                        {% elif note.report_summary.recap %}
+                                            {{ note.report_summary.recap|truncatewords:25 }}
+                                        {% else %}
+                                            Summary available - click to view details
+                                        {% endif %}
+                                    </p>
+                                {% endif %}
+
+                                <small class="text-muted">
+                                    <strong>Created:</strong> {{ note.created_at|date:"M d, Y H:i" }}
+                                    {% if note.file_download_time %}
+                                        | <strong>Downloaded:</strong> {{ note.file_download_time|date:"M d, Y H:i" }}
+                                    {% endif %}
+                                    {% if note.file_summary_time %}
+                                        | <strong>Summarized:</strong> {{ note.file_summary_time|date:"M d, Y H:i" }}
+                                    {% endif %}
+                                    {% if note.raw_page_count %}
+                                        | <strong>Pages:</strong> {{ note.raw_page_count }}
+                                    {% endif %}
+                                </small>
+                            </div>
+
+                            <div class="col-md-4 text-end">
+                                <!-- Action Buttons -->
+                                <div class="btn-group-vertical d-grid gap-1">
+                                    <a href="{% url 'research_summaries:note_detail' note.id %}" class="btn btn-primary btn-sm">
+                                        📄 View Summary
+                                    </a>
+
+                                    {% if note.file_directory %}
+                                        <button class="btn btn-outline-primary btn-sm" onclick="viewPDF('{{ note.file_directory }}')">
+                                            📎 View PDF
+                                        </button>
+                                    {% endif %}
+
+                                    {% if note.download_link %}
+                                        <a href="{{ note.download_link }}" target="_blank" class="btn btn-outline-secondary btn-sm">
+                                            🔗 Original Link
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+
+        {% else %}
         <div class="text-center py-5">
             <h4 class="text-muted">No New Research Reports</h4>
             <p class="text-muted">
@@ -269,38 +367,8 @@
                 Reset Filters
             </a>
         </div>
-        {% endfor %}
-
-        <!-- Pagination -->
-        {% if page_obj.has_other_pages %}
-        <nav aria-label="Research notes pagination">
-            <ul class="pagination justify-content-center">
-                {% if page_obj.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.datetime %}datetime={{ current_filters.datetime }}&{% endif %}{% if current_filters.source %}source={{ current_filters.source }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
-                    </li>
-                {% endif %}
-
-                {% for page_num in page_obj.paginator.page_range %}
-                    {% if page_num == page_obj.number %}
-                        <li class="page-item active">
-                            <span class="page-link">{{ page_num }}</span>
-                        </li>
-                    {% elif page_num > page_obj.number|add:'-3' and page_num < page_obj.number|add:'3' %}
-                        <li class="page-item">
-                            <a class="page-link" href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.datetime %}datetime={{ current_filters.datetime }}&{% endif %}{% if current_filters.source %}source={{ current_filters.source }}&{% endif %}page={{ page_num }}">{{ page_num }}</a>
-                        </li>
-                    {% endif %}
-                {% endfor %}
-
-                {% if page_obj.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.datetime %}datetime={{ current_filters.datetime }}&{% endif %}{% if current_filters.source %}source={{ current_filters.source }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
-                    </li>
-                {% endif %}
-            </ul>
-        </nav>
         {% endif %}
+
     </div>
 </div>
 

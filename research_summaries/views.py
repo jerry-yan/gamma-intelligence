@@ -35,7 +35,6 @@ class ResearchSummariesView(LoginRequiredMixin, TemplateView):
         source_filter = self.request.GET.get('source', '')
         search_query = self.request.GET.get('search', '')
         datetime_filter = self.request.GET.get('datetime', '')
-        page_number = self.request.GET.get('page', 1)
 
         # Parse datetime filter or use default
         if datetime_filter:
@@ -75,9 +74,51 @@ class ResearchSummariesView(LoginRequiredMixin, TemplateView):
                 Q(parsed_ticker__icontains=search_query)
             )
 
-        # Pagination
-        paginator = Paginator(queryset, 20)  # Show 20 items per page
-        page_obj = paginator.get_page(page_number)
+        # Group the results
+        from collections import defaultdict, OrderedDict
+
+        # Get all results for grouping (limit to reasonable number for performance)
+        all_results = list(queryset[:200])  # Limit to 200 most recent results
+
+        # Separate reports with tickers from those without
+        ticker_groups = defaultdict(list)
+        report_type_groups = defaultdict(list)
+
+        for note in all_results:
+            if note.parsed_ticker:
+                ticker_groups[note.parsed_ticker].append(note)
+            else:
+                report_type = note.report_type or "Uncategorized"
+                report_type_groups[report_type].append(note)
+
+        # Sort ticker groups alphabetically and sort reports within each group by summary time
+        sorted_ticker_groups = OrderedDict()
+        for ticker in sorted(ticker_groups.keys()):
+            sorted_ticker_groups[ticker] = sorted(
+                ticker_groups[ticker],
+                key=lambda x: x.file_summary_time,
+                reverse=True
+            )
+
+        # Sort report type groups alphabetically and sort reports within each group by summary time
+        sorted_report_type_groups = OrderedDict()
+        for report_type in sorted(report_type_groups.keys()):
+            sorted_report_type_groups[report_type] = sorted(
+                report_type_groups[report_type],
+                key=lambda x: x.file_summary_time,
+                reverse=True
+            )
+
+        # Calculate total results
+        total_results = len(all_results)
+        total_available = queryset.count()
+
+        # Simple result info (no complex pagination for grouped results)
+        results_info = {
+            'showing_count': total_results,
+            'total_available': total_available,
+            'limited': total_results < total_available
+        }
 
         # Get status counts for dashboard (still show all statuses for reference)
         status_counts = {
@@ -86,7 +127,7 @@ class ResearchSummariesView(LoginRequiredMixin, TemplateView):
             'downloaded': ResearchNote.objects.filter(status=1).count(),
             'preprocessed': ResearchNote.objects.filter(status=2).count(),
             'summarized': ResearchNote.objects.filter(status=3).count(),
-            'filtered_count': queryset.count(),
+            'filtered_count': total_results,
         }
 
         # Get unique sources for filter dropdown (from summarized notes only)
@@ -96,11 +137,11 @@ class ResearchSummariesView(LoginRequiredMixin, TemplateView):
         # Recent activity
         recent_summaries = ResearchNote.objects.filter(status=3).order_by('-file_summary_time')[:5]
 
-        # Get latest report time on current page for "Mark as Read" functionality
+        # Get latest report time from all results for "Mark as Read" functionality
         latest_report_time = None
-        if page_obj.object_list:
+        if all_results:
             latest_report_time = max(
-                note.file_summary_time for note in page_obj.object_list
+                note.file_summary_time for note in all_results
                 if note.file_summary_time
             )
 
@@ -108,8 +149,9 @@ class ResearchSummariesView(LoginRequiredMixin, TemplateView):
         formatted_datetime = filter_datetime.strftime('%Y-%m-%dT%H:%M') if filter_datetime else ''
 
         context.update({
-            'page_obj': page_obj,
-            'research_notes': page_obj.object_list,
+            'ticker_groups': sorted_ticker_groups,
+            'report_type_groups': sorted_report_type_groups,
+            'results_info': results_info,
             'status_counts': status_counts,
             'sources': sorted(sources),
             'recent_summaries': recent_summaries,
