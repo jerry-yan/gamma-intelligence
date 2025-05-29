@@ -216,7 +216,7 @@
                                         </a>
 
                                         {% if note.file_directory %}
-                                            <button class="btn btn-outline-primary btn-sm" onclick="event.stopPropagation(); viewPDF('{{ note.file_directory }}')">
+                                            <button class="btn btn-outline-primary btn-sm" onclick="event.stopPropagation(); viewPDF('{{ note.file_directory }}', {{ note.id }})">
                                                 📎 PDF
                                             </button>
                                         {% endif %}
@@ -560,7 +560,7 @@
                                             </a>
 
                                             {% if note.file_directory %}
-                                                <button class="btn btn-outline-primary" onclick="viewPDF('{{ note.file_directory }}')">
+                                                <button class="btn btn-outline-primary" onclick="viewPDF('{{ note.file_directory }}', {{ note.id }})">
                                                     📎 View PDF
                                                 </button>
                                             {% endif %}
@@ -615,7 +615,7 @@
                                         </a>
 
                                         {% if note.file_directory %}
-                                            <button class="btn btn-outline-primary btn-sm" onclick="event.stopPropagation(); viewPDF('{{ note.file_directory }}')">
+                                            <button class="btn btn-outline-primary btn-sm" onclick="event.stopPropagation(); viewPDF('{{ note.file_directory }}', {{ note.id }})">
                                                 📎 PDF
                                             </button>
                                         {% endif %}
@@ -957,7 +957,7 @@
                                             </a>
 
                                             {% if note.file_directory %}
-                                                <button class="btn btn-outline-primary" onclick="viewPDF('{{ note.file_directory }}')">
+                                                <button class="btn btn-outline-primary" onclick="viewPDF('{{ note.file_directory }}', {{ note.id }})">
                                                     📎 View PDF
                                                 </button>
                                             {% endif %}
@@ -1026,12 +1026,61 @@
 </style>
 
 <script>
-function viewPDF(fileDirectory) {
-    // Handle PDF viewing - you can customize this based on how you want to display PDFs
-    if (fileDirectory.includes('s3://') || fileDirectory.includes('amazonaws.com')) {
-        alert('PDF viewing from S3 requires additional setup. File location: ' + fileDirectory);
+function viewPDF(fileDirectory, noteId) {
+    // Show loading state
+    const originalText = event.target.innerHTML;
+    const button = event.target;
+    button.innerHTML = '⏳ Loading...';
+    button.disabled = true;
+
+    // Use noteId if available (preferred method)
+    if (noteId) {
+        fetch(`/research/pdf/${noteId}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Open PDF in new tab
+                    const newWindow = window.open(data.url, '_blank');
+                    if (!newWindow) {
+                        alert('Pop-up blocked! Please allow pop-ups for this site and try again.');
+                    }
+                } else {
+                    alert('Error loading PDF: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to load PDF. Please try again.');
+            })
+            .finally(() => {
+                // Restore button state
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
     } else {
+        // Fallback for direct URLs (if somehow noteId is not available)
+        if (fileDirectory) {
+            if (fileDirectory.startsWith('http')) {
+                window.open(fileDirectory, '_blank');
+            } else {
+                alert('Invalid PDF URL format');
+            }
+        } else {
+            alert('No PDF file available');
+        }
+
+        // Restore button state
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+// Alternative function for cases where you only have the file directory
+function viewPDFDirect(fileDirectory) {
+    if (fileDirectory && fileDirectory.startsWith('http')) {
         window.open(fileDirectory, '_blank');
+    } else {
+        alert('PDF file not available or invalid URL');
     }
 }
 

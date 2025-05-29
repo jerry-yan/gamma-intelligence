@@ -6,11 +6,13 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
-from django.core.paginator import Paginator
-from django.db.models import Q, Count
+from django.db.models import Q
 from .email_parser import fetch_research_summaries
 from .file_downloader import download_documents
 from .models import ResearchNote
+import boto3
+from botocore.exceptions import ClientError
+from django.conf import settings
 import json
 import time
 
@@ -587,3 +589,58 @@ def get_summarization_status(request):
         'summarized_count': summarized_count,
         'error_count': error_count,
     })
+
+
+@login_required
+def get_pdf_url(request, note_id):
+    """Generate a pre-signed URL for viewing PDF from S3"""
+    try:
+        # Get the research note
+        note = get_object_or_404(ResearchNote, id=note_id)
+
+        # Check if file exists
+        if not note.file_directory:
+            return JsonResponse({'error': 'No file associated with this note'}, status=404)
+
+        # Extract S3 key from file_directory
+        s3_key = note.file_directory
+        if s3_key.startswith('https://'):
+            # Extract key from full S3 URL
+            s3_key = s3_key.split('amazonaws.com/')[-1]
+        elif s3_key.startswith('s3://'):
+            # Extract key from s3:// URL
+            s3_key = s3_key.split('/', 3)[-1]
+
+        # Initialize S3 client
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_S3_REGION_NAME
+        )
+
+        # Generate pre-signed URL (expires in 1 hour)
+        try:
+            bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+            presigned_url = s3_client.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': bucket_name, 'Key': s3_key},
+                ExpiresIn=3600,  # 1 hour
+                HttpMethod='GET'
+            )
+
+            return JsonResponse({
+                'success': True,
+                'url': presigned_url,
+                'filename': note.raw_title or 'Research Report'
+            })
+
+        except ClientError as e:
+            return JsonResponse({
+                'error': f'Could not generate PDF URL: {str(e)}'
+            }, status=500)
+
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Error accessing PDF: {str(e)}'
+        }, status=500)

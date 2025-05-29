@@ -10,6 +10,7 @@ urlpatterns = [
     path('note/<int:note_id>/', views.research_note_detail, name='note_detail'),
     path('mark-as-read/', views.mark_as_read, name='mark_as_read'),
     path('toggle-favorite/<int:note_id>/', views.toggle_note_favorite, name='toggle_favorite'),
+    path('pdf/<int:note_id>/', views.get_pdf_url, name='get_pdf_url'),
 
     # Test/admin pages (keep these for now)
     path('email-test/', views.email_test_view, name='email_test'),
