@@ -273,52 +273,111 @@
                                     <div class="mb-3">
                                         <h6 class="border-bottom pb-2">AI Summary</h6>
 
-                                        {% if note.report_type == "Company Update" %}
-                                            <!-- Company Update Format -->
-                                            <div class="row mb-3">
+                                        <!-- Top Row: Sentiment, Price Target, Stock Rating -->
+                                        <div class="row mb-3">
+                                            {% if note.report_summary.sentiment %}
                                                 <div class="col-md-4">
-                                                    {% if note.report_summary.sentiment %}
-                                                        <div class="mb-2">
-                                                            <strong>Sentiment:</strong>
-                                                            {% if note.report_summary.sentiment == "Positive" %}
-                                                                <span class="badge bg-success">{{ note.report_summary.sentiment }}</span>
-                                                            {% elif note.report_summary.sentiment == "Negative" %}
-                                                                <span class="badge bg-danger">{{ note.report_summary.sentiment }}</span>
-                                                            {% else %}
-                                                                <span class="badge bg-secondary">{{ note.report_summary.sentiment }}</span>
-                                                            {% endif %}
-                                                        </div>
-                                                    {% endif %}
-                                                </div>
-                                                <div class="col-md-4">
-                                                    {% if note.report_summary.price_target %}
-                                                        <div class="mb-2"><strong>Price Target:</strong> ${{ note.report_summary.price_target }}</div>
-                                                    {% endif %}
-                                                </div>
-                                                <div class="col-md-4">
-                                                    {% if note.report_summary.stock_rating %}
-                                                        <div class="mb-2">
-                                                            <strong>Rating:</strong>
-                                                            {% if note.report_summary.stock_rating == "Buy" %}
-                                                                <span class="badge bg-success">{{ note.report_summary.stock_rating }}</span>
-                                                            {% elif note.report_summary.stock_rating == "Sell" %}
-                                                                <span class="badge bg-danger">{{ note.report_summary.stock_rating }}</span>
-                                                            {% else %}
-                                                                <span class="badge bg-warning">{{ note.report_summary.stock_rating }}</span>
-                                                            {% endif %}
-                                                        </div>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-
-                                            {% if note.report_summary.executive_summary %}
-                                                <div class="mb-3">
-                                                    <strong>Executive Summary:</strong>
-                                                    <p class="text-justify">{{ note.report_summary.executive_summary }}</p>
+                                                    <div class="mb-2">
+                                                        <strong>Sentiment:</strong>
+                                                        {% if note.report_summary.sentiment == "Positive" %}
+                                                            <span class="badge bg-success">{{ note.report_summary.sentiment }}</span>
+                                                        {% elif note.report_summary.sentiment == "Negative" %}
+                                                            <span class="badge bg-danger">{{ note.report_summary.sentiment }}</span>
+                                                        {% else %}
+                                                            <span class="badge bg-secondary">{{ note.report_summary.sentiment }}</span>
+                                                        {% endif %}
+                                                    </div>
                                                 </div>
                                             {% endif %}
+                                            {% if note.report_summary.price_target %}
+                                                <div class="col-md-4">
+                                                    <div class="mb-2"><strong>Price Target:</strong> ${{ note.report_summary.price_target }}</div>
+                                                </div>
+                                            {% endif %}
+                                            {% if note.report_summary.stock_rating %}
+                                                <div class="col-md-4">
+                                                    <div class="mb-2">
+                                                        <strong>Rating:</strong>
+                                                        {% if note.report_summary.stock_rating == "Buy" %}
+                                                            <span class="badge bg-success">{{ note.report_summary.stock_rating }}</span>
+                                                        {% elif note.report_summary.stock_rating == "Sell" %}
+                                                            <span class="badge bg-danger">{{ note.report_summary.stock_rating }}</span>
+                                                        {% else %}
+                                                            <span class="badge bg-warning">{{ note.report_summary.stock_rating }}</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        </div>
 
-                                            <div class="row">
+                                        <!-- Authors -->
+                                        {% if note.report_summary.authors %}
+                                            <div class="mb-3">
+                                                <strong>Authors:</strong> {{ note.report_summary.authors|join:", " }}
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Recap -->
+                                        {% if note.report_summary.recap %}
+                                            <div class="mb-3">
+                                                <strong>Recap:</strong>
+                                                <p class="text-justify">{{ note.report_summary.recap }}</p>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Summary -->
+                                        {% if note.report_summary.summary %}
+                                            <div class="mb-3">
+                                                <strong>Summary:</strong>
+                                                <p class="text-justify">{{ note.report_summary.summary }}</p>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Executive Summary -->
+                                        {% if note.report_summary.executive_summary %}
+                                            <div class="mb-3">
+                                                <strong>Executive Summary:</strong>
+                                                <p class="text-justify">{{ note.report_summary.executive_summary }}</p>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Expectations -->
+                                        {% if note.report_summary.expectations %}
+                                            <div class="mb-3">
+                                                <strong>Expectations:</strong>
+                                                <p class="text-justify">{{ note.report_summary.expectations }}</p>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Risk Points and Opportunity Points Side by Side -->
+                                        {% if note.report_summary.risk_points or note.report_summary.opportunity_points %}
+                                            <div class="row mb-3">
+                                                {% if note.report_summary.risk_points %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-danger">Risk Points:</strong>
+                                                        <ul class="small">
+                                                            {% for point in note.report_summary.risk_points %}
+                                                                <li>{{ point }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                {% endif %}
+                                                {% if note.report_summary.opportunity_points %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-success">Opportunity Points:</strong>
+                                                        <ul class="small">
+                                                            {% for point in note.report_summary.opportunity_points %}
+                                                                <li>{{ point }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Bull Points and Bear Points Side by Side -->
+                                        {% if note.report_summary.bull_points or note.report_summary.bear_points %}
+                                            <div class="row mb-3">
                                                 {% if note.report_summary.bull_points %}
                                                     <div class="col-md-6">
                                                         <strong class="text-success">Bullish Points:</strong>
@@ -329,7 +388,6 @@
                                                         </ul>
                                                     </div>
                                                 {% endif %}
-
                                                 {% if note.report_summary.bear_points %}
                                                     <div class="col-md-6">
                                                         <strong class="text-danger">Bearish Points:</strong>
@@ -341,63 +399,35 @@
                                                     </div>
                                                 {% endif %}
                                             </div>
+                                        {% endif %}
 
-                                        {% elif note.report_type == "Industry Note" %}
-                                            <!-- Industry Note Format -->
-                                            {% if note.report_summary.sentiment %}
-                                                <div class="mb-2">
-                                                    <strong>Industry Sentiment:</strong>
-                                                    {% if note.report_summary.sentiment == "Positive" %}
-                                                        <span class="badge bg-success">{{ note.report_summary.sentiment }}</span>
-                                                    {% elif note.report_summary.sentiment == "Negative" %}
-                                                        <span class="badge bg-danger">{{ note.report_summary.sentiment }}</span>
-                                                    {% else %}
-                                                        <span class="badge bg-secondary">{{ note.report_summary.sentiment }}</span>
-                                                    {% endif %}
-                                                </div>
-                                            {% endif %}
+                                        <!-- Key Themes -->
+                                        {% if note.report_summary.key_themes %}
+                                            <div class="mb-3">
+                                                <strong>Key Themes:</strong>
+                                                <ul class="small">
+                                                    {% for theme in note.report_summary.key_themes %}
+                                                        <li>{{ theme }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        {% endif %}
 
-                                            {% if note.report_summary.executive_summary %}
-                                                <div class="mb-3">
-                                                    <strong>Executive Summary:</strong>
-                                                    <p class="text-justify">{{ note.report_summary.executive_summary }}</p>
-                                                </div>
-                                            {% endif %}
+                                        <!-- Key Dynamics -->
+                                        {% if note.report_summary.key_dynamics %}
+                                            <div class="mb-3">
+                                                <strong>Key Industry Dynamics:</strong>
+                                                <ul class="small">
+                                                    {% for dynamic in note.report_summary.key_dynamics %}
+                                                        <li>{{ dynamic }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        {% endif %}
 
-                                            {% if note.report_summary.key_dynamics %}
-                                                <div class="mb-3">
-                                                    <strong>Key Industry Dynamics:</strong>
-                                                    <ul class="small">
-                                                        {% for dynamic in note.report_summary.key_dynamics %}
-                                                            <li>{{ dynamic }}</li>
-                                                        {% endfor %}
-                                                    </ul>
-                                                </div>
-                                            {% endif %}
-
-                                        {% elif note.report_type == "Initiation Report" %}
-                                            <!-- Initiation Report Format -->
-                                            {% if note.report_summary.sentiment %}
-                                                <div class="mb-2">
-                                                    <strong>Sentiment:</strong>
-                                                    {% if note.report_summary.sentiment == "Positive" %}
-                                                        <span class="badge bg-success">{{ note.report_summary.sentiment }}</span>
-                                                    {% elif note.report_summary.sentiment == "Negative" %}
-                                                        <span class="badge bg-danger">{{ note.report_summary.sentiment }}</span>
-                                                    {% else %}
-                                                        <span class="badge bg-secondary">{{ note.report_summary.sentiment }}</span>
-                                                    {% endif %}
-                                                </div>
-                                            {% endif %}
-
-                                            {% if note.report_summary.summary %}
-                                                <div class="mb-3">
-                                                    <strong>Summary:</strong>
-                                                    <p class="text-justify">{{ note.report_summary.summary }}</p>
-                                                </div>
-                                            {% endif %}
-
-                                            <div class="row">
+                                        <!-- Positive and Negative Dynamics Side by Side -->
+                                        {% if note.report_summary.positive_dynamics or note.report_summary.negative_dynamics %}
+                                            <div class="row mb-3">
                                                 {% if note.report_summary.positive_dynamics %}
                                                     <div class="col-md-6">
                                                         <strong class="text-success">Positive Dynamics:</strong>
@@ -408,7 +438,6 @@
                                                         </ul>
                                                     </div>
                                                 {% endif %}
-
                                                 {% if note.report_summary.negative_dynamics %}
                                                     <div class="col-md-6">
                                                         <strong class="text-danger">Negative Dynamics:</strong>
@@ -420,32 +449,102 @@
                                                     </div>
                                                 {% endif %}
                                             </div>
+                                        {% endif %}
 
-                                        {% else %}
-                                            <!-- Generic/Other Report Types -->
-                                            <div class="small">
-                                                <strong>Summary Available:</strong>
-                                                <div class="bg-light p-2 border rounded mt-2" style="max-height: 200px; overflow-y: auto;">
-                                                    <p class="mb-1"><em>This report type has a custom summary format. Click "View Full Summary" to see the complete analysis.</em></p>
-                                                    {% if note.report_summary.executive_summary %}
-                                                        <div class="mb-2">
-                                                            <strong>Executive Summary:</strong>
-                                                            <p class="mb-0">{{ note.report_summary.executive_summary }}</p>
-                                                        </div>
-                                                    {% endif %}
-                                                    {% if note.report_summary.summary %}
-                                                        <div class="mb-2">
-                                                            <strong>Summary:</strong>
-                                                            <p class="mb-0">{{ note.report_summary.summary }}</p>
-                                                        </div>
-                                                    {% endif %}
-                                                    {% if note.report_summary.sentiment %}
-                                                        <div class="mb-2">
-                                                            <strong>Sentiment:</strong>
-                                                            <span class="badge bg-secondary">{{ note.report_summary.sentiment }}</span>
-                                                        </div>
-                                                    {% endif %}
+                                        <!-- Upside and Downside Valuation Side by Side -->
+                                        {% if note.report_summary.upside_valuation or note.report_summary.downside_valuation %}
+                                            <div class="row mb-3">
+                                                {% if note.report_summary.upside_valuation %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-success">Upside Valuation:</strong>
+                                                        <p class="small text-justify">{{ note.report_summary.upside_valuation }}</p>
+                                                    </div>
+                                                {% endif %}
+                                                {% if note.report_summary.downside_valuation %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-danger">Downside Valuation:</strong>
+                                                        <p class="small text-justify">{{ note.report_summary.downside_valuation }}</p>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Valuation Analysis -->
+                                        {% if note.report_summary.valuation_analysis %}
+                                            <div class="mb-3">
+                                                <strong>Valuation Analysis:</strong>
+                                                {% if note.report_summary.valuation_analysis|first %}
+                                                    <!-- List of items -->
+                                                    <ul class="small">
+                                                        {% for analysis in note.report_summary.valuation_analysis %}
+                                                            <li>{{ analysis }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                {% else %}
+                                                    <!-- Single string value -->
+                                                    <p class="small text-justify">{{ note.report_summary.valuation_analysis }}</p>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Stock Recaps -->
+                                        {% if note.report_summary.stock_recaps %}
+                                            <div class="mb-3">
+                                                <strong>Stock Coverage:</strong>
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Ticker</th>
+                                                                <th>Rating</th>
+                                                                <th>Outlook</th>
+                                                                <th>Valuation</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for stock in note.report_summary.stock_recaps %}
+                                                                <tr>
+                                                                    <td><strong>{{ stock.stock_ticker }}</strong></td>
+                                                                    <td>
+                                                                        {% if stock.stock_rating and stock.stock_rating != "None" %}
+                                                                            {% if stock.stock_rating == "Buy" %}
+                                                                                <span class="badge bg-success">{{ stock.stock_rating }}</span>
+                                                                            {% elif stock.stock_rating == "Sell" %}
+                                                                                <span class="badge bg-danger">{{ stock.stock_rating }}</span>
+                                                                            {% else %}
+                                                                                <span class="badge bg-warning">{{ stock.stock_rating }}</span>
+                                                                            {% endif %}
+                                                                        {% else %}
+                                                                            -
+                                                                        {% endif %}
+                                                                    </td>
+                                                                    <td class="small">{{ stock.stock_outlook|default:"-" }}</td>
+                                                                    <td class="small">{{ stock.stock_valuation|default:"-" }}</td>
+                                                                </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
                                                 </div>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Strategic Recommendations -->
+                                        {% if note.report_summary.strategic_recommendations %}
+                                            <div class="mb-3">
+                                                <strong>Strategic Recommendations:</strong>
+                                                <ul class="small">
+                                                    {% for recommendation in note.report_summary.strategic_recommendations %}
+                                                        <li>{{ recommendation }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Conclusion -->
+                                        {% if note.report_summary.conclusion %}
+                                            <div class="mb-3">
+                                                <strong>Conclusion:</strong>
+                                                <p class="text-justify">{{ note.report_summary.conclusion }}</p>
                                             </div>
                                         {% endif %}
                                     </div>
@@ -571,52 +670,111 @@
                                     <div class="mb-3">
                                         <h6 class="border-bottom pb-2">AI Summary</h6>
 
-                                        {% if note.report_type == "Company Update" %}
-                                            <!-- Company Update Format -->
-                                            <div class="row mb-3">
+                                        <!-- Top Row: Sentiment, Price Target, Stock Rating -->
+                                        <div class="row mb-3">
+                                            {% if note.report_summary.sentiment %}
                                                 <div class="col-md-4">
-                                                    {% if note.report_summary.sentiment %}
-                                                        <div class="mb-2">
-                                                            <strong>Sentiment:</strong>
-                                                            {% if note.report_summary.sentiment == "Positive" %}
-                                                                <span class="badge bg-success">{{ note.report_summary.sentiment }}</span>
-                                                            {% elif note.report_summary.sentiment == "Negative" %}
-                                                                <span class="badge bg-danger">{{ note.report_summary.sentiment }}</span>
-                                                            {% else %}
-                                                                <span class="badge bg-secondary">{{ note.report_summary.sentiment }}</span>
-                                                            {% endif %}
-                                                        </div>
-                                                    {% endif %}
-                                                </div>
-                                                <div class="col-md-4">
-                                                    {% if note.report_summary.price_target %}
-                                                        <div class="mb-2"><strong>Price Target:</strong> ${{ note.report_summary.price_target }}</div>
-                                                    {% endif %}
-                                                </div>
-                                                <div class="col-md-4">
-                                                    {% if note.report_summary.stock_rating %}
-                                                        <div class="mb-2">
-                                                            <strong>Rating:</strong>
-                                                            {% if note.report_summary.stock_rating == "Buy" %}
-                                                                <span class="badge bg-success">{{ note.report_summary.stock_rating }}</span>
-                                                            {% elif note.report_summary.stock_rating == "Sell" %}
-                                                                <span class="badge bg-danger">{{ note.report_summary.stock_rating }}</span>
-                                                            {% else %}
-                                                                <span class="badge bg-warning">{{ note.report_summary.stock_rating }}</span>
-                                                            {% endif %}
-                                                        </div>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-
-                                            {% if note.report_summary.executive_summary %}
-                                                <div class="mb-3">
-                                                    <strong>Executive Summary:</strong>
-                                                    <p class="text-justify">{{ note.report_summary.executive_summary }}</p>
+                                                    <div class="mb-2">
+                                                        <strong>Sentiment:</strong>
+                                                        {% if note.report_summary.sentiment == "Positive" %}
+                                                            <span class="badge bg-success">{{ note.report_summary.sentiment }}</span>
+                                                        {% elif note.report_summary.sentiment == "Negative" %}
+                                                            <span class="badge bg-danger">{{ note.report_summary.sentiment }}</span>
+                                                        {% else %}
+                                                            <span class="badge bg-secondary">{{ note.report_summary.sentiment }}</span>
+                                                        {% endif %}
+                                                    </div>
                                                 </div>
                                             {% endif %}
+                                            {% if note.report_summary.price_target %}
+                                                <div class="col-md-4">
+                                                    <div class="mb-2"><strong>Price Target:</strong> ${{ note.report_summary.price_target }}</div>
+                                                </div>
+                                            {% endif %}
+                                            {% if note.report_summary.stock_rating %}
+                                                <div class="col-md-4">
+                                                    <div class="mb-2">
+                                                        <strong>Rating:</strong>
+                                                        {% if note.report_summary.stock_rating == "Buy" %}
+                                                            <span class="badge bg-success">{{ note.report_summary.stock_rating }}</span>
+                                                        {% elif note.report_summary.stock_rating == "Sell" %}
+                                                            <span class="badge bg-danger">{{ note.report_summary.stock_rating }}</span>
+                                                        {% else %}
+                                                            <span class="badge bg-warning">{{ note.report_summary.stock_rating }}</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        </div>
 
-                                            <div class="row">
+                                        <!-- Authors -->
+                                        {% if note.report_summary.authors %}
+                                            <div class="mb-3">
+                                                <strong>Authors:</strong> {{ note.report_summary.authors|join:", " }}
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Recap -->
+                                        {% if note.report_summary.recap %}
+                                            <div class="mb-3">
+                                                <strong>Recap:</strong>
+                                                <p class="text-justify">{{ note.report_summary.recap }}</p>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Summary -->
+                                        {% if note.report_summary.summary %}
+                                            <div class="mb-3">
+                                                <strong>Summary:</strong>
+                                                <p class="text-justify">{{ note.report_summary.summary }}</p>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Executive Summary -->
+                                        {% if note.report_summary.executive_summary %}
+                                            <div class="mb-3">
+                                                <strong>Executive Summary:</strong>
+                                                <p class="text-justify">{{ note.report_summary.executive_summary }}</p>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Expectations -->
+                                        {% if note.report_summary.expectations %}
+                                            <div class="mb-3">
+                                                <strong>Expectations:</strong>
+                                                <p class="text-justify">{{ note.report_summary.expectations }}</p>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Risk Points and Opportunity Points Side by Side -->
+                                        {% if note.report_summary.risk_points or note.report_summary.opportunity_points %}
+                                            <div class="row mb-3">
+                                                {% if note.report_summary.risk_points %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-danger">Risk Points:</strong>
+                                                        <ul class="small">
+                                                            {% for point in note.report_summary.risk_points %}
+                                                                <li>{{ point }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                {% endif %}
+                                                {% if note.report_summary.opportunity_points %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-success">Opportunity Points:</strong>
+                                                        <ul class="small">
+                                                            {% for point in note.report_summary.opportunity_points %}
+                                                                <li>{{ point }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Bull Points and Bear Points Side by Side -->
+                                        {% if note.report_summary.bull_points or note.report_summary.bear_points %}
+                                            <div class="row mb-3">
                                                 {% if note.report_summary.bull_points %}
                                                     <div class="col-md-6">
                                                         <strong class="text-success">Bullish Points:</strong>
@@ -627,7 +785,6 @@
                                                         </ul>
                                                     </div>
                                                 {% endif %}
-
                                                 {% if note.report_summary.bear_points %}
                                                     <div class="col-md-6">
                                                         <strong class="text-danger">Bearish Points:</strong>
@@ -639,63 +796,35 @@
                                                     </div>
                                                 {% endif %}
                                             </div>
+                                        {% endif %}
 
-                                        {% elif note.report_type == "Industry Note" %}
-                                            <!-- Industry Note Format -->
-                                            {% if note.report_summary.sentiment %}
-                                                <div class="mb-2">
-                                                    <strong>Industry Sentiment:</strong>
-                                                    {% if note.report_summary.sentiment == "Positive" %}
-                                                        <span class="badge bg-success">{{ note.report_summary.sentiment }}</span>
-                                                    {% elif note.report_summary.sentiment == "Negative" %}
-                                                        <span class="badge bg-danger">{{ note.report_summary.sentiment }}</span>
-                                                    {% else %}
-                                                        <span class="badge bg-secondary">{{ note.report_summary.sentiment }}</span>
-                                                    {% endif %}
-                                                </div>
-                                            {% endif %}
+                                        <!-- Key Themes -->
+                                        {% if note.report_summary.key_themes %}
+                                            <div class="mb-3">
+                                                <strong>Key Themes:</strong>
+                                                <ul class="small">
+                                                    {% for theme in note.report_summary.key_themes %}
+                                                        <li>{{ theme }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        {% endif %}
 
-                                            {% if note.report_summary.executive_summary %}
-                                                <div class="mb-3">
-                                                    <strong>Executive Summary:</strong>
-                                                    <p class="text-justify">{{ note.report_summary.executive_summary }}</p>
-                                                </div>
-                                            {% endif %}
+                                        <!-- Key Dynamics -->
+                                        {% if note.report_summary.key_dynamics %}
+                                            <div class="mb-3">
+                                                <strong>Key Industry Dynamics:</strong>
+                                                <ul class="small">
+                                                    {% for dynamic in note.report_summary.key_dynamics %}
+                                                        <li>{{ dynamic }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        {% endif %}
 
-                                            {% if note.report_summary.key_dynamics %}
-                                                <div class="mb-3">
-                                                    <strong>Key Industry Dynamics:</strong>
-                                                    <ul class="small">
-                                                        {% for dynamic in note.report_summary.key_dynamics %}
-                                                            <li>{{ dynamic }}</li>
-                                                        {% endfor %}
-                                                    </ul>
-                                                </div>
-                                            {% endif %}
-
-                                        {% elif note.report_type == "Initiation Report" %}
-                                            <!-- Initiation Report Format -->
-                                            {% if note.report_summary.sentiment %}
-                                                <div class="mb-2">
-                                                    <strong>Sentiment:</strong>
-                                                    {% if note.report_summary.sentiment == "Positive" %}
-                                                        <span class="badge bg-success">{{ note.report_summary.sentiment }}</span>
-                                                    {% elif note.report_summary.sentiment == "Negative" %}
-                                                        <span class="badge bg-danger">{{ note.report_summary.sentiment }}</span>
-                                                    {% else %}
-                                                        <span class="badge bg-secondary">{{ note.report_summary.sentiment }}</span>
-                                                    {% endif %}
-                                                </div>
-                                            {% endif %}
-
-                                            {% if note.report_summary.summary %}
-                                                <div class="mb-3">
-                                                    <strong>Summary:</strong>
-                                                    <p class="text-justify">{{ note.report_summary.summary }}</p>
-                                                </div>
-                                            {% endif %}
-
-                                            <div class="row">
+                                        <!-- Positive and Negative Dynamics Side by Side -->
+                                        {% if note.report_summary.positive_dynamics or note.report_summary.negative_dynamics %}
+                                            <div class="row mb-3">
                                                 {% if note.report_summary.positive_dynamics %}
                                                     <div class="col-md-6">
                                                         <strong class="text-success">Positive Dynamics:</strong>
@@ -706,7 +835,6 @@
                                                         </ul>
                                                     </div>
                                                 {% endif %}
-
                                                 {% if note.report_summary.negative_dynamics %}
                                                     <div class="col-md-6">
                                                         <strong class="text-danger">Negative Dynamics:</strong>
@@ -718,32 +846,102 @@
                                                     </div>
                                                 {% endif %}
                                             </div>
+                                        {% endif %}
 
-                                        {% else %}
-                                            <!-- Generic/Other Report Types -->
-                                            <div class="small">
-                                                <strong>Summary Available:</strong>
-                                                <div class="bg-light p-2 border rounded mt-2" style="max-height: 200px; overflow-y: auto;">
-                                                    <p class="mb-1"><em>This report type has a custom summary format. Click "View Full Summary" to see the complete analysis.</em></p>
-                                                    {% if note.report_summary.executive_summary %}
-                                                        <div class="mb-2">
-                                                            <strong>Executive Summary:</strong>
-                                                            <p class="mb-0">{{ note.report_summary.executive_summary }}</p>
-                                                        </div>
-                                                    {% endif %}
-                                                    {% if note.report_summary.summary %}
-                                                        <div class="mb-2">
-                                                            <strong>Summary:</strong>
-                                                            <p class="mb-0">{{ note.report_summary.summary }}</p>
-                                                        </div>
-                                                    {% endif %}
-                                                    {% if note.report_summary.sentiment %}
-                                                        <div class="mb-2">
-                                                            <strong>Sentiment:</strong>
-                                                            <span class="badge bg-secondary">{{ note.report_summary.sentiment }}</span>
-                                                        </div>
-                                                    {% endif %}
+                                        <!-- Upside and Downside Valuation Side by Side -->
+                                        {% if note.report_summary.upside_valuation or note.report_summary.downside_valuation %}
+                                            <div class="row mb-3">
+                                                {% if note.report_summary.upside_valuation %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-success">Upside Valuation:</strong>
+                                                        <p class="small text-justify">{{ note.report_summary.upside_valuation }}</p>
+                                                    </div>
+                                                {% endif %}
+                                                {% if note.report_summary.downside_valuation %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-danger">Downside Valuation:</strong>
+                                                        <p class="small text-justify">{{ note.report_summary.downside_valuation }}</p>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Valuation Analysis -->
+                                        {% if note.report_summary.valuation_analysis %}
+                                            <div class="mb-3">
+                                                <strong>Valuation Analysis:</strong>
+                                                {% if note.report_summary.valuation_analysis|first %}
+                                                    <!-- List of items -->
+                                                    <ul class="small">
+                                                        {% for analysis in note.report_summary.valuation_analysis %}
+                                                            <li>{{ analysis }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                {% else %}
+                                                    <!-- Single string value -->
+                                                    <p class="small text-justify">{{ note.report_summary.valuation_analysis }}</p>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Stock Recaps -->
+                                        {% if note.report_summary.stock_recaps %}
+                                            <div class="mb-3">
+                                                <strong>Stock Coverage:</strong>
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Ticker</th>
+                                                                <th>Rating</th>
+                                                                <th>Outlook</th>
+                                                                <th>Valuation</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for stock in note.report_summary.stock_recaps %}
+                                                                <tr>
+                                                                    <td><strong>{{ stock.stock_ticker }}</strong></td>
+                                                                    <td>
+                                                                        {% if stock.stock_rating and stock.stock_rating != "None" %}
+                                                                            {% if stock.stock_rating == "Buy" %}
+                                                                                <span class="badge bg-success">{{ stock.stock_rating }}</span>
+                                                                            {% elif stock.stock_rating == "Sell" %}
+                                                                                <span class="badge bg-danger">{{ stock.stock_rating }}</span>
+                                                                            {% else %}
+                                                                                <span class="badge bg-warning">{{ stock.stock_rating }}</span>
+                                                                            {% endif %}
+                                                                        {% else %}
+                                                                            -
+                                                                        {% endif %}
+                                                                    </td>
+                                                                    <td class="small">{{ stock.stock_outlook|default:"-" }}</td>
+                                                                    <td class="small">{{ stock.stock_valuation|default:"-" }}</td>
+                                                                </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
                                                 </div>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Strategic Recommendations -->
+                                        {% if note.report_summary.strategic_recommendations %}
+                                            <div class="mb-3">
+                                                <strong>Strategic Recommendations:</strong>
+                                                <ul class="small">
+                                                    {% for recommendation in note.report_summary.strategic_recommendations %}
+                                                        <li>{{ recommendation }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Conclusion -->
+                                        {% if note.report_summary.conclusion %}
+                                            <div class="mb-3">
+                                                <strong>Conclusion:</strong>
+                                                <p class="text-justify">{{ note.report_summary.conclusion }}</p>
                                             </div>
                                         {% endif %}
                                     </div>
