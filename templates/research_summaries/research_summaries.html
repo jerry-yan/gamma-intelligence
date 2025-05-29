@@ -471,18 +471,20 @@
 
                                         <!-- Valuation Analysis -->
                                         {% if note.report_summary.valuation_analysis %}
-                                          <div class="mb-3">
-                                              <strong>Valuation:</strong>
-                                              {% if note.report_summary.valuation_analysis.0|stringformat:"s" != note.report_summary.valuation_analysis.0 %}
-                                                  <ul class="small">
-                                                      {% for analysis in note.report_summary.valuation_analysis %}
-                                                          <li>{{ analysis }}</li>
-                                                      {% endfor %}
-                                                  </ul>
-                                              {% else %}
-                                                  <p class="small text-justify">{{ note.report_summary.valuation_analysis }}</p>
-                                              {% endif %}
-                                          </div>
+                                            <div class="mb-3">
+                                                <strong>Valuation Analysis:</strong>
+                                                {% if note.report_summary.valuation_analysis.0 %}
+                                                    <!-- List of items -->
+                                                    <ul>
+                                                        {% for analysis in note.report_summary.valuation_analysis %}
+                                                            <li>{{ analysis }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                {% else %}
+                                                    <!-- Single string value -->
+                                                    <p class="text-justify">{{ note.report_summary.valuation_analysis }}</p>
+                                                {% endif %}
+                                            </div>
                                         {% endif %}
 
                                         <!-- Stock Recaps -->
@@ -516,8 +518,8 @@
                                                                             -
                                                                         {% endif %}
                                                                     </td>
-                                                                    <td class="small">{{ stock.stock_outlook|default:"-" }}</td>
-                                                                    <td class="small">{{ stock.stock_valuation|default:"-" }}</td>
+                                                                    <td>{{ stock.stock_outlook|default:"-" }}</td>
+                                                                    <td>{{ stock.stock_valuation|default:"-" }}</td>
                                                                 </tr>
                                                             {% endfor %}
                                                         </tbody>
@@ -530,7 +532,7 @@
                                         {% if note.report_summary.strategic_recommendations %}
                                             <div class="mb-3">
                                                 <strong>Strategic Recommendations:</strong>
-                                                <ul class="small">
+                                                <ul>
                                                     {% for recommendation in note.report_summary.strategic_recommendations %}
                                                         <li>{{ recommendation }}</li>
                                                     {% endfor %}
@@ -866,21 +868,21 @@
 
                                         <!-- Valuation Analysis -->
                                         {% if note.report_summary.valuation_analysis %}
-                                          <div class="mb-3">
-                                              <strong>Valuation:</strong>
-
-                                              {% if note.report_summary.valuation_analysis.0|stringformat:"s" != note.report_summary.valuation_analysis.0 %}
-                                                  <ul class="small">
-                                                      {% for analysis in note.report_summary.valuation_analysis %}
-                                                          <li>{{ analysis }}</li>
-                                                      {% endfor %}
-                                                  </ul>
-                                              {% else %}
-                                                  <p class="small text-justify">{{ note.report_summary.valuation_analysis }}</p>
-                                              {% endif %}
-                                          </div>
+                                            <div class="mb-3">
+                                                <strong>Valuation Analysis:</strong>
+                                                {% if note.report_summary.valuation_analysis|first %}
+                                                    <!-- List of items -->
+                                                    <ul class="small">
+                                                        {% for analysis in note.report_summary.valuation_analysis %}
+                                                            <li>{{ analysis }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                {% else %}
+                                                    <!-- Single string value -->
+                                                    <p class="small text-justify">{{ note.report_summary.valuation_analysis }}</p>
+                                                {% endif %}
+                                            </div>
                                         {% endif %}
-
 
                                         <!-- Stock Recaps -->
                                         {% if note.report_summary.stock_recaps %}
