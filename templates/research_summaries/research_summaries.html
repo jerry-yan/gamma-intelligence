@@ -425,28 +425,29 @@
                                             </div>
 
                                         {% else %}
-                                            <!-- Generic Format -->
+                                            <!-- Generic/Other Report Types -->
                                             <div class="small">
-                                                <strong>Summary Data:</strong>
+                                                <strong>Summary Available:</strong>
                                                 <div class="bg-light p-2 border rounded mt-2" style="max-height: 200px; overflow-y: auto;">
-                                                    {% for key, value in note.report_summary.items %}
-                                                        <div class="mb-1">
-                                                            <strong>{{ key|title }}:</strong>
-                                                            {% if value|length_is:"1" and value.0|add:0 != value.0 %}
-                                                                {{ value }}
-                                                            {% else %}
-                                                                {% if value|first %}
-                                                                    <ul class="mb-0">
-                                                                        {% for item in value %}
-                                                                            <li>{{ item }}</li>
-                                                                        {% endfor %}
-                                                                    </ul>
-                                                                {% else %}
-                                                                    {{ value }}
-                                                                {% endif %}
-                                                            {% endif %}
+                                                    <p class="mb-1"><em>This report type has a custom summary format. Click "View Full Summary" to see the complete analysis.</em></p>
+                                                    {% if note.report_summary.executive_summary %}
+                                                        <div class="mb-2">
+                                                            <strong>Executive Summary:</strong>
+                                                            <p class="mb-0">{{ note.report_summary.executive_summary }}</p>
                                                         </div>
-                                                    {% endfor %}
+                                                    {% endif %}
+                                                    {% if note.report_summary.summary %}
+                                                        <div class="mb-2">
+                                                            <strong>Summary:</strong>
+                                                            <p class="mb-0">{{ note.report_summary.summary }}</p>
+                                                        </div>
+                                                    {% endif %}
+                                                    {% if note.report_summary.sentiment %}
+                                                        <div class="mb-2">
+                                                            <strong>Sentiment:</strong>
+                                                            <span class="badge bg-secondary">{{ note.report_summary.sentiment }}</span>
+                                                        </div>
+                                                    {% endif %}
                                                 </div>
                                             </div>
                                         {% endif %}
