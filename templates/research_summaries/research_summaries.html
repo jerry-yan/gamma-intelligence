@@ -355,7 +355,7 @@
                                                 {% if note.report_summary.risk_points %}
                                                     <div class="col-md-6">
                                                         <strong class="text-danger">Risk Points:</strong>
-                                                        <ul class="small">
+                                                        <ul>
                                                             {% for point in note.report_summary.risk_points %}
                                                                 <li>{{ point }}</li>
                                                             {% endfor %}
@@ -365,7 +365,7 @@
                                                 {% if note.report_summary.opportunity_points %}
                                                     <div class="col-md-6">
                                                         <strong class="text-success">Opportunity Points:</strong>
-                                                        <ul class="small">
+                                                        <ul>
                                                             {% for point in note.report_summary.opportunity_points %}
                                                                 <li>{{ point }}</li>
                                                             {% endfor %}
@@ -381,7 +381,7 @@
                                                 {% if note.report_summary.bull_points %}
                                                     <div class="col-md-6">
                                                         <strong class="text-success">Bullish Points:</strong>
-                                                        <ul class="small">
+                                                        <ul>
                                                             {% for point in note.report_summary.bull_points %}
                                                                 <li>{{ point }}</li>
                                                             {% endfor %}
@@ -391,7 +391,7 @@
                                                 {% if note.report_summary.bear_points %}
                                                     <div class="col-md-6">
                                                         <strong class="text-danger">Bearish Points:</strong>
-                                                        <ul class="small">
+                                                        <ul>
                                                             {% for point in note.report_summary.bear_points %}
                                                                 <li>{{ point }}</li>
                                                             {% endfor %}
@@ -405,7 +405,7 @@
                                         {% if note.report_summary.key_themes %}
                                             <div class="mb-3">
                                                 <strong>Key Themes:</strong>
-                                                <ul class="small">
+                                                <ul>
                                                     {% for theme in note.report_summary.key_themes %}
                                                         <li>{{ theme }}</li>
                                                     {% endfor %}
@@ -417,7 +417,7 @@
                                         {% if note.report_summary.key_dynamics %}
                                             <div class="mb-3">
                                                 <strong>Key Industry Dynamics:</strong>
-                                                <ul class="small">
+                                                <ul>
                                                     {% for dynamic in note.report_summary.key_dynamics %}
                                                         <li>{{ dynamic }}</li>
                                                     {% endfor %}
@@ -431,7 +431,7 @@
                                                 {% if note.report_summary.positive_dynamics %}
                                                     <div class="col-md-6">
                                                         <strong class="text-success">Positive Dynamics:</strong>
-                                                        <ul class="small">
+                                                        <ul>
                                                             {% for dynamic in note.report_summary.positive_dynamics %}
                                                                 <li>{{ dynamic }}</li>
                                                             {% endfor %}
@@ -441,7 +441,7 @@
                                                 {% if note.report_summary.negative_dynamics %}
                                                     <div class="col-md-6">
                                                         <strong class="text-danger">Negative Dynamics:</strong>
-                                                        <ul class="small">
+                                                        <ul>
                                                             {% for dynamic in note.report_summary.negative_dynamics %}
                                                                 <li>{{ dynamic }}</li>
                                                             {% endfor %}
@@ -457,13 +457,13 @@
                                                 {% if note.report_summary.upside_valuation %}
                                                     <div class="col-md-6">
                                                         <strong class="text-success">Upside Valuation:</strong>
-                                                        <p class="small text-justify">{{ note.report_summary.upside_valuation }}</p>
+                                                        <p class="small">{{ note.report_summary.upside_valuation }}</p>
                                                     </div>
                                                 {% endif %}
                                                 {% if note.report_summary.downside_valuation %}
                                                     <div class="col-md-6">
                                                         <strong class="text-danger">Downside Valuation:</strong>
-                                                        <p class="small text-justify">{{ note.report_summary.downside_valuation }}</p>
+                                                        <p class="small">{{ note.report_summary.downside_valuation }}</p>
                                                     </div>
                                                 {% endif %}
                                             </div>
@@ -473,17 +473,19 @@
                                         {% if note.report_summary.valuation_analysis %}
                                             <div class="mb-3">
                                                 <strong>Valuation:</strong>
-                                                {% if note.report_summary.valuation_analysis.1 %}
-                                                    <!-- List of items (has multiple elements) -->
-                                                    <ul>
-                                                        {% for analysis in note.report_summary.valuation_analysis %}
-                                                            <li>{{ analysis }}</li>
-                                                        {% endfor %}
-                                                    </ul>
-                                                {% else %}
-                                                    <!-- Single string value -->
-                                                    <p class="text-justify">{{ note.report_summary.valuation_analysis }}</p>
-                                                {% endif %}
+                                                {% with first=note.report_summary.valuation_analysis.0 %}
+                                                    {% if first|stringformat:"s" != first %}
+                                                        <!-- It's a list/array -->
+                                                        <ul>
+                                                            {% for analysis in note.report_summary.valuation_analysis %}
+                                                                <li>{{ analysis }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    {% else %}
+                                                        <!-- It's a string -->
+                                                        <p class="small">{{ note.report_summary.valuation_analysis }}</p>
+                                                    {% endif %}
+                                                {% endwith %}
                                             </div>
                                         {% endif %}
 
