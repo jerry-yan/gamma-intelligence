@@ -3,114 +3,310 @@
 {% block title %}Research Summaries - Gamma Intelligence{% endblock %}
 
 {% block content %}
-<div class="row">
+<!-- Header Section -->
+<div class="row mb-4">
     <div class="col-md-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>Research Summaries</h2>
-            <button class="btn btn-primary">+ Upload New Research</button>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2>Research Summaries</h2>
+                <p class="text-muted">Manage and explore your financial research reports</p>
+            </div>
+            <div class="dropdown">
+                <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    Admin Tools
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'research_summaries:email_test' %}">📧 Email Test</a></li>
+                    <li><a class="dropdown-item" href="{% url 'research_summaries:download_test' %}">📥 Download Test</a></li>
+                    <li><a class="dropdown-item" href="{% url 'research_summaries:document_cleaner_page' %}">🧹 Document Cleaner</a></li>
+                    <li><a class="dropdown-item" href="{% url 'research_summaries:document_summarizer_page' %}">📝 Summarizer</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Dashboard -->
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-3">
+                <h4 class="text-primary mb-0">{{ status_counts.total }}</h4>
+                <small class="text-muted">Total Reports</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-3">
+                <h4 class="text-secondary mb-0">{{ status_counts.not_downloaded }}</h4>
+                <small class="text-muted">Pending</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-3">
+                <h4 class="text-info mb-0">{{ status_counts.downloaded }}</h4>
+                <small class="text-muted">Downloaded</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-3">
+                <h4 class="text-warning mb-0">{{ status_counts.preprocessed }}</h4>
+                <small class="text-muted">Cleaned</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-3">
+                <h4 class="text-success mb-0">{{ status_counts.summarized }}</h4>
+                <small class="text-muted">Summarized</small>
+            </div>
         </div>
     </div>
 </div>
 
 <div class="row">
+    <!-- Filters Sidebar -->
     <div class="col-md-3">
-        <!-- Filters Sidebar -->
         <div class="card">
             <div class="card-header">
-                <h5>Filters</h5>
+                <h5>Filters & Search</h5>
             </div>
             <div class="card-body">
-                <div class="mb-3">
-                    <label class="form-label">Source</label>
-                    <select class="form-select">
-                        <option>All Sources</option>
-                        <option>Goldman Sachs</option>
-                        <option>Morgan Stanley</option>
-                    </select>
+                <form method="get" action="">
+                    <!-- Search -->
+                    <div class="mb-3">
+                        <label class="form-label">Search</label>
+                        <input type="text" name="search" class="form-control" placeholder="Title, author, company..." value="{{ current_filters.search }}">
+                    </div>
+                    
+                    <!-- Status Filter -->
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="">All Status</option>
+                            {% for status_value, status_label in status_choices %}
+                                <option value="{{ status_value }}" {% if current_filters.status == status_value|stringformat:"s" %}selected{% endif %}>
+                                    {{ status_label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Source Filter -->
+                    <div class="mb-3">
+                        <label class="form-label">Source</label>
+                        <select name="source" class="form-select">
+                            <option value="">All Sources</option>
+                            {% for source in sources %}
+                                <option value="{{ source }}" {% if current_filters.source == source %}selected{% endif %}>
+                                    {{ source }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100 mb-2">Apply Filters</button>
+                    <a href="{% url 'research_summaries:research_summaries' %}" class="btn btn-outline-secondary w-100">Clear All</a>
+                </form>
+                
+                <!-- Recent Activity -->
+                <hr class="mt-4">
+                <h6>Recent Summaries</h6>
+                <div style="max-height: 200px; overflow-y: auto;">
+                    {% for note in recent_summaries %}
+                        <div class="border-bottom pb-2 mb-2">
+                            <a href="{% url 'research_summaries:note_detail' note.id %}" class="text-decoration-none">
+                                <strong class="small">{{ note.raw_title|default:"Untitled"|truncatechars:30 }}</strong>
+                            </a>
+                            <br>
+                            <small class="text-muted">
+                                {% if note.parsed_ticker %}{{ note.parsed_ticker }} | {% endif %}
+                                {{ note.file_summary_time|date:"M d" }}
+                            </small>
+                        </div>
+                    {% empty %}
+                        <p class="text-muted small">No recent summaries</p>
+                    {% endfor %}
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Status</label>
-                    <select class="form-select">
-                        <option>All Status</option>
-                        <option>Downloaded</option>
-                        <option>Summarized</option>
-                    </select>
-                </div>
-                <button class="btn btn-outline-primary btn-sm w-100">Apply Filters</button>
             </div>
         </div>
     </div>
 
+    <!-- Main Content -->
     <div class="col-md-9">
-        <!-- Sample Research Items -->
+        <!-- Results Header -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h5>Research Reports</h5>
+                <small class="text-muted">
+                    {% if page_obj.paginator.count %}
+                        Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }} results
+                    {% else %}
+                        No results found
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+
+        <!-- Research Notes List -->
+        {% for note in research_notes %}
         <div class="card mb-3">
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-8">
-                        <h5 class="card-title">Technology Sector Outlook 2025</h5>
-                        <p class="card-text text-muted">
-                            <strong>Source:</strong> Goldman Sachs |
-                            <strong>Author:</strong> Kash Rangan |
-                            <strong>Companies:</strong> Multiple (15)
+                        <h5 class="card-title">
+                            {{ note.raw_title|default:"Untitled Research Report" }}
+                            {% if note.parsed_ticker %}
+                                <span class="badge bg-primary ms-2">{{ note.parsed_ticker }}</span>
+                            {% endif %}
+                        </h5>
+                        
+                        <p class="card-text text-muted mb-2">
+                            <strong>Source:</strong> {{ note.source|default:"Unknown" }}
+                            {% if note.raw_author %}
+                                | <strong>Author:</strong> {{ note.raw_author }}
+                            {% endif %}
+                            {% if note.raw_companies %}
+                                | <strong>Companies:</strong> {{ note.raw_companies|truncatechars:50 }} ({{ note.raw_company_count|default:0 }})
+                            {% endif %}
                         </p>
-                        <p class="card-text">
-                            Annual technology sector report covering AI trends, cloud computing growth,
-                            and semiconductor market dynamics.
-                        </p>
-                        <small class="text-muted">Downloaded: January 12, 2025 | Pages: 45</small>
+                        
+                        {% if note.report_type %}
+                            <p class="card-text">
+                                <span class="badge bg-secondary">{{ note.report_type }}</span>
+                                {% if note.report_summary %}
+                                    <span class="ms-2">
+                                        {% if note.report_summary.executive_summary %}
+                                            {{ note.report_summary.executive_summary|truncatewords:25 }}
+                                        {% elif note.report_summary.summary %}
+                                            {{ note.report_summary.summary|truncatewords:25 }}
+                                        {% elif note.report_summary.recap %}
+                                            {{ note.report_summary.recap|truncatewords:25 }}
+                                        {% else %}
+                                            Summary available - click to view details
+                                        {% endif %}
+                                    </span>
+                                {% endif %}
+                            </p>
+                        {% endif %}
+                        
+                        <small class="text-muted">
+                            <strong>Created:</strong> {{ note.created_at|date:"M d, Y H:i" }}
+                            {% if note.file_download_time %}
+                                | <strong>Downloaded:</strong> {{ note.file_download_time|date:"M d, Y H:i" }}
+                            {% endif %}
+                            {% if note.file_summary_time %}
+                                | <strong>Summarized:</strong> {{ note.file_summary_time|date:"M d, Y H:i" }}
+                            {% endif %}
+                            {% if note.raw_page_count %}
+                                | <strong>Pages:</strong> {{ note.raw_page_count }}
+                            {% endif %}
+                        </small>
                     </div>
+                    
                     <div class="col-md-4 text-end">
-                        <span class="badge bg-success mb-2">Summarized</span><br>
-                        <button class="btn btn-outline-primary btn-sm mb-1">View PDF</button><br>
-                        <button class="btn btn-primary btn-sm">View Summary</button>
+                        <!-- Status Badge -->
+                        {% if note.status == 0 %}
+                            <span class="badge bg-secondary mb-2 d-block">Not Downloaded</span>
+                        {% elif note.status == 1 %}
+                            <span class="badge bg-info mb-2 d-block">Downloaded</span>
+                        {% elif note.status == 2 %}
+                            <span class="badge bg-warning mb-2 d-block">Preprocessed</span>
+                        {% elif note.status == 3 %}
+                            <span class="badge bg-success mb-2 d-block">Summarized</span>
+                        {% elif note.status == 10 %}
+                            <span class="badge bg-danger mb-2 d-block">Error</span>
+                        {% endif %}
+                        
+                        <!-- Action Buttons -->
+                        <div class="btn-group-vertical d-grid gap-1">
+                            {% if note.status >= 3 %}
+                                <a href="{% url 'research_summaries:note_detail' note.id %}" class="btn btn-primary btn-sm">
+                                    📄 View Summary
+                                </a>
+                            {% endif %}
+                            
+                            {% if note.file_directory and note.status >= 1 %}
+                                <button class="btn btn-outline-primary btn-sm" onclick="viewPDF('{{ note.file_directory }}')">
+                                    📎 View PDF
+                                </button>
+                            {% endif %}
+                            
+                            {% if note.download_link %}
+                                <a href="{{ note.download_link }}" target="_blank" class="btn btn-outline-secondary btn-sm">
+                                    🔗 Original Link
+                                </a>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+        {% empty %}
+        <div class="text-center py-5">
+            <h4 class="text-muted">No Research Reports Found</h4>
+            <p class="text-muted">Try adjusting your filters or check back later for new reports.</p>
+        </div>
+        {% endfor %}
 
-        <div class="card mb-3">
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-8">
-                        <h5 class="card-title">Microsoft Corporation - Cloud Revenue Analysis</h5>
-                        <p class="card-text text-muted">
-                            <strong>Source:</strong> Morgan Stanley |
-                            <strong>Author:</strong> Keith Weiss |
-                            <strong>Ticker:</strong> MSFT
-                        </p>
-                        <p class="card-text">
-                            Deep dive into Microsoft's Azure growth trajectory and Office 365 subscription trends.
-                        </p>
-                        <small class="text-muted">Downloaded: January 10, 2025 | Pages: 8</small>
-                    </div>
-                    <div class="col-md-4 text-end">
-                        <span class="badge bg-info mb-2">Downloaded</span><br>
-                        <button class="btn btn-outline-primary btn-sm mb-1">View PDF</button><br>
-                        <button class="btn btn-outline-secondary btn-sm" disabled>Pending</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Statistics Row -->
-        <div class="row mt-4">
-            <div class="col-md-6">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h5 class="card-title text-primary">2</h5>
-                        <p class="card-text">Total Reports</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h5 class="card-title text-success">1</h5>
-                        <p class="card-text">Summarized</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Research notes pagination">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.status %}status={{ current_filters.status }}&{% endif %}{% if current_filters.source %}source={{ current_filters.source }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
+                    </li>
+                {% endif %}
+                
+                {% for page_num in page_obj.paginator.page_range %}
+                    {% if page_num == page_obj.number %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                    {% elif page_num > page_obj.number|add:'-3' and page_num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.status %}status={{ current_filters.status }}&{% endif %}{% if current_filters.source %}source={{ current_filters.source }}&{% endif %}page={{ page_num }}">{{ page_num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.status %}status={{ current_filters.status }}&{% endif %}{% if current_filters.source %}source={{ current_filters.source }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
     </div>
 </div>
+
+<script>
+function viewPDF(fileDirectory) {
+    // Handle PDF viewing - you can customize this based on how you want to display PDFs
+    if (fileDirectory.includes('s3://') || fileDirectory.includes('amazonaws.com')) {
+        alert('PDF viewing from S3 requires additional setup. File location: ' + fileDirectory);
+    } else {
+        window.open(fileDirectory, '_blank');
+    }
+}
+
+// Auto-submit form on select change for better UX
+document.addEventListener('DOMContentLoaded', function() {
+    const selects = document.querySelectorAll('select[name="status"], select[name="source"]');
+    selects.forEach(select => {
+        select.addEventListener('change', function() {
+            this.form.submit();
+        });
+    });
+});
+</script>
+
 {% endblock %}

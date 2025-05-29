@@ -35,7 +35,7 @@ class Command(BaseCommand):
                 )
 
                 # Wait 2 hours
-                self.stdout.write('😴 Sleeping for 2 hours...')
+                self.stdout.write('😴 Sleeping for 1 minute...')
                 time.sleep(60) # sleep 1 minute
                 # time.sleep(2 * 60 * 60)  # 2 hours in seconds
 

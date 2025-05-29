@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block title %}Research Summaries - Gamma Intelligence{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Research Summaries</h2>
+            <button class="btn btn-primary">+ Upload New Research</button>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3">
+        <!-- Filters Sidebar -->
+        <div class="card">
+            <div class="card-header">
+                <h5>Filters</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Source</label>
+                    <select class="form-select">
+                        <option>All Sources</option>
+                        <option>Goldman Sachs</option>
+                        <option>Morgan Stanley</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Status</label>
+                    <select class="form-select">
+                        <option>All Status</option>
+                        <option>Downloaded</option>
+                        <option>Summarized</option>
+                    </select>
+                </div>
+                <button class="btn btn-outline-primary btn-sm w-100">Apply Filters</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <!-- Sample Research Items -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h5 class="card-title">Technology Sector Outlook 2025</h5>
+                        <p class="card-text text-muted">
+                            <strong>Source:</strong> Goldman Sachs |
+                            <strong>Author:</strong> Kash Rangan |
+                            <strong>Companies:</strong> Multiple (15)
+                        </p>
+                        <p class="card-text">
+                            Annual technology sector report covering AI trends, cloud computing growth,
+                            and semiconductor market dynamics.
+                        </p>
+                        <small class="text-muted">Downloaded: January 12, 2025 | Pages: 45</small>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <span class="badge bg-success mb-2">Summarized</span><br>
+                        <button class="btn btn-outline-primary btn-sm mb-1">View PDF</button><br>
+                        <button class="btn btn-primary btn-sm">View Summary</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h5 class="card-title">Microsoft Corporation - Cloud Revenue Analysis</h5>
+                        <p class="card-text text-muted">
+                            <strong>Source:</strong> Morgan Stanley |
+                            <strong>Author:</strong> Keith Weiss |
+                            <strong>Ticker:</strong> MSFT
+                        </p>
+                        <p class="card-text">
+                            Deep dive into Microsoft's Azure growth trajectory and Office 365 subscription trends.
+                        </p>
+                        <small class="text-muted">Downloaded: January 10, 2025 | Pages: 8</small>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <span class="badge bg-info mb-2">Downloaded</span><br>
+                        <button class="btn btn-outline-primary btn-sm mb-1">View PDF</button><br>
+                        <button class="btn btn-outline-secondary btn-sm" disabled>Pending</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Row -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">2</h5>
+                        <p class="card-text">Total Reports</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-success">1</h5>
+                        <p class="card-text">Summarized</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

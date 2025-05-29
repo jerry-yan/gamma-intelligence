@@ -1,0 +1,366 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ note.raw_title|default:"Research Report" }} - Gamma Intelligence{% endblock %}
+
+{% block content %}
+<!-- Navigation Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'research_summaries:research_summaries' %}">Research Summaries</a></li>
+        <li class="breadcrumb-item active">{{ note.raw_title|default:"Report"|truncatechars:50 }}</li>
+    </ol>
+</nav>
+
+<!-- Header Section -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="mb-2">{{ note.raw_title|default:"Untitled Research Report" }}</h1>
+        {% if note.parsed_ticker %}
+            <span class="badge bg-primary fs-6 me-2">{{ note.parsed_ticker }}</span>
+        {% endif %}
+        {% if note.report_type %}
+            <span class="badge bg-secondary fs-6">{{ note.report_type }}</span>
+        {% endif %}
+    </div>
+    <div class="col-md-4 text-end">
+        {% if note.status == 0 %}
+            <span class="badge bg-secondary fs-6">Not Downloaded</span>
+        {% elif note.status == 1 %}
+            <span class="badge bg-info fs-6">Downloaded</span>
+        {% elif note.status == 2 %}
+            <span class="badge bg-warning fs-6">Preprocessed</span>
+        {% elif note.status == 3 %}
+            <span class="badge bg-success fs-6">Summarized</span>
+        {% elif note.status == 10 %}
+            <span class="badge bg-danger fs-6">Error</span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Metadata Card -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5>Report Information</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Source:</strong> {{ note.source|default:"Unknown" }}</p>
+                <p><strong>Author:</strong> {{ note.raw_author|default:"Unknown" }}</p>
+                <p><strong>Companies:</strong> 
+                    {% if note.raw_companies %}
+                        {{ note.raw_companies }} ({{ note.raw_company_count|default:0 }} companies)
+                    {% else %}
+                        Not specified
+                    {% endif %}
+                </p>
+                <p><strong>Pages:</strong> {{ note.raw_page_count|default:"Unknown" }}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Created:</strong> {{ note.created_at|date:"F d, Y g:i A" }}</p>
+                {% if note.file_download_time %}
+                    <p><strong>Downloaded:</strong> {{ note.file_download_time|date:"F d, Y g:i A" }}</p>
+                {% endif %}
+                {% if note.file_summary_time %}
+                    <p><strong>Summarized:</strong> {{ note.file_summary_time|date:"F d, Y g:i A" }}</p>
+                {% endif %}
+                <p><strong>File ID:</strong> {{ note.file_id|default:"Unknown" }}</p>
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="mt-3">
+            {% if note.file_directory and note.status >= 1 %}
+                <button class="btn btn-primary me-2" onclick="viewPDF('{{ note.file_directory }}')">
+                    📎 View PDF
+                </button>
+            {% endif %}
+            {% if note.download_link %}
+                <a href="{{ note.download_link }}" target="_blank" class="btn btn-outline-primary me-2">
+                    🔗 Original Link
+                </a>
+            {% endif %}
+            <a href="{% url 'research_summaries:research_summaries' %}" class="btn btn-outline-secondary">
+                ← Back to List
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Section -->
+{% if summary_data %}
+<div class="card">
+    <div class="card-header">
+        <h5>AI-Generated Summary</h5>
+    </div>
+    <div class="card-body">
+        {% if note.report_type == "Company Update" %}
+            <!-- Company Update Format -->
+            <div class="row">
+                <div class="col-md-6">
+                    {% if summary_data.sentiment %}
+                        <p><strong>Sentiment:</strong> 
+                            {% if summary_data.sentiment == "Positive" %}
+                                <span class="badge bg-success">{{ summary_data.sentiment }}</span>
+                            {% elif summary_data.sentiment == "Negative" %}
+                                <span class="badge bg-danger">{{ summary_data.sentiment }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ summary_data.sentiment }}</span>
+                            {% endif %}
+                        </p>
+                    {% endif %}
+                    {% if summary_data.price_target %}
+                        <p><strong>Price Target:</strong> ${{ summary_data.price_target }}</p>
+                    {% endif %}
+                    {% if summary_data.stock_rating %}
+                        <p><strong>Rating:</strong> 
+                            {% if summary_data.stock_rating == "Buy" %}
+                                <span class="badge bg-success">{{ summary_data.stock_rating }}</span>
+                            {% elif summary_data.stock_rating == "Sell" %}
+                                <span class="badge bg-danger">{{ summary_data.stock_rating }}</span>
+                            {% else %}
+                                <span class="badge bg-warning">{{ summary_data.stock_rating }}</span>
+                            {% endif %}
+                        </p>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    {% if summary_data.authors %}
+                        <p><strong>Authors:</strong> {{ summary_data.authors|join:", " }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if summary_data.executive_summary %}
+                <h6 class="mt-4">Executive Summary</h6>
+                <p>{{ summary_data.executive_summary }}</p>
+            {% endif %}
+            
+            {% if summary_data.bull_points %}
+                <h6 class="mt-4">Bullish Points</h6>
+                <ul>
+                    {% for point in summary_data.bull_points %}
+                        <li>{{ point }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+            
+            {% if summary_data.bear_points %}
+                <h6 class="mt-4">Bearish Points</h6>
+                <ul>
+                    {% for point in summary_data.bear_points %}
+                        <li>{{ point }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+            
+            {% if summary_data.valuation_analysis %}
+                <h6 class="mt-4">Valuation Analysis</h6>
+                <p>{{ summary_data.valuation_analysis }}</p>
+            {% endif %}
+            
+            {% if summary_data.extra_details %}
+                <h6 class="mt-4">Additional Details</h6>
+                <p>{{ summary_data.extra_details }}</p>
+            {% endif %}
+
+        {% elif note.report_type == "Industry Note" %}
+            <!-- Industry Note Format -->
+            {% if summary_data.sentiment %}
+                <p><strong>Industry Sentiment:</strong> 
+                    {% if summary_data.sentiment == "Positive" %}
+                        <span class="badge bg-success">{{ summary_data.sentiment }}</span>
+                    {% elif summary_data.sentiment == "Negative" %}
+                        <span class="badge bg-danger">{{ summary_data.sentiment }}</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ summary_data.sentiment }}</span>
+                    {% endif %}
+                </p>
+            {% endif %}
+            
+            {% if summary_data.executive_summary %}
+                <h6 class="mt-4">Executive Summary</h6>
+                <p>{{ summary_data.executive_summary }}</p>
+            {% endif %}
+            
+            {% if summary_data.key_dynamics %}
+                <h6 class="mt-4">Key Industry Dynamics</h6>
+                <ul>
+                    {% for dynamic in summary_data.key_dynamics %}
+                        <li>{{ dynamic }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+            
+            {% if summary_data.valuation_analysis %}
+                <h6 class="mt-4">Valuation Analysis</h6>
+                <ul>
+                    {% for analysis in summary_data.valuation_analysis %}
+                        <li>{{ analysis }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+            
+            {% if summary_data.stock_recaps %}
+                <h6 class="mt-4">Stock Coverage</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Ticker</th>
+                                <th>Rating</th>
+                                <th>Outlook</th>
+                                <th>Valuation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stock in summary_data.stock_recaps %}
+                                <tr>
+                                    <td><strong>{{ stock.stock_ticker }}</strong></td>
+                                    <td>
+                                        {% if stock.stock_rating and stock.stock_rating != "None" %}
+                                            {% if stock.stock_rating == "Buy" %}
+                                                <span class="badge bg-success">{{ stock.stock_rating }}</span>
+                                            {% elif stock.stock_rating == "Sell" %}
+                                                <span class="badge bg-danger">{{ stock.stock_rating }}</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">{{ stock.stock_rating }}</span>
+                                            {% endif %}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ stock.stock_outlook|default:"-" }}</td>
+                                    <td>{{ stock.stock_valuation|default:"-" }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+
+        {% elif note.report_type == "Initiation Report" %}
+            <!-- Initiation Report Format -->
+            {% if summary_data.sentiment %}
+                <p><strong>Sentiment:</strong> 
+                    {% if summary_data.sentiment == "Positive" %}
+                        <span class="badge bg-success">{{ summary_data.sentiment }}</span>
+                    {% elif summary_data.sentiment == "Negative" %}
+                        <span class="badge bg-danger">{{ summary_data.sentiment }}</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ summary_data.sentiment }}</span>
+                    {% endif %}
+                </p>
+            {% endif %}
+            
+            {% if summary_data.summary %}
+                <h6 class="mt-4">Summary</h6>
+                <p>{{ summary_data.summary }}</p>
+            {% endif %}
+            
+            <div class="row">
+                <div class="col-md-6">
+                    {% if summary_data.positive_dynamics %}
+                        <h6 class="mt-4">Positive Dynamics</h6>
+                        <ul>
+                            {% for dynamic in summary_data.positive_dynamics %}
+                                <li>{{ dynamic }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    {% if summary_data.negative_dynamics %}
+                        <h6 class="mt-4">Negative Dynamics</h6>
+                        <ul>
+                            {% for dynamic in summary_data.negative_dynamics %}
+                                <li>{{ dynamic }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    {% if summary_data.upside_valuation %}
+                        <h6 class="mt-4">Upside Scenario</h6>
+                        <p>{{ summary_data.upside_valuation }}</p>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    {% if summary_data.downside_valuation %}
+                        <h6 class="mt-4">Downside Scenario</h6>
+                        <p>{{ summary_data.downside_valuation }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if summary_data.conclusion %}
+                <h6 class="mt-4">Conclusion</h6>
+                <p>{{ summary_data.conclusion }}</p>
+            {% endif %}
+
+        {% else %}
+            <!-- Generic Format for other report types -->
+            {% if summary_data.sentiment %}
+                <p><strong>Sentiment:</strong> 
+                    {% if summary_data.sentiment == "Positive" %}
+                        <span class="badge bg-success">{{ summary_data.sentiment }}</span>
+                    {% elif summary_data.sentiment == "Negative" %}
+                        <span class="badge bg-danger">{{ summary_data.sentiment }}</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ summary_data.sentiment }}</span>
+                    {% endif %}
+                </p>
+            {% endif %}
+            
+            <!-- Display all available fields in a generic way -->
+            {% for key, value in summary_data.items %}
+                {% if key != "sentiment" and value %}
+                    <h6 class="mt-4">{{ key|title|replace:"_":" " }}</h6>
+                    {% if value|length_is:'1' and value.0|add:0 != value.0 %}
+                        <!-- Single string value -->
+                        <p>{{ value }}</p>
+                    {% elif value|first %}
+                        <!-- List of items -->
+                        <ul>
+                            {% for item in value %}
+                                <li>{{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>{{ value }}</p>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <h5 class="text-muted">No Summary Available</h5>
+        <p class="text-muted">
+            {% if note.status < 3 %}
+                This document is still being processed. Please check back later.
+            {% else %}
+                Summary generation failed or is not available for this document.
+            {% endif %}
+        </p>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function viewPDF(fileDirectory) {
+    // Handle PDF viewing - you can customize this based on how you want to display PDFs
+    if (fileDirectory.includes('s3://') || fileDirectory.includes('amazonaws.com')) {
+        alert('PDF viewing from S3 requires additional setup. File location: ' + fileDirectory);
+    } else {
+        window.open(fileDirectory, '_blank');
+    }
+}
+</script>
+
+{% endblock %}

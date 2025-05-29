@@ -1,11 +1,13 @@
 # research_summaries/views.py
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, StreamingHttpResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
+from django.core.paginator import Paginator
+from django.db.models import Q, Count
 from .email_parser import fetch_research_summaries
 from .file_downloader import download_documents
 from .models import ResearchNote
@@ -17,6 +19,94 @@ class ResearchSummariesView(LoginRequiredMixin, TemplateView):
     template_name = 'research_summaries/research_summaries.html'
     login_url = '/accounts/login/'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Get query parameters for filtering and search
+        status_filter = self.request.GET.get('status', '')
+        source_filter = self.request.GET.get('source', '')
+        search_query = self.request.GET.get('search', '')
+        page_number = self.request.GET.get('page', 1)
+
+        # Base queryset - get all research notes
+        queryset = ResearchNote.objects.all().order_by('-created_at')
+
+        # Apply filters
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        if source_filter:
+            queryset = queryset.filter(source__icontains=source_filter)
+
+        if search_query:
+            queryset = queryset.filter(
+                Q(raw_title__icontains=search_query) |
+                Q(raw_author__icontains=search_query) |
+                Q(raw_companies__icontains=search_query) |
+                Q(parsed_ticker__icontains=search_query)
+            )
+
+        # Pagination
+        paginator = Paginator(queryset, 20)  # Show 20 items per page
+        page_obj = paginator.get_page(page_number)
+
+        # Get status counts for dashboard
+        status_counts = {
+            'total': ResearchNote.objects.count(),
+            'not_downloaded': ResearchNote.objects.filter(status=0).count(),
+            'downloaded': ResearchNote.objects.filter(status=1).count(),
+            'preprocessed': ResearchNote.objects.filter(status=2).count(),
+            'summarized': ResearchNote.objects.filter(status=3).count(),
+        }
+
+        # Get unique sources for filter dropdown
+        sources = ResearchNote.objects.values_list('source', flat=True).distinct().exclude(source__isnull=True).exclude(
+            source='')
+
+        # Recent activity
+        recent_summaries = ResearchNote.objects.filter(status=3).order_by('-file_summary_time')[:5]
+
+        context.update({
+            'page_obj': page_obj,
+            'research_notes': page_obj.object_list,
+            'status_counts': status_counts,
+            'sources': sorted(sources),
+            'recent_summaries': recent_summaries,
+            'current_filters': {
+                'status': status_filter,
+                'source': source_filter,
+                'search': search_query,
+            },
+            'status_choices': ResearchNote.STATUS_CHOICES,
+        })
+
+        return context
+
+
+@login_required
+def research_note_detail(request, note_id):
+    """View individual research note with full summary"""
+    note = get_object_or_404(ResearchNote, id=note_id)
+
+    context = {
+        'note': note,
+        'summary_data': note.report_summary if note.report_summary else None,
+    }
+
+    return render(request, 'research_summaries/note_detail.html', context)
+
+
+@login_required
+def toggle_note_favorite(request, note_id):
+    """AJAX endpoint to toggle favorite status (if you want to add this feature later)"""
+    if request.method == 'POST':
+        note = get_object_or_404(ResearchNote, id=note_id)
+        # You can add a favorite field to your model later
+        return JsonResponse({'success': True})
+    return JsonResponse({'success': False})
+
+
+# Keep all your existing test views below...
 
 @login_required
 def email_test_view(request):
