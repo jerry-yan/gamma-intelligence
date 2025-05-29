@@ -6,6 +6,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
+from django.views.decorators.cache import cache_control
+import logging
 from django.db.models import Q
 from .email_parser import fetch_research_summaries
 from .file_downloader import download_documents
@@ -16,6 +18,7 @@ from django.conf import settings
 import json
 import time
 
+logger = logging.getLogger(__name__)
 
 class ResearchSummariesView(LoginRequiredMixin, TemplateView):
     template_name = 'research_summaries/research_summaries.html'
@@ -590,41 +593,85 @@ def get_summarization_status(request):
         'error_count': error_count,
     })
 
-
 @login_required
+@cache_control(no_cache=True)
 def get_pdf_url(request, note_id):
     """Generate a pre-signed URL for viewing PDF from S3"""
     try:
-        # Get the research note
         note = get_object_or_404(ResearchNote, id=note_id)
 
-        # Check if file exists
         if not note.file_directory:
-            return JsonResponse({'error': 'No file associated with this note'}, status=404)
+            return JsonResponse({
+                'error': 'No PDF file associated with this research note'
+            }, status=404)
+
+        if note.status < 1:
+            return JsonResponse({
+                'error': 'PDF file is not yet downloaded. Please try again later.'
+            }, status=404)
 
         # Extract S3 key from file_directory
-        s3_key = note.file_directory
+        s3_key = note.file_directory.strip()
+
         if s3_key.startswith('https://'):
-            # Extract key from full S3 URL
-            s3_key = s3_key.split('amazonaws.com/')[-1]
+            try:
+                s3_key = s3_key.split('amazonaws.com/')[-1]
+            except IndexError:
+                s3_key = s3_key.split('.com/')[-1]
         elif s3_key.startswith('s3://'):
-            # Extract key from s3:// URL
-            s3_key = s3_key.split('/', 3)[-1]
+            parts = s3_key.split('/', 3)
+            if len(parts) < 4:
+                return JsonResponse({'error': 'Invalid file path format'}, status=400)
+            s3_key = parts[3]
+
+        # Check required settings
+        required_settings = ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_STORAGE_BUCKET_NAME']
+        missing_settings = [setting for setting in required_settings
+                            if not getattr(settings, setting, None)]
+
+        if missing_settings:
+            return JsonResponse({
+                'error': 'Server configuration error. Please contact administrator.'
+            }, status=500)
 
         # Initialize S3 client
         s3_client = boto3.client(
             's3',
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            region_name=settings.AWS_S3_REGION_NAME
+            region_name=getattr(settings, 'AWS_S3_REGION_NAME', 'us-east-1')
         )
 
-        # Generate pre-signed URL (expires in 1 hour)
+        bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+
+        # Check if object exists
         try:
-            bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+            s3_client.head_object(Bucket=bucket_name, Key=s3_key)
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            if error_code == '404':
+                return JsonResponse({
+                    'error': 'PDF file not found in storage.'
+                }, status=404)
+            else:
+                return JsonResponse({
+                    'error': 'Unable to access PDF file.'
+                }, status=500)
+
+        # Generate pre-signed URL for inline viewing
+        try:
+            # Clean filename for Content-Disposition
+            clean_filename = (note.raw_title or 'Research_Report').replace('"', '').replace('\\', '')
+
             presigned_url = s3_client.generate_presigned_url(
                 'get_object',
-                Params={'Bucket': bucket_name, 'Key': s3_key},
+                Params={
+                    'Bucket': bucket_name,
+                    'Key': s3_key,
+                    # CRITICAL: Set Content-Disposition to inline for browser viewing
+                    'ResponseContentDisposition': 'inline',
+                    'ResponseContentType': 'application/pdf'
+                },
                 ExpiresIn=3600,  # 1 hour
                 HttpMethod='GET'
             )
@@ -632,15 +679,17 @@ def get_pdf_url(request, note_id):
             return JsonResponse({
                 'success': True,
                 'url': presigned_url,
-                'filename': note.raw_title or 'Research Report'
+                'filename': f"{clean_filename}.pdf",
+                'expires_in': 3600
             })
 
         except ClientError as e:
             return JsonResponse({
-                'error': f'Could not generate PDF URL: {str(e)}'
+                'error': f'Could not generate PDF access URL: {str(e)}'
             }, status=500)
 
     except Exception as e:
+        logger.error(f"Unexpected error in get_pdf_url for note {note_id}: {e}")
         return JsonResponse({
-            'error': f'Error accessing PDF: {str(e)}'
+            'error': 'An unexpected error occurred. Please try again later.'
         }, status=500)
