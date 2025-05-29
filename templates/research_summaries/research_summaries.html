@@ -321,7 +321,7 @@
                                         {% if note.report_summary.recap %}
                                             <div class="mb-3">
                                                 <strong>Recap:</strong>
-                                                <p class="text-justify">{{ note.report_summary.recap }}</p>
+                                                <p>{{ note.report_summary.recap }}</p>
                                             </div>
                                         {% endif %}
 
@@ -329,7 +329,7 @@
                                         {% if note.report_summary.summary %}
                                             <div class="mb-3">
                                                 <strong>Summary:</strong>
-                                                <p class="text-justify">{{ note.report_summary.summary }}</p>
+                                                <p>{{ note.report_summary.summary }}</p>
                                             </div>
                                         {% endif %}
 
@@ -337,7 +337,7 @@
                                         {% if note.report_summary.executive_summary %}
                                             <div class="mb-3">
                                                 <strong>Executive Summary:</strong>
-                                                <p class="text-justify">{{ note.report_summary.executive_summary }}</p>
+                                                <p>{{ note.report_summary.executive_summary }}</p>
                                             </div>
                                         {% endif %}
 
@@ -345,7 +345,7 @@
                                         {% if note.report_summary.expectations %}
                                             <div class="mb-3">
                                                 <strong>Expectations:</strong>
-                                                <p class="text-justify">{{ note.report_summary.expectations }}</p>
+                                                <p>{{ note.report_summary.expectations }}</p>
                                             </div>
                                         {% endif %}
 
@@ -472,9 +472,9 @@
                                         <!-- Valuation Analysis -->
                                         {% if note.report_summary.valuation_analysis %}
                                             <div class="mb-3">
-                                                <strong>Valuation Analysis:</strong>
-                                                {% if note.report_summary.valuation_analysis.0 %}
-                                                    <!-- List of items -->
+                                                <strong>Valuation:</strong>
+                                                {% if note.report_summary.valuation_analysis.1 %}
+                                                    <!-- List of items (has multiple elements) -->
                                                     <ul>
                                                         {% for analysis in note.report_summary.valuation_analysis %}
                                                             <li>{{ analysis }}</li>
@@ -544,7 +544,7 @@
                                         {% if note.report_summary.conclusion %}
                                             <div class="mb-3">
                                                 <strong>Conclusion:</strong>
-                                                <p class="text-justify">{{ note.report_summary.conclusion }}</p>
+                                                <p>{{ note.report_summary.conclusion }}</p>
                                             </div>
                                         {% endif %}
                                     </div>
