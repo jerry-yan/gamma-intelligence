@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from research_summaries.document_summarizer import summarize_documents
+from research_summaries.processors.document_summarizer import summarize_documents
 
 
 class Command(BaseCommand):
