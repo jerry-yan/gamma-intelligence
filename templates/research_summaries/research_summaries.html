@@ -277,7 +277,7 @@
                                         <div class="row mb-3">
                                             {% if note.report_summary.sentiment %}
                                                 <div class="col-md-4">
-                                                    <div class="mb-2">
+                                                    <div class="mb-2 small">
                                                         <strong>Sentiment:</strong>
                                                         {% if note.report_summary.sentiment == "Positive" %}
                                                             <span class="badge bg-success">{{ note.report_summary.sentiment }}</span>
@@ -291,12 +291,12 @@
                                             {% endif %}
                                             {% if note.report_summary.price_target %}
                                                 <div class="col-md-4">
-                                                    <div class="mb-2"><strong>Price Target:</strong> ${{ note.report_summary.price_target }}</div>
+                                                    <div class="mb-2 small"><strong>Price Target:</strong> ${{ note.report_summary.price_target }}</div>
                                                 </div>
                                             {% endif %}
                                             {% if note.report_summary.stock_rating %}
                                                 <div class="col-md-4">
-                                                    <div class="mb-2">
+                                                    <div class="mb-2 small">
                                                         <strong>Rating:</strong>
                                                         {% if note.report_summary.stock_rating == "Buy" %}
                                                             <span class="badge bg-success">{{ note.report_summary.stock_rating }}</span>
@@ -312,7 +312,7 @@
 
                                         <!-- Authors -->
                                         {% if note.report_summary.authors %}
-                                            <div class="mb-3">
+                                            <div class="mb-3 small">
                                                 <strong>Authors:</strong> {{ note.report_summary.authors|join:", " }}
                                             </div>
                                         {% endif %}
@@ -320,7 +320,7 @@
                                         <!-- Recap -->
                                         {% if note.report_summary.recap %}
                                             <div class="mb-3">
-                                                <strong>Recap:</strong>
+                                                <strong class="small">Recap:</strong>
                                                 <p class="small">{{ note.report_summary.recap }}</p>
                                             </div>
                                         {% endif %}
@@ -328,7 +328,7 @@
                                         <!-- Summary -->
                                         {% if note.report_summary.summary %}
                                             <div class="mb-3">
-                                                <strong>Summary:</strong>
+                                                <strong class="small">Summary:</strong>
                                                 <p class="small">{{ note.report_summary.summary }}</p>
                                             </div>
                                         {% endif %}
@@ -336,7 +336,7 @@
                                         <!-- Executive Summary -->
                                         {% if note.report_summary.executive_summary %}
                                             <div class="mb-3">
-                                                <strong>Executive Summary:</strong>
+                                                <strong class="small">Executive Summary:</strong>
                                                 <p class="small">{{ note.report_summary.executive_summary }}</p>
                                             </div>
                                         {% endif %}
@@ -344,7 +344,7 @@
                                         <!-- Expectations -->
                                         {% if note.report_summary.expectations %}
                                             <div class="mb-3">
-                                                <strong>Expectations:</strong>
+                                                <strong class="small">Expectations:</strong>
                                                 <p class="small">{{ note.report_summary.expectations }}</p>
                                             </div>
                                         {% endif %}
@@ -354,20 +354,20 @@
                                             <div class="row mb-3">
                                                 {% if note.report_summary.risk_points %}
                                                     <div class="col-md-6">
-                                                        <strong class="text-danger">Risk Points:</strong>
-                                                        <ul>
+                                                        <strong class="text-danger small">Risk Points:</strong>
+                                                        <ul class="small">
                                                             {% for point in note.report_summary.risk_points %}
-                                                                <li>{{ point }}</li>
+                                                                <li class="small">{{ point }}</li>
                                                             {% endfor %}
                                                         </ul>
                                                     </div>
                                                 {% endif %}
                                                 {% if note.report_summary.opportunity_points %}
                                                     <div class="col-md-6">
-                                                        <strong class="text-success">Opportunity Points:</strong>
-                                                        <ul>
+                                                        <strong class="text-success small">Opportunity Points:</strong>
+                                                        <ul class="small">
                                                             {% for point in note.report_summary.opportunity_points %}
-                                                                <li>{{ point }}</li>
+                                                                <li class="small">{{ point }}</li>
                                                             {% endfor %}
                                                         </ul>
                                                     </div>
@@ -380,20 +380,20 @@
                                             <div class="row mb-3">
                                                 {% if note.report_summary.bull_points %}
                                                     <div class="col-md-6">
-                                                        <strong class="text-success">Bullish Points:</strong>
-                                                        <ul>
+                                                        <strong class="text-success small">Bullish Points:</strong>
+                                                        <ul class="small">
                                                             {% for point in note.report_summary.bull_points %}
-                                                                <li>{{ point }}</li>
+                                                                <li class="small">{{ point }}</li>
                                                             {% endfor %}
                                                         </ul>
                                                     </div>
                                                 {% endif %}
                                                 {% if note.report_summary.bear_points %}
                                                     <div class="col-md-6">
-                                                        <strong class="text-danger">Bearish Points:</strong>
-                                                        <ul>
+                                                        <strong class="text-danger small">Bearish Points:</strong>
+                                                        <ul class="small">
                                                             {% for point in note.report_summary.bear_points %}
-                                                                <li>{{ point }}</li>
+                                                                <li class="small">{{ point }}</li>
                                                             {% endfor %}
                                                         </ul>
                                                     </div>
@@ -404,10 +404,10 @@
                                         <!-- Key Themes -->
                                         {% if note.report_summary.key_themes %}
                                             <div class="mb-3">
-                                                <strong>Key Themes:</strong>
-                                                <ul>
+                                                <strong class="small">Key Themes:</strong>
+                                                <ul class="small">
                                                     {% for theme in note.report_summary.key_themes %}
-                                                        <li>{{ theme }}</li>
+                                                        <li class="small">{{ theme }}</li>
                                                     {% endfor %}
                                                 </ul>
                                             </div>
@@ -416,10 +416,10 @@
                                         <!-- Key Dynamics -->
                                         {% if note.report_summary.key_dynamics %}
                                             <div class="mb-3">
-                                                <strong>Key Industry Dynamics:</strong>
-                                                <ul>
+                                                <strong class="small">Key Industry Dynamics:</strong>
+                                                <ul class="small">
                                                     {% for dynamic in note.report_summary.key_dynamics %}
-                                                        <li>{{ dynamic }}</li>
+                                                        <li class="small">{{ dynamic }}</li>
                                                     {% endfor %}
                                                 </ul>
                                             </div>
@@ -430,20 +430,20 @@
                                             <div class="row mb-3">
                                                 {% if note.report_summary.positive_dynamics %}
                                                     <div class="col-md-6">
-                                                        <strong class="text-success">Positive Dynamics:</strong>
-                                                        <ul>
+                                                        <strong class="text-success small">Positive Dynamics:</strong>
+                                                        <ul class="small">
                                                             {% for dynamic in note.report_summary.positive_dynamics %}
-                                                                <li>{{ dynamic }}</li>
+                                                                <li class="small">{{ dynamic }}</li>
                                                             {% endfor %}
                                                         </ul>
                                                     </div>
                                                 {% endif %}
                                                 {% if note.report_summary.negative_dynamics %}
                                                     <div class="col-md-6">
-                                                        <strong class="text-danger">Negative Dynamics:</strong>
-                                                        <ul>
+                                                        <strong class="text-danger small">Negative Dynamics:</strong>
+                                                        <ul class="small">
                                                             {% for dynamic in note.report_summary.negative_dynamics %}
-                                                                <li>{{ dynamic }}</li>
+                                                                <li class="small">{{ dynamic }}</li>
                                                             {% endfor %}
                                                         </ul>
                                                     </div>
@@ -456,13 +456,13 @@
                                             <div class="row mb-3">
                                                 {% if note.report_summary.upside_valuation %}
                                                     <div class="col-md-6">
-                                                        <strong class="text-success">Upside Valuation:</strong>
+                                                        <strong class="text-success small">Upside Valuation:</strong>
                                                         <p class="small">{{ note.report_summary.upside_valuation }}</p>
                                                     </div>
                                                 {% endif %}
                                                 {% if note.report_summary.downside_valuation %}
                                                     <div class="col-md-6">
-                                                        <strong class="text-danger">Downside Valuation:</strong>
+                                                        <strong class="text-danger small">Downside Valuation:</strong>
                                                         <p class="small">{{ note.report_summary.downside_valuation }}</p>
                                                     </div>
                                                 {% endif %}
@@ -472,13 +472,13 @@
                                         <!-- Valuation Analysis -->
                                         {% if note.report_summary.valuation_analysis %}
                                             <div class="mb-3">
-                                                <strong>Valuation:</strong>
+                                                <strong class="small">Valuation:</strong>
                                                 {% with first=note.report_summary.valuation_analysis.0 %}
                                                     {% if first|stringformat:"s" != first %}
                                                         <!-- It's a list/array -->
-                                                        <ul>
+                                                        <ul class="small">
                                                             {% for analysis in note.report_summary.valuation_analysis %}
-                                                                <li>{{ analysis }}</li>
+                                                                <li class="small">{{ analysis }}</li>
                                                             {% endfor %}
                                                         </ul>
                                                     {% else %}
@@ -492,22 +492,22 @@
                                         <!-- Stock Recaps -->
                                         {% if note.report_summary.stock_recaps %}
                                             <div class="mb-3">
-                                                <strong>Stock Coverage:</strong>
+                                                <strong class="small">Stock Coverage:</strong>
                                                 <div class="table-responsive">
                                                     <table class="table table-sm">
                                                         <thead>
                                                             <tr>
-                                                                <th>Ticker</th>
-                                                                <th>Rating</th>
-                                                                <th>Outlook</th>
-                                                                <th>Valuation</th>
+                                                                <th class="small">Ticker</th>
+                                                                <th class="small">Rating</th>
+                                                                <th class="small">Outlook</th>
+                                                                <th class="small">Valuation</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
                                                             {% for stock in note.report_summary.stock_recaps %}
                                                                 <tr>
-                                                                    <td><strong>{{ stock.stock_ticker }}</strong></td>
-                                                                    <td>
+                                                                    <td class="small"><strong>{{ stock.stock_ticker }}</strong></td>
+                                                                    <td class="small">
                                                                         {% if stock.stock_rating and stock.stock_rating != "None" %}
                                                                             {% if stock.stock_rating == "Buy" %}
                                                                                 <span class="badge bg-success">{{ stock.stock_rating }}</span>
@@ -520,8 +520,8 @@
                                                                             -
                                                                         {% endif %}
                                                                     </td>
-                                                                    <td>{{ stock.stock_outlook|default:"-" }}</td>
-                                                                    <td>{{ stock.stock_valuation|default:"-" }}</td>
+                                                                    <td class="small">{{ stock.stock_outlook|default:"-" }}</td>
+                                                                    <td class="small">{{ stock.stock_valuation|default:"-" }}</td>
                                                                 </tr>
                                                             {% endfor %}
                                                         </tbody>
@@ -533,10 +533,10 @@
                                         <!-- Strategic Recommendations -->
                                         {% if note.report_summary.strategic_recommendations %}
                                             <div class="mb-3">
-                                                <strong>Strategic Recommendations:</strong>
-                                                <ul>
+                                                <strong class="small">Strategic Recommendations:</strong>
+                                                <ul class="small">
                                                     {% for recommendation in note.report_summary.strategic_recommendations %}
-                                                        <li>{{ recommendation }}</li>
+                                                        <li class="small">{{ recommendation }}</li>
                                                     {% endfor %}
                                                 </ul>
                                             </div>
@@ -545,7 +545,7 @@
                                         <!-- Conclusion -->
                                         {% if note.report_summary.conclusion %}
                                             <div class="mb-3">
-                                                <strong>Conclusion:</strong>
+                                                <strong class="small">Conclusion:</strong>
                                                 <p class="small">{{ note.report_summary.conclusion }}</p>
                                             </div>
                                         {% endif %}
@@ -676,7 +676,7 @@
                                         <div class="row mb-3">
                                             {% if note.report_summary.sentiment %}
                                                 <div class="col-md-4">
-                                                    <div class="mb-2">
+                                                    <div class="mb-2 small">
                                                         <strong>Sentiment:</strong>
                                                         {% if note.report_summary.sentiment == "Positive" %}
                                                             <span class="badge bg-success">{{ note.report_summary.sentiment }}</span>
@@ -690,12 +690,12 @@
                                             {% endif %}
                                             {% if note.report_summary.price_target %}
                                                 <div class="col-md-4">
-                                                    <div class="mb-2"><strong>Price Target:</strong> ${{ note.report_summary.price_target }}</div>
+                                                    <div class="mb-2 small"><strong>Price Target:</strong> ${{ note.report_summary.price_target }}</div>
                                                 </div>
                                             {% endif %}
                                             {% if note.report_summary.stock_rating %}
                                                 <div class="col-md-4">
-                                                    <div class="mb-2">
+                                                    <div class="mb-2 small">
                                                         <strong>Rating:</strong>
                                                         {% if note.report_summary.stock_rating == "Buy" %}
                                                             <span class="badge bg-success">{{ note.report_summary.stock_rating }}</span>
@@ -711,7 +711,7 @@
 
                                         <!-- Authors -->
                                         {% if note.report_summary.authors %}
-                                            <div class="mb-3">
+                                            <div class="mb-3 small">
                                                 <strong>Authors:</strong> {{ note.report_summary.authors|join:", " }}
                                             </div>
                                         {% endif %}
@@ -719,32 +719,32 @@
                                         <!-- Recap -->
                                         {% if note.report_summary.recap %}
                                             <div class="mb-3">
-                                                <strong>Recap:</strong>
-                                                <p class="text-justify">{{ note.report_summary.recap }}</p>
+                                                <strong class="small">Recap:</strong>
+                                                <p class="small text-justify">{{ note.report_summary.recap }}</p>
                                             </div>
                                         {% endif %}
 
                                         <!-- Summary -->
                                         {% if note.report_summary.summary %}
                                             <div class="mb-3">
-                                                <strong>Summary:</strong>
-                                                <p class="text-justify">{{ note.report_summary.summary }}</p>
+                                                <strong class="small">Summary:</strong>
+                                                <p class="small text-justify">{{ note.report_summary.summary }}</p>
                                             </div>
                                         {% endif %}
 
                                         <!-- Executive Summary -->
                                         {% if note.report_summary.executive_summary %}
                                             <div class="mb-3">
-                                                <strong>Executive Summary:</strong>
-                                                <p class="text-justify">{{ note.report_summary.executive_summary }}</p>
+                                                <strong class="small">Executive Summary:</strong>
+                                                <p class="small text-justify">{{ note.report_summary.executive_summary }}</p>
                                             </div>
                                         {% endif %}
 
                                         <!-- Expectations -->
                                         {% if note.report_summary.expectations %}
                                             <div class="mb-3">
-                                                <strong>Expectations:</strong>
-                                                <p class="text-justify">{{ note.report_summary.expectations }}</p>
+                                                <strong class="small">Expectations:</strong>
+                                                <p class="small text-justify">{{ note.report_summary.expectations }}</p>
                                             </div>
                                         {% endif %}
 
@@ -753,20 +753,20 @@
                                             <div class="row mb-3">
                                                 {% if note.report_summary.risk_points %}
                                                     <div class="col-md-6">
-                                                        <strong class="text-danger">Risk Points:</strong>
+                                                        <strong class="text-danger small">Risk Points:</strong>
                                                         <ul class="small">
                                                             {% for point in note.report_summary.risk_points %}
-                                                                <li>{{ point }}</li>
+                                                                <li class="small">{{ point }}</li>
                                                             {% endfor %}
                                                         </ul>
                                                     </div>
                                                 {% endif %}
                                                 {% if note.report_summary.opportunity_points %}
                                                     <div class="col-md-6">
-                                                        <strong class="text-success">Opportunity Points:</strong>
+                                                        <strong class="text-success small">Opportunity Points:</strong>
                                                         <ul class="small">
                                                             {% for point in note.report_summary.opportunity_points %}
-                                                                <li>{{ point }}</li>
+                                                                <li class="small">{{ point }}</li>
                                                             {% endfor %}
                                                         </ul>
                                                     </div>
@@ -779,20 +779,20 @@
                                             <div class="row mb-3">
                                                 {% if note.report_summary.bull_points %}
                                                     <div class="col-md-6">
-                                                        <strong class="text-success">Bullish Points:</strong>
+                                                        <strong class="text-success small">Bullish Points:</strong>
                                                         <ul class="small">
                                                             {% for point in note.report_summary.bull_points %}
-                                                                <li>{{ point }}</li>
+                                                                <li class="small">{{ point }}</li>
                                                             {% endfor %}
                                                         </ul>
                                                     </div>
                                                 {% endif %}
                                                 {% if note.report_summary.bear_points %}
                                                     <div class="col-md-6">
-                                                        <strong class="text-danger">Bearish Points:</strong>
+                                                        <strong class="text-danger small">Bearish Points:</strong>
                                                         <ul class="small">
                                                             {% for point in note.report_summary.bear_points %}
-                                                                <li>{{ point }}</li>
+                                                                <li class="small">{{ point }}</li>
                                                             {% endfor %}
                                                         </ul>
                                                     </div>
@@ -803,10 +803,10 @@
                                         <!-- Key Themes -->
                                         {% if note.report_summary.key_themes %}
                                             <div class="mb-3">
-                                                <strong>Key Themes:</strong>
+                                                <strong class="small">Key Themes:</strong>
                                                 <ul class="small">
                                                     {% for theme in note.report_summary.key_themes %}
-                                                        <li>{{ theme }}</li>
+                                                        <li class="small">{{ theme }}</li>
                                                     {% endfor %}
                                                 </ul>
                                             </div>
@@ -815,10 +815,10 @@
                                         <!-- Key Dynamics -->
                                         {% if note.report_summary.key_dynamics %}
                                             <div class="mb-3">
-                                                <strong>Key Industry Dynamics:</strong>
+                                                <strong class="small">Key Industry Dynamics:</strong>
                                                 <ul class="small">
                                                     {% for dynamic in note.report_summary.key_dynamics %}
-                                                        <li>{{ dynamic }}</li>
+                                                        <li class="small">{{ dynamic }}</li>
                                                     {% endfor %}
                                                 </ul>
                                             </div>
@@ -829,20 +829,20 @@
                                             <div class="row mb-3">
                                                 {% if note.report_summary.positive_dynamics %}
                                                     <div class="col-md-6">
-                                                        <strong class="text-success">Positive Dynamics:</strong>
+                                                        <strong class="text-success small">Positive Dynamics:</strong>
                                                         <ul class="small">
                                                             {% for dynamic in note.report_summary.positive_dynamics %}
-                                                                <li>{{ dynamic }}</li>
+                                                                <li class="small">{{ dynamic }}</li>
                                                             {% endfor %}
                                                         </ul>
                                                     </div>
                                                 {% endif %}
                                                 {% if note.report_summary.negative_dynamics %}
                                                     <div class="col-md-6">
-                                                        <strong class="text-danger">Negative Dynamics:</strong>
+                                                        <strong class="text-danger small">Negative Dynamics:</strong>
                                                         <ul class="small">
                                                             {% for dynamic in note.report_summary.negative_dynamics %}
-                                                                <li>{{ dynamic }}</li>
+                                                                <li class="small">{{ dynamic }}</li>
                                                             {% endfor %}
                                                         </ul>
                                                     </div>
@@ -855,13 +855,13 @@
                                             <div class="row mb-3">
                                                 {% if note.report_summary.upside_valuation %}
                                                     <div class="col-md-6">
-                                                        <strong class="text-success">Upside Valuation:</strong>
+                                                        <strong class="text-success small">Upside Valuation:</strong>
                                                         <p class="small text-justify">{{ note.report_summary.upside_valuation }}</p>
                                                     </div>
                                                 {% endif %}
                                                 {% if note.report_summary.downside_valuation %}
                                                     <div class="col-md-6">
-                                                        <strong class="text-danger">Downside Valuation:</strong>
+                                                        <strong class="text-danger small">Downside Valuation:</strong>
                                                         <p class="small text-justify">{{ note.report_summary.downside_valuation }}</p>
                                                     </div>
                                                 {% endif %}
@@ -871,12 +871,12 @@
                                         <!-- Valuation Analysis -->
                                         {% if note.report_summary.valuation_analysis %}
                                             <div class="mb-3">
-                                                <strong>Valuation Analysis:</strong>
+                                                <strong class="small">Valuation Analysis:</strong>
                                                 {% if note.report_summary.valuation_analysis|first %}
                                                     <!-- List of items -->
                                                     <ul class="small">
                                                         {% for analysis in note.report_summary.valuation_analysis %}
-                                                            <li>{{ analysis }}</li>
+                                                            <li class="small">{{ analysis }}</li>
                                                         {% endfor %}
                                                     </ul>
                                                 {% else %}
@@ -889,22 +889,22 @@
                                         <!-- Stock Recaps -->
                                         {% if note.report_summary.stock_recaps %}
                                             <div class="mb-3">
-                                                <strong>Stock Coverage:</strong>
+                                                <strong class="small">Stock Coverage:</strong>
                                                 <div class="table-responsive">
                                                     <table class="table table-sm">
                                                         <thead>
                                                             <tr>
-                                                                <th>Ticker</th>
-                                                                <th>Rating</th>
-                                                                <th>Outlook</th>
-                                                                <th>Valuation</th>
+                                                                <th class="small">Ticker</th>
+                                                                <th class="small">Rating</th>
+                                                                <th class="small">Outlook</th>
+                                                                <th class="small">Valuation</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
                                                             {% for stock in note.report_summary.stock_recaps %}
                                                                 <tr>
-                                                                    <td><strong>{{ stock.stock_ticker }}</strong></td>
-                                                                    <td>
+                                                                    <td class="small"><strong>{{ stock.stock_ticker }}</strong></td>
+                                                                    <td class="small">
                                                                         {% if stock.stock_rating and stock.stock_rating != "None" %}
                                                                             {% if stock.stock_rating == "Buy" %}
                                                                                 <span class="badge bg-success">{{ stock.stock_rating }}</span>
@@ -930,10 +930,10 @@
                                         <!-- Strategic Recommendations -->
                                         {% if note.report_summary.strategic_recommendations %}
                                             <div class="mb-3">
-                                                <strong>Strategic Recommendations:</strong>
+                                                <strong class="small">Strategic Recommendations:</strong>
                                                 <ul class="small">
                                                     {% for recommendation in note.report_summary.strategic_recommendations %}
-                                                        <li>{{ recommendation }}</li>
+                                                        <li class="small">{{ recommendation }}</li>
                                                     {% endfor %}
                                                 </ul>
                                             </div>
@@ -942,8 +942,8 @@
                                         <!-- Conclusion -->
                                         {% if note.report_summary.conclusion %}
                                             <div class="mb-3">
-                                                <strong>Conclusion:</strong>
-                                                <p class="text-justify">{{ note.report_summary.conclusion }}</p>
+                                                <strong class="small">Conclusion:</strong>
+                                                <p class="small text-justify">{{ note.report_summary.conclusion }}</p>
                                             </div>
                                         {% endif %}
                                     </div>
