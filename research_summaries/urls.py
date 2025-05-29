@@ -8,6 +8,7 @@ urlpatterns = [
     # Main research summaries page
     path('summaries/', views.ResearchSummariesView.as_view(), name='research_summaries'),
     path('note/<int:note_id>/', views.research_note_detail, name='note_detail'),
+    path('mark-as-read/', views.mark_as_read, name='mark_as_read'),
     path('toggle-favorite/<int:note_id>/', views.toggle_note_favorite, name='toggle_favorite'),
 
     # Test/admin pages (keep these for now)

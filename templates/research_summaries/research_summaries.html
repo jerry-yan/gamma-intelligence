@@ -3,6 +3,7 @@
 {% block title %}Research Summaries - Gamma Intelligence{% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <!-- Header Section -->
 <div class="row mb-4">
     <div class="col-md-12">
@@ -31,8 +32,16 @@
     <div class="col-md-2">
         <div class="card text-center">
             <div class="card-body py-3">
-                <h4 class="text-primary mb-0">{{ status_counts.total }}</h4>
-                <small class="text-muted">Total Reports</small>
+                <h4 class="text-success mb-0">{{ status_counts.filtered_count }}</h4>
+                <small class="text-muted">New Reports</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-3">
+                <h4 class="text-primary mb-0">{{ status_counts.summarized }}</h4>
+                <small class="text-muted">Total Summarized</small>
             </div>
         </div>
     </div>
@@ -63,8 +72,13 @@
     <div class="col-md-2">
         <div class="card text-center">
             <div class="card-body py-3">
-                <h4 class="text-success mb-0">{{ status_counts.summarized }}</h4>
-                <small class="text-muted">Summarized</small>
+                {% if user_last_read_time %}
+                    <h6 class="text-muted mb-0">{{ user_last_read_time|date:"M d, H:i" }}</h6>
+                    <small class="text-muted">Last Read</small>
+                {% else %}
+                    <h6 class="text-muted mb-0">Never</h6>
+                    <small class="text-muted">Last Read</small>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -84,20 +98,20 @@
                         <label class="form-label">Search</label>
                         <input type="text" name="search" class="form-control" placeholder="Title, author, company..." value="{{ current_filters.search }}">
                     </div>
-                    
-                    <!-- Status Filter -->
+
+                    <!-- Datetime Filter -->
                     <div class="mb-3">
-                        <label class="form-label">Status</label>
-                        <select name="status" class="form-select">
-                            <option value="">All Status</option>
-                            {% for status_value, status_label in status_choices %}
-                                <option value="{{ status_value }}" {% if current_filters.status == status_value|stringformat:"s" %}selected{% endif %}>
-                                    {{ status_label }}
-                                </option>
-                            {% endfor %}
-                        </select>
+                        <label class="form-label">Show reports after</label>
+                        <input type="datetime-local" name="datetime" class="form-control" value="{{ formatted_datetime }}">
+                        <small class="text-muted">
+                            {% if user_last_read_time %}
+                                Default: your last read time
+                            {% else %}
+                                Default: last 24 hours
+                            {% endif %}
+                        </small>
                     </div>
-                    
+
                     <!-- Source Filter -->
                     <div class="mb-3">
                         <label class="form-label">Source</label>
@@ -110,11 +124,11 @@
                             {% endfor %}
                         </select>
                     </div>
-                    
+
                     <button type="submit" class="btn btn-primary w-100 mb-2">Apply Filters</button>
-                    <a href="{% url 'research_summaries:research_summaries' %}" class="btn btn-outline-secondary w-100">Clear All</a>
+                    <a href="{% url 'research_summaries:research_summaries' %}" class="btn btn-outline-secondary w-100">Reset to Default</a>
                 </form>
-                
+
                 <!-- Recent Activity -->
                 <hr class="mt-4">
                 <h6>Recent Summaries</h6>
@@ -143,15 +157,23 @@
         <!-- Results Header -->
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
-                <h5>Research Reports</h5>
+                <h5>New Research Reports</h5>
                 <small class="text-muted">
                     {% if page_obj.paginator.count %}
-                        Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }} results
+                        Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }} new reports
+                        {% if filter_datetime %}
+                            (since {{ filter_datetime|date:"M d, Y g:i A" }})
+                        {% endif %}
                     {% else %}
-                        No results found
+                        No new reports found
                     {% endif %}
                 </small>
             </div>
+            {% if page_obj.object_list and latest_report_time %}
+            <button id="markAsReadBtn" class="btn btn-success">
+                📖 Mark All as Read
+            </button>
+            {% endif %}
         </div>
 
         <!-- Research Notes List -->
@@ -166,7 +188,7 @@
                                 <span class="badge bg-primary ms-2">{{ note.parsed_ticker }}</span>
                             {% endif %}
                         </h5>
-                        
+
                         <p class="card-text text-muted mb-2">
                             <strong>Source:</strong> {{ note.source|default:"Unknown" }}
                             {% if note.raw_author %}
@@ -176,7 +198,7 @@
                                 | <strong>Companies:</strong> {{ note.raw_companies|truncatechars:50 }} ({{ note.raw_company_count|default:0 }})
                             {% endif %}
                         </p>
-                        
+
                         {% if note.report_type %}
                             <p class="card-text">
                                 <span class="badge bg-secondary">{{ note.report_type }}</span>
@@ -195,7 +217,7 @@
                                 {% endif %}
                             </p>
                         {% endif %}
-                        
+
                         <small class="text-muted">
                             <strong>Created:</strong> {{ note.created_at|date:"M d, Y H:i" }}
                             {% if note.file_download_time %}
@@ -209,35 +231,20 @@
                             {% endif %}
                         </small>
                     </div>
-                    
+
                     <div class="col-md-4 text-end">
-                        <!-- Status Badge -->
-                        {% if note.status == 0 %}
-                            <span class="badge bg-secondary mb-2 d-block">Not Downloaded</span>
-                        {% elif note.status == 1 %}
-                            <span class="badge bg-info mb-2 d-block">Downloaded</span>
-                        {% elif note.status == 2 %}
-                            <span class="badge bg-warning mb-2 d-block">Preprocessed</span>
-                        {% elif note.status == 3 %}
-                            <span class="badge bg-success mb-2 d-block">Summarized</span>
-                        {% elif note.status == 10 %}
-                            <span class="badge bg-danger mb-2 d-block">Error</span>
-                        {% endif %}
-                        
                         <!-- Action Buttons -->
                         <div class="btn-group-vertical d-grid gap-1">
-                            {% if note.status >= 3 %}
-                                <a href="{% url 'research_summaries:note_detail' note.id %}" class="btn btn-primary btn-sm">
-                                    📄 View Summary
-                                </a>
-                            {% endif %}
-                            
-                            {% if note.file_directory and note.status >= 1 %}
+                            <a href="{% url 'research_summaries:note_detail' note.id %}" class="btn btn-primary btn-sm">
+                                📄 View Summary
+                            </a>
+
+                            {% if note.file_directory %}
                                 <button class="btn btn-outline-primary btn-sm" onclick="viewPDF('{{ note.file_directory }}')">
                                     📎 View PDF
                                 </button>
                             {% endif %}
-                            
+
                             {% if note.download_link %}
                                 <a href="{{ note.download_link }}" target="_blank" class="btn btn-outline-secondary btn-sm">
                                     🔗 Original Link
@@ -250,8 +257,17 @@
         </div>
         {% empty %}
         <div class="text-center py-5">
-            <h4 class="text-muted">No Research Reports Found</h4>
-            <p class="text-muted">Try adjusting your filters or check back later for new reports.</p>
+            <h4 class="text-muted">No New Research Reports</h4>
+            <p class="text-muted">
+                {% if filter_datetime %}
+                    No new reports have been summarized since {{ filter_datetime|date:"M d, Y g:i A" }}.
+                {% else %}
+                    No summarized reports found. Try adjusting your filters.
+                {% endif %}
+            </p>
+            <a href="{% url 'research_summaries:research_summaries' %}" class="btn btn-outline-primary">
+                Reset Filters
+            </a>
         </div>
         {% endfor %}
 
@@ -261,10 +277,10 @@
             <ul class="pagination justify-content-center">
                 {% if page_obj.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.status %}status={{ current_filters.status }}&{% endif %}{% if current_filters.source %}source={{ current_filters.source }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
+                        <a class="page-link" href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.datetime %}datetime={{ current_filters.datetime }}&{% endif %}{% if current_filters.source %}source={{ current_filters.source }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
                     </li>
                 {% endif %}
-                
+
                 {% for page_num in page_obj.paginator.page_range %}
                     {% if page_num == page_obj.number %}
                         <li class="page-item active">
@@ -272,14 +288,14 @@
                         </li>
                     {% elif page_num > page_obj.number|add:'-3' and page_num < page_obj.number|add:'3' %}
                         <li class="page-item">
-                            <a class="page-link" href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.status %}status={{ current_filters.status }}&{% endif %}{% if current_filters.source %}source={{ current_filters.source }}&{% endif %}page={{ page_num }}">{{ page_num }}</a>
+                            <a class="page-link" href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.datetime %}datetime={{ current_filters.datetime }}&{% endif %}{% if current_filters.source %}source={{ current_filters.source }}&{% endif %}page={{ page_num }}">{{ page_num }}</a>
                         </li>
                     {% endif %}
                 {% endfor %}
-                
+
                 {% if page_obj.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.status %}status={{ current_filters.status }}&{% endif %}{% if current_filters.source %}source={{ current_filters.source }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+                        <a class="page-link" href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.datetime %}datetime={{ current_filters.datetime }}&{% endif %}{% if current_filters.source %}source={{ current_filters.source }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
                     </li>
                 {% endif %}
             </ul>
@@ -298,13 +314,83 @@ function viewPDF(fileDirectory) {
     }
 }
 
+// Mark as Read functionality
+function markAsRead() {
+    {% if latest_report_time %}
+    const latestReportTime = '{{ latest_report_time|date:"c" }}';
+
+    fetch('{% url "research_summaries:mark_as_read" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            latest_report_time: latestReportTime
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            // Refresh the page to show updated results
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to mark as read');
+    });
+    {% endif %}
+}
+
+// Get CSRF token from cookie
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
 // Auto-submit form on select change for better UX
 document.addEventListener('DOMContentLoaded', function() {
-    const selects = document.querySelectorAll('select[name="status"], select[name="source"]');
+    // Handle select changes
+    const selects = document.querySelectorAll('select[name="source"]');
     selects.forEach(select => {
         select.addEventListener('change', function() {
             this.form.submit();
         });
+    });
+
+    // Handle mark as read button
+    const markAsReadBtn = document.getElementById('markAsReadBtn');
+    if (markAsReadBtn) {
+        markAsReadBtn.addEventListener('click', markAsRead);
+    }
+
+    // Add CSRF token to forms that don't have it
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        if (!form.querySelector('[name=csrfmiddlewaretoken]')) {
+            const csrfToken = getCookie('csrftoken');
+            if (csrfToken) {
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = csrfToken;
+                form.appendChild(csrfInput);
+            }
+        }
     });
 });
 </script>
