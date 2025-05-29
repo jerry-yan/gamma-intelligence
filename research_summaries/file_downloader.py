@@ -120,7 +120,13 @@ def upload_to_s3(local_file_path: Path, s3_key: str) -> str:
                 s3_key,
                 ExtraArgs={
                     'ContentType': 'application/pdf',
-                    'ServerSideEncryption': 'AES256'
+                    'ContentDisposition': 'inline',
+                    'ServerSideEncryption': 'AES256',
+                    'CacheControl': 'max-age=86400',
+                    'Metadata': {
+                        'source': 'gamma-intelligence',
+                        'file-type': 'research-pdf'
+                    }
                 }
             )
 
@@ -243,7 +249,7 @@ def download_documents():
     """
     try:
         # Process only 1 file at a time to minimize memory issues
-        BATCH_SIZE = 1
+        BATCH_SIZE = 10
         queue = ResearchNote.objects.filter(status=0).order_by("id")[:BATCH_SIZE]
 
         if not queue.exists():
