@@ -15,9 +15,9 @@
                     View Research Summaries
                 </a>
             {% else %}
-                <p>Get started by creating an account or logging in to access your research summaries.</p>
-                <a class="btn btn-primary btn-lg" href="{% url 'login_register' %}" role="button">
-                    Get Started
+                <p>Please log in to access your research summaries.</p>
+                <a class="btn btn-primary btn-lg" href="{% url 'login' %}" role="button">
+                    Login
                 </a>
             {% endif %}
         </div>
