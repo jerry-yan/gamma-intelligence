@@ -17,6 +17,8 @@ from botocore.exceptions import ClientError
 from django.conf import settings
 import json
 import time
+import markdown
+from django.utils.html import mark_safe
 
 logger = logging.getLogger(__name__)
 
@@ -693,3 +695,163 @@ def get_pdf_url(request, note_id):
         return JsonResponse({
             'error': 'An unexpected error occurred. Please try again later.'
         }, status=500)
+
+
+@login_required
+def aggregate_summary(request, ticker):
+    """Generate and display aggregate summary for a specific ticker with same filters as main page"""
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+
+        # Get user's last read time for default datetime filter (same logic as main view)
+        user_profile = request.user.profile
+        if user_profile.last_read_time:
+            default_datetime = user_profile.last_read_time
+        else:
+            default_datetime = timezone.now() - timedelta(hours=24)
+
+        # Get query parameters for filtering (same as main view)
+        source_filter = request.GET.get('source', '')
+        search_query = request.GET.get('search', '')
+        datetime_filter = request.GET.get('datetime', '')
+
+        # Parse datetime filter or use default (same logic as main view)
+        if datetime_filter:
+            try:
+                from django.utils.dateparse import parse_datetime, parse_date
+                filter_datetime = parse_datetime(datetime_filter)
+                if not filter_datetime:
+                    filter_date = parse_date(datetime_filter)
+                    if filter_date:
+                        filter_datetime = timezone.make_aware(
+                            timezone.datetime.combine(filter_date, timezone.datetime.min.time())
+                        )
+                    else:
+                        filter_datetime = default_datetime
+            except:
+                filter_datetime = default_datetime
+        else:
+            filter_datetime = default_datetime
+
+        # Build queryset with EXACT same filters as main research summaries page
+        queryset = ResearchNote.objects.filter(
+            status=3,  # Only summarized notes
+            parsed_ticker=ticker,
+            report_summary__isnull=False
+        ).order_by('-file_summary_time')
+
+        # Apply datetime filter - show reports updated after the filter datetime
+        queryset = queryset.filter(file_summary_time__gte=filter_datetime)
+
+        # Apply other filters (same as main view)
+        if source_filter:
+            queryset = queryset.filter(source__icontains=source_filter)
+
+        if search_query:
+            queryset = queryset.filter(
+                Q(raw_title__icontains=search_query) |
+                Q(raw_author__icontains=search_query) |
+                Q(raw_companies__icontains=search_query) |
+                Q(parsed_ticker__icontains=search_query)
+            )
+
+        notes = list(queryset)
+
+        if not notes:
+            error_msg = f"No reports found for {ticker} with current filters"
+            if request.GET.get('fullpage'):
+                return render(request, 'research_summaries/aggregate_summary.html', {
+                    'ticker': ticker,
+                    'error': error_msg,
+                    'notes_count': 0
+                })
+            return JsonResponse({'success': False, 'error': error_msg})
+
+        notes_count = len(notes)
+
+        # Check if this is a full page request (new tab)
+        if request.GET.get('fullpage'):
+            return render(request, 'research_summaries/aggregate_summary.html', {
+                'ticker': ticker,
+                'notes_count': notes_count,
+                'notes': notes,
+                'loading': True
+            })
+
+        # Generate aggregate summary
+        try:
+            summary_markdown = generate_aggregate_summary(ticker, notes)
+
+            # Convert markdown to HTML
+            html_content = markdown.markdown(
+                summary_markdown,
+                extensions=['extra', 'codehilite']
+            )
+
+            return JsonResponse({
+                'success': True,
+                'summary_html': mark_safe(html_content),
+                'ticker': ticker,
+                'notes_count': notes_count,
+                'summary_markdown': summary_markdown
+            })
+
+        except Exception as e:
+            logger.error(f"Error generating aggregate summary for {ticker}: {e}")
+            return JsonResponse({
+                'success': False,
+                'error': f"Failed to generate summary: {str(e)}"
+            })
+
+    except Exception as e:
+        logger.error(f"Error in aggregate_summary view for {ticker}: {e}")
+        error_msg = "An unexpected error occurred"
+
+        if request.GET.get('fullpage'):
+            return render(request, 'research_summaries/aggregate_summary.html', {
+                'ticker': ticker,
+                'error': error_msg,
+                'notes_count': 0
+            })
+        return JsonResponse({'success': False, 'error': error_msg})
+
+
+def generate_aggregate_summary(ticker, notes):
+    """
+    Generate aggregate summary for multiple research notes of the same ticker.
+
+    Args:
+        ticker (str): The stock ticker symbol
+        notes (list): List of ResearchNote objects that match user's current filters
+
+    Returns:
+        str: Markdown-formatted aggregate summary
+
+    TODO: Replace this placeholder with OpenAI integration
+    """
+
+    # Simulate processing time (remove this when you add OpenAI)
+    time.sleep(2)
+
+    # For now, return placeholder markdown summary
+    # REPLACE THIS ENTIRE FUNCTION WITH YOUR OPENAI LOGIC
+
+    notes_count = len(notes)
+    if notes_count == 0:
+        return "# No Reports Found\n\nNo reports available for analysis."
+
+    latest_report = notes[0]  # Already ordered by -file_summary_time
+    oldest_report = notes[-1]
+
+    # Get unique sources
+    sources = list(set(note.source for note in notes if note.source))
+
+    # Sample markdown content (REPLACE WITH OPENAI-GENERATED CONTENT)
+    markdown_content = f"""# {ticker} - Aggregate Research Summary
+
+                        ## Overview
+                        This aggregate summary consolidates insights from **{notes_count} research reports** covering {ticker} based on your current filters.
+                        
+                        """
+    return markdown_content

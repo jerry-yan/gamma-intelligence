@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ ticker }} - Aggregate Summary - Gamma Intelligence{% endblock %}
+
+{% block content %}
+<!-- Navigation Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'research_summaries:research_summaries' %}">Research Summaries</a></li>
+        <li class="breadcrumb-item active">{{ ticker }} - Aggregate Summary</li>
+    </ol>
+</nav>
+
+<!-- Header Section -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="mb-2">
+            <span class="badge bg-primary fs-5 me-2">{{ ticker }}</span>
+            Aggregate Research Summary
+        </h1>
+        {% if notes_count %}
+            <p class="text-muted">Consolidated insights from {{ notes_count }} research report{{ notes_count|pluralize }}</p>
+        {% endif %}
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'research_summaries:research_summaries' %}" class="btn btn-outline-primary">
+            ← Back to Research Summaries
+        </a>
+    </div>
+</div>
+
+<!-- Error State -->
+{% if error %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <h5 class="text-muted">{{ error }}</h5>
+        <p class="text-muted">Please check if there are summarized reports available for this ticker with your current filters.</p>
+        <a href="{% url 'research_summaries:research_summaries' %}" class="btn btn-primary">
+            Back to Research Summaries
+        </a>
+    </div>
+</div>
+
+<!-- Loading State -->
+{% elif loading %}
+<div id="loadingContainer">
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <h5>Generating Aggregate Summary</h5>
+            <p class="text-muted">Analyzing {{ notes_count }} research reports for {{ ticker }}...</p>
+            <div class="progress mx-auto" style="width: 300px; height: 8px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                     role="progressbar" style="width: 0%" id="progressBar"></div>
+            </div>
+            <small class="text-muted mt-2 d-block">This may take a few moments while we synthesize insights.</small>
+        </div>
+    </div>
+</div>
+
+<!-- Content Container (initially hidden) -->
+<div id="contentContainer" style="display: none;">
+    <div class="card">
+        <div class="card-body">
+            <div id="aggregateContent" class="aggregate-summary">
+                <!-- Content will be loaded here via JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Container (initially hidden) -->
+<div id="errorContainer" style="display: none;">
+    <div class="card">
+        <div class="card-body">
+            <div class="alert alert-danger">
+                <h6>Error Generating Summary</h6>
+                <p id="errorMessage"></p>
+                <button class="btn btn-outline-danger btn-sm" onclick="retryGeneration()">
+                    🔄 Retry
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Simulate progress bar animation
+    const progressBar = document.getElementById('progressBar');
+    let progress = 0;
+    
+    const progressInterval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress > 90) progress = 90; // Cap at 90% until actual completion
+        progressBar.style.width = progress + '%';
+    }, 500);
+    
+    // Get current URL params to maintain filters
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.delete('fullpage'); // Remove fullpage param for API call
+    
+    // Fetch the actual aggregate summary
+    const apiUrl = window.location.pathname + '?' + urlParams.toString();
+    
+    fetch(apiUrl)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            clearInterval(progressInterval);
+            progressBar.style.width = '100%';
+            
+            setTimeout(() => {
+                if (data.success) {
+                    // Hide loading, show content
+                    document.getElementById('loadingContainer').style.display = 'none';
+                    document.getElementById('contentContainer').style.display = 'block';
+                    document.getElementById('aggregateContent').innerHTML = data.summary_html;
+                } else {
+                    // Show error
+                    document.getElementById('loadingContainer').style.display = 'none';
+                    document.getElementById('errorContainer').style.display = 'block';
+                    document.getElementById('errorMessage').textContent = data.error || 'Unknown error occurred';
+                }
+            }, 500); // Small delay to show 100% completion
+        })
+        .catch(error => {
+            clearInterval(progressInterval);
+            console.error('Error fetching aggregate summary:', error);
+            
+            document.getElementById('loadingContainer').style.display = 'none';
+            document.getElementById('errorContainer').style.display = 'block';
+            document.getElementById('errorMessage').textContent = 'Failed to load summary: ' + error.message;
+        });
+});
+
+function retryGeneration() {
+    // Reload the page to retry
+    window.location.reload();
+}
+</script>
+
+<!-- Add custom CSS for the aggregate summary styling -->
+<style>
+.aggregate-summary {
+    line-height: 1.6;
+}
+
+.aggregate-summary h1 {
+    color: #2c3e50;
+    border-bottom: 3px solid #3498db;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+    font-size: 2rem;
+}
+
+.aggregate-summary h2 {
+    color: #34495e;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+    border-bottom: 1px solid #bdc3c7;
+    padding-bottom: 0.3rem;
+}
+
+.aggregate-summary h3 {
+    color: #2c3e50;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 1.25rem;
+}
+
+.aggregate-summary ul, .aggregate-summary ol {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+}
+
+.aggregate-summary li {
+    margin-bottom: 0.5rem;
+}
+
+.aggregate-summary blockquote {
+    border-left: 4px solid #3498db;
+    padding-left: 1rem;
+    margin: 1.5rem 0;
+    font-style: italic;
+    background-color: #ecf0f1;
+    padding: 1rem;
+    border-radius: 4px;
+}
+
+.aggregate-summary table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.aggregate-summary th, .aggregate-summary td {
+    border: 1px solid #bdc3c7;
+    padding: 0.75rem;
+    text-align: left;
+}
+
+.aggregate-summary th {
+    background-color: #3498db;
+    color: white;
+    font-weight: 600;
+}
+
+.aggregate-summary tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+.aggregate-summary strong {
+    color: #2c3e50;
+}
+
+.aggregate-summary hr {
+    border: none;
+    height: 2px;
+    background: linear-gradient(to right, #3498db, transparent);
+    margin: 2rem 0;
+}
+
+/* Progress bar styling */
+.progress {
+    background-color: #ecf0f1;
+    border-radius: 10px;
+}
+
+.progress-bar {
+    background: linear-gradient(45deg, #3498db, #2980b9);
+    border-radius: 10px;
+}
+</style>
+
+{% endblock %}
