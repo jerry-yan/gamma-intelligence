@@ -243,7 +243,7 @@ def download_documents():
     """
     try:
         # Process only 1 file at a time to minimize memory issues
-        BATCH_SIZE = 10
+        BATCH_SIZE = 8
         queue = ResearchNote.objects.filter(status=0).order_by("id")[:BATCH_SIZE]
 
         if not queue.exists():
