@@ -212,16 +212,16 @@ and your goal will be to output a summary of around 500 words that contains the 
 '''
 
 MACRO_REPORT_INSTRUCTION =  '''
-    You are a helpful financial assistant. You will be provided with a report,
-    and your goal will be to output a summary of around 450 words that contains the following information:
-    - Report title: The title of the report and not the file name
-    - Author(s): A list of the authors of the report
-    - Source: The name of the firm that published the report
-    - Sentiment: How the author feels about the stock
-    - Detailed executive summary of the report of at least 2-3 sentences
-    - Detailed bullet points on key themes and insights and whether the subject is leaning bullish or bearish
-    - Bullet points on valuation analysis (if any)
-    - Bullet points on strategic recommendations (if any)
+You are a helpful financial assistant. You will be provided with a report,
+and your goal will be to output a summary of around 450 words that contains the following information:
+- Report title: The title of the report and not the file name
+- Author(s): A list of the authors of the report
+- Source: The name of the firm that published the report
+- Sentiment: How the author feels about the stock
+- Detailed executive summary of the report of at least 2-3 sentences
+- Detailed bullet points on key themes and insights and whether the subject is leaning bullish or bearish
+- Bullet points on valuation analysis (if any)
+- Bullet points on strategic recommendations (if any)
 '''
 
 # key = report_type produced by categorization (e.g., "Company Update")
@@ -235,3 +235,21 @@ SUMMARY_INSTRUCTIONS = {
 }
 
 DEFAULT_SUMMARY_PROMPT = """<Fallback prompt if report_type not in SUMMARY_QUERIES>"""
+
+AGGREGATE_SUMMARY_INSTRUCTION = '''
+You are a helpful financial assistant who goal is to create stock summaries. You will be provided
+with JSON objects and you must provide a structured summary of key insights. The summary should ideally include 
+the following sections, but feel free to omit any section or heading if the information isn't available or relevant:
+
+- Overview of the company and its performance.
+- Price Target and Valuation with details on the valuation method.
+- Financial Outlook covering EPS estimates, comp sales performance, and future expectations.
+- Risks associated with the company’s performance and market conditions.
+- Opportunities for growth and expansion (if applicable).
+- Strategic Initiatives that could impact future performance.
+- Risk/Reward Profile summarizing the balance of potential risks and rewards.
+- A Conclusion that provides a high-level assessment of the company’s future prospects.
+
+The summary must be between 480 and 510 words and formatted with headings for easy readability. 
+If some of the sections are not relevant or applicable, feel free to omit them without affecting the structure of the summary.
+'''

@@ -19,6 +19,8 @@ import json
 import time
 import markdown
 from django.utils.html import mark_safe
+from research_summaries.OpenAI_toolbox.prompts import AGGREGATE_SUMMARY_INSTRUCTION
+from research_summaries.openai_utils import get_openai_client
 
 logger = logging.getLogger(__name__)
 
@@ -827,31 +829,42 @@ def generate_aggregate_summary(ticker, notes):
 
     Returns:
         str: Markdown-formatted aggregate summary
-
-    TODO: Replace this placeholder with OpenAI integration
     """
 
-    # Simulate processing time (remove this when you add OpenAI)
-    time.sleep(2)
-
-    # For now, return placeholder markdown summary
-    # REPLACE THIS ENTIRE FUNCTION WITH YOUR OPENAI LOGIC
+    MODEL = "gpt-4.1-mini-2025-04-14"
 
     notes_count = len(notes)
     if notes_count == 0:
         return "# No Reports Found\n\nNo reports available for analysis."
 
-    latest_report = notes[0]  # Already ordered by -file_summary_time
-    oldest_report = notes[-1]
+    try:
+        reports_summaries = []
+        for note in notes:
+            if note.report_summary:
+                reports_summaries.append(note.report_summary)
 
-    # Get unique sources
-    sources = list(set(note.source for note in notes if note.source))
+        if not reports_summaries:
+            return f"# {ticker} - No Summary Data Available\n\nNo report summaries found for analysis."
 
-    # Sample markdown content (REPLACE WITH OPENAI-GENERATED CONTENT)
-    markdown_content = f"""# {ticker} - Aggregate Research Summary
+        client = get_openai_client()
 
-                        ## Overview
-                        This aggregate summary consolidates insights from **{notes_count} research reports** covering {ticker} based on your current filters.
-                        
-                        """
-    return markdown_content
+        prompt_content = (
+            f"Please create a comprehensive aggregate research summary for {ticker} based on the following {len(reports_summaries)} research reports.\n\n"
+            "**Report Summaries:**\n"
+            f"{json.dumps(reports_summaries, indent=2, default=str)}"
+        )
+
+        response = client.responses.create(
+            model=MODEL,
+            instructions=AGGREGATE_SUMMARY_INSTRUCTION,
+            input=prompt_content,
+            temperature=0.2,
+        )
+
+        summarized_text = response.output_text
+
+        return summarized_text
+
+    except Exception as e:
+        logger.error(f"Error generating aggregate summary for {ticker}: {e}")
+        return f"# {ticker} - Summary Generation Error\n\nError generating summary: {str(e)}"
