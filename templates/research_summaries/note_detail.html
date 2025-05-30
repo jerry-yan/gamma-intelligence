@@ -320,7 +320,7 @@
                 {% if key != "sentiment" and value %}
                     <!-- FIXED: Removed the invalid 'replace' filter -->
                     <h6 class="mt-4">{{ key|title }}</h6>
-                    {% if value|length_is:'1' and value.0|add:0 != value.0 %}
+                    {% if value|length == 1 and value.0|add:0 != value.0 %}
                         <!-- Single string value -->
                         <p>{{ value }}</p>
                     {% elif value|first %}
