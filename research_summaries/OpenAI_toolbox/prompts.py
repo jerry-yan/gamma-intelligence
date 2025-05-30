@@ -40,7 +40,7 @@ You are a helpful financial assistant whose goal is to classify a given research
 - A note published after the company has released results. Focus is on reviewing the reported results, comparing them to expectations, and discussing key metrics (e.g., “reported results,” “actual vs. expected performance”).
 
 5. Invalid
-- A note that is an invitation to a call or a webcast. These reports may ask the reader to register for an upcoming event without providing concrete analysis. Invalid reports may also refer to a video link or webcast.
+- A note that is an invitation to a call or a webcast. These reports may ask the reader to register for an upcoming event without providing concrete analysis. Invalid reports may also refer to a video link or webcast. One key word in the title is usually “invite”, “register” or “reminder”.
 
 ***Tips & Clarifications***
 1. Context Is Key: Always consider the entire document’s content — do not rely solely on the title.
@@ -78,7 +78,7 @@ You are a helpful financial assistant whose goal is to classify a given research
 - A focus on the broader economic environment, market trends, investment strategies, currencies, commodities, or asset classes. This type of report generally does not focus on individual companies or even a single sector; it looks at the “big picture.”
 
 7. Invalid
-- A note that is an invitation to a call or a webcast. These reports may ask the reader to register for an upcoming event without providing concrete analysis. Invalid reports may also refer to a video link or webcast.
+- A note that is an invitation to a call or a webcast. These reports may ask the reader to register for an upcoming event without providing concrete analysis. Invalid reports may also refer to a video link or webcast. One key word in the title is usually “invite”, “register” or “reminder”.
 
 
 ***Tips & Clarifications***
