@@ -140,8 +140,8 @@ class ResearchSummariesView(LoginRequiredMixin, TemplateView):
         }
 
         # Get unique sources for filter dropdown (from summarized notes only)
-        sources = ResearchNote.objects.filter(status=3).values_list('source', flat=True).distinct().exclude(
-            source__isnull=True).exclude(source='')
+        sources = ResearchNote.objects.filter(status=3).values_list('source', flat=True).exclude(
+            source__isnull=True).exclude(source='').distinct().order_by('source')
 
         # Recent activity
         recent_summaries = ResearchNote.objects.filter(status=3).order_by('-file_summary_time')[:5]
