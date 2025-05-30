@@ -195,7 +195,7 @@ def mark_as_read(request):
                 latest_report_time = parse_datetime(latest_report_time_str)
                 if latest_report_time:
                     # Add 1 second to the latest report time
-                    new_last_read_time = latest_report_time + timedelta(seconds=1)
+                    new_last_read_time = latest_report_time + timedelta(seconds=59)
 
                     # Update user's profile
                     user_profile = request.user.profile
