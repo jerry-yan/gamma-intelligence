@@ -302,9 +302,9 @@
             {% endif %}
 
         {% else %}
-            <!-- Generic Format for other report types -->
+            <!-- Generic Format for other report types - FIXED -->
             {% if summary_data.sentiment %}
-                <p><strong>Sentiment:</strong> 
+                <p><strong>Sentiment:</strong>
                     {% if summary_data.sentiment == "Positive" %}
                         <span class="badge bg-success">{{ summary_data.sentiment }}</span>
                     {% elif summary_data.sentiment == "Negative" %}
@@ -314,11 +314,12 @@
                     {% endif %}
                 </p>
             {% endif %}
-            
+
             <!-- Display all available fields in a generic way -->
             {% for key, value in summary_data.items %}
                 {% if key != "sentiment" and value %}
-                    <h6 class="mt-4">{{ key|title|replace:"_":" " }}</h6>
+                    <!-- FIXED: Removed the invalid 'replace' filter -->
+                    <h6 class="mt-4">{{ key|title }}</h6>
                     {% if value|length_is:'1' and value.0|add:0 != value.0 %}
                         <!-- Single string value -->
                         <p>{{ value }}</p>
