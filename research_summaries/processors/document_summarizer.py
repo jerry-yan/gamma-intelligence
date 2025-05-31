@@ -51,7 +51,7 @@ def clean_ticker(raw: str | None) -> str | None:
     if " " in ticker:
         ticker = ticker.split(" ", 1)[0]
 
-    for sep in (".", "-"):
+    for sep in (".", "-", ","):
         if sep in ticker:
             ticker = ticker.split(sep, 1)[0]
     return ticker or None
@@ -210,6 +210,8 @@ def summarize_documents():
 
             if note.report_type == "Invalid":
                 print(f"⚠️  Skipping invalid report: {note.file_id}")
+                note.status = 10  # Invalid
+                note.save(update_fields=["status"])
                 continue
 
             print(f"📝 Summarizing {note.file_id}...")
@@ -237,8 +239,6 @@ def summarize_documents():
 
         except Exception as e:
             print(f"❌ Error processing {note.file_id}: {e}")
-            note.status = 10  # Error status
-            note.save(update_fields=["status"])
 
         finally:
             # Clean up OpenAI file
