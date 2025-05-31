@@ -38,6 +38,8 @@ class ResearchNote(models.Model):
         (1, "Downloaded"),
         (2, "Preprocessed"),
         (3, "Summarized"),
+        (10, "Error 1"),
+        (11, "Error 2"),
     ]
     status = models.PositiveIntegerField(choices=STATUS_CHOICES, default=0)
 
