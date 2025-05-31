@@ -36,7 +36,7 @@ class Command(BaseCommand):
 
                 # Wait 2 hours
                 self.stdout.write('😴 Sleeping for 1 minute...')
-                time.sleep(60) # sleep 1 minute
+                time.sleep(5 * 60) # sleep 5 minutes
                 # time.sleep(2 * 60 * 60)  # 2 hours in seconds
 
             except KeyboardInterrupt:
