@@ -105,8 +105,7 @@ class ResearchSummariesView(LoginRequiredMixin, TemplateView):
         for ticker in sorted(ticker_groups.keys()):
             sorted_ticker_groups[ticker] = sorted(
                 ticker_groups[ticker],
-                key=lambda x: x.file_summary_time,
-                reverse=True
+                key=lambda x: (x.source or '', x.raw_title or '')
             )
 
         # Sort report type groups alphabetically and sort reports within each group by summary time
@@ -114,8 +113,7 @@ class ResearchSummariesView(LoginRequiredMixin, TemplateView):
         for report_type in sorted(report_type_groups.keys()):
             sorted_report_type_groups[report_type] = sorted(
                 report_type_groups[report_type],
-                key=lambda x: x.file_summary_time,
-                reverse=True
+                key=lambda x: (x.source or '', x.raw_title or '')
             )
 
         # Calculate total results
