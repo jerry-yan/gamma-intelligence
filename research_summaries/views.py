@@ -866,3 +866,86 @@ def generate_aggregate_summary(ticker, notes):
     except Exception as e:
         logger.error(f"Error generating aggregate summary for {ticker}: {e}")
         return f"# {ticker} - Summary Generation Error\n\nError generating summary: {str(e)}"
+
+
+@login_required
+@require_POST
+def flag_report(request, note_id):
+    """Flag a report for report type reassignment"""
+    try:
+        import json
+        from django.utils.timezone import now
+
+        # Get the research note
+        note = get_object_or_404(ResearchNote, id=note_id)
+
+        # Parse request body
+        data = json.loads(request.body)
+        new_report_type = data.get('new_report_type', '').strip()
+
+        # Validate the new report type
+        valid_report_types = [
+            "Initiation Report",
+            "Company Update",
+            "Quarter Preview",
+            "Quarter Review",
+            "Industry Note",
+            "Macro/Strategy Report",
+            "Invalid"
+        ]
+
+        if new_report_type not in valid_report_types:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid report type selected'
+            }, status=400)
+
+        # Store original values for logging
+        original_report_type = note.report_type
+        original_status = note.status
+
+        # Update the note
+        note.report_type = new_report_type
+        note.status = 2  # Revert to "Preprocessed" status
+        note.file_update_time = now()
+
+        # Clear the existing summary since we're changing the type
+        note.report_summary = None
+        note.parsed_ticker = None
+        note.file_summary_time = None
+
+        # Save the changes
+        note.save(update_fields=[
+            'report_type',
+            'status',
+            'file_update_time',
+            'report_summary',
+            'parsed_ticker',
+            'file_summary_time'
+        ])
+
+        # Log the change
+        logger.info(f"Report {note.file_id} flagged by user {request.user.username}: "
+                    f"type changed from '{original_report_type}' to '{new_report_type}', "
+                    f"status reverted from {original_status} to 2")
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Report successfully flagged and reassigned to "{new_report_type}"',
+            'new_report_type': new_report_type,
+            'new_status': 2,
+            'note_id': note_id
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid request format'
+        }, status=400)
+
+    except Exception as e:
+        logger.error(f"Error flagging report {note_id}: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'An unexpected error occurred'
+        }, status=500)

@@ -235,6 +235,10 @@
                                                 🔗 Link
                                             </a>
                                         {% endif %}
+
+                                        <button class="btn btn-outline-warning btn-sm" onclick="event.stopPropagation(); openFlagModal({{ note.id }}, '{{ note.report_type|default:"Unknown" }}')" title="Flag for report type reassignment">
+                                            🚩
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -579,6 +583,11 @@
                                                     🔗 Original Link
                                                 </a>
                                             {% endif %}
+
+                                            <button class="btn btn-outline-warning" onclick="openFlagModal({{ note.id }}, '{{ note.report_type|default:"Unknown" }}')" title="Flag for report type reassignment">
+                                                🚩 Report
+                                            </button>
+
                                         </div>
                                     </div>
                                 </div>
@@ -1059,6 +1068,90 @@
 }
 </style>
 
+<!-- Flag Modal for Report Type Reassignment -->
+<div class="modal fade" id="flagModal" tabindex="-1" aria-labelledby="flagModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="flagModalLabel">🚩 Flag Report for Reassignment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="flagContent">
+                    <p class="mb-3">
+                        <strong>Current Report Type:</strong> <span id="currentReportType">Unknown</span>
+                    </p>
+                    <p class="text-muted mb-3">
+                        Select a new report type. This will revert the document to "Preprocessed" status and trigger re-summarization with the new type.
+                    </p>
+
+                    <form id="flagForm">
+                        <div class="mb-3">
+                            <label class="form-label"><strong>New Report Type:</strong></label>
+                            <div class="d-flex flex-column gap-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="new_report_type" value="Initiation Report" id="type_initiation">
+                                    <label class="form-check-label" for="type_initiation">
+                                        📈 Initiation Report
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="new_report_type" value="Company Update" id="type_update">
+                                    <label class="form-check-label" for="type_update">
+                                        📊 Company Update
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="new_report_type" value="Quarter Preview" id="type_preview">
+                                    <label class="form-check-label" for="type_preview">
+                                        📅 Quarter Preview
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="new_report_type" value="Quarter Review" id="type_review">
+                                    <label class="form-check-label" for="type_review">
+                                        📋 Quarter Review
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="new_report_type" value="Industry Note" id="type_industry">
+                                    <label class="form-check-label" for="type_industry">
+                                        🏭 Industry Note
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="new_report_type" value="Macro/Strategy Report" id="type_macro">
+                                    <label class="form-check-label" for="type_macro">
+                                        🌍 Macro/Strategy Report
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="new_report_type" value="Invalid" id="type_invalid">
+                                    <label class="form-check-label" for="type_invalid">
+                                        ❌ Invalid
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning" role="alert">
+                            <small>
+                                <strong>⚠️ Warning:</strong> Flagging this report will change its status back to "Preprocessed" and will trigger re-summarization with the new report type.
+                            </small>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="submitFlag" disabled>
+                    🚩 Flag & Reassign
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 function viewPDF(fileDirectory, noteId) {
     // Show loading state
@@ -1430,6 +1523,93 @@ if (!document.getElementById('aggregate-styles')) {
     styleElement.innerHTML = aggregateStyles;
     document.head.appendChild(styleElement);
 }
+
+
+let currentNoteId = null;
+
+function openFlagModal(noteId, currentType) {
+    currentNoteId = noteId;
+    document.getElementById('currentReportType').textContent = currentType;
+
+    // Clear any previous selections
+    const radioButtons = document.querySelectorAll('input[name="new_report_type"]');
+    radioButtons.forEach(radio => {
+        radio.checked = false;
+    });
+
+    // Enable/disable submit button based on selection
+    updateSubmitButton();
+
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('flagModal'));
+    modal.show();
+}
+
+function updateSubmitButton() {
+    const submitBtn = document.getElementById('submitFlag');
+    const checkedRadio = document.querySelector('input[name="new_report_type"]:checked');
+    submitBtn.disabled = !checkedRadio;
+}
+
+// Listen for radio button changes
+document.querySelectorAll('input[name="new_report_type"]').forEach(radio => {
+    radio.addEventListener('change', updateSubmitButton);
+});
+
+// Handle form submission
+document.getElementById('submitFlag').addEventListener('click', function() {
+    const checkedRadio = document.querySelector('input[name="new_report_type"]:checked');
+
+    if (!checkedRadio || !currentNoteId) {
+        alert('Please select a report type');
+        return;
+    }
+
+    const newReportType = checkedRadio.value;
+
+    // Show loading state
+    const submitBtn = this;
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '⏳ Processing...';
+    submitBtn.disabled = true;
+
+    // Submit the flag request
+    fetch(`/research/flag-report/${currentNoteId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            new_report_type: newReportType
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('flagModal'));
+            modal.hide();
+
+            // Show success message
+            alert(`Report successfully flagged and reassigned to "${newReportType}". Status reverted to "Preprocessed".`);
+
+            // Refresh the page to show updated status
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error occurred'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to flag report. Please try again.');
+    })
+    .finally(() => {
+        // Restore button state
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+});
 
 </script>
 

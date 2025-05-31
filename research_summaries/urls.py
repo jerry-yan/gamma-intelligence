@@ -12,6 +12,7 @@ urlpatterns = [
     path('toggle-favorite/<int:note_id>/', views.toggle_note_favorite, name='toggle_favorite'),
     path('pdf/<int:note_id>/', views.get_pdf_url, name='get_pdf_url'),
     path('aggregate-summary/<str:ticker>/', views.aggregate_summary, name='aggregate_summary'),
+    path('flag-report/<int:note_id>/', views.flag_report, name='flag_report'),
 
     # Test/admin pages (keep these for now)
     path('email-test/', views.email_test_view, name='email_test'),
