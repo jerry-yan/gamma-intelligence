@@ -698,123 +698,205 @@ def get_pdf_url(request, note_id):
 
 
 @login_required
+def aggregate_summary_stream(request, ticker):
+    """Stream the aggregate summary generation with real-time updates"""
+
+    def generate_summary_updates():
+        """Generator that yields real-time updates during summary generation"""
+        try:
+            from django.utils import timezone
+            from datetime import timedelta
+
+            yield f"data: {json.dumps({'type': 'info', 'message': f'🔍 Gathering {ticker} reports with your current filters...'})}\n\n"
+
+            # Get user's last read time for default datetime filter (same logic as main view)
+            user_profile = request.user.profile
+            if user_profile.last_read_time:
+                default_datetime = user_profile.last_read_time
+            else:
+                default_datetime = timezone.now() - timedelta(hours=24)
+
+            # Get query parameters for filtering (same as main view)
+            source_filter = request.GET.get('source', '')
+            search_query = request.GET.get('search', '')
+            datetime_filter = request.GET.get('datetime', '')
+
+            # Parse datetime filter or use default (same logic as main view)
+            if datetime_filter:
+                try:
+                    from django.utils.dateparse import parse_datetime, parse_date
+                    filter_datetime = parse_datetime(datetime_filter)
+                    if not filter_datetime:
+                        filter_date = parse_date(datetime_filter)
+                        if filter_date:
+                            filter_datetime = timezone.make_aware(
+                                timezone.datetime.combine(filter_date, timezone.datetime.min.time())
+                            )
+                        else:
+                            filter_datetime = default_datetime
+                except:
+                    filter_datetime = default_datetime
+            else:
+                filter_datetime = default_datetime
+
+            # Build queryset with EXACT same filters as main research summaries page
+            queryset = ResearchNote.objects.filter(
+                status=3,  # Only summarized notes
+                parsed_ticker=ticker,
+                report_summary__isnull=False
+            ).order_by('-file_summary_time')
+
+            # Apply datetime filter - show reports updated after the filter datetime
+            queryset = queryset.filter(file_summary_time__gte=filter_datetime)
+
+            # Apply other filters (same as main view)
+            if source_filter:
+                queryset = queryset.filter(source__icontains=source_filter)
+
+            if search_query:
+                queryset = queryset.filter(
+                    Q(raw_title__icontains=search_query) |
+                    Q(raw_author__icontains=search_query) |
+                    Q(raw_companies__icontains=search_query) |
+                    Q(parsed_ticker__icontains=search_query)
+                )
+
+            notes = list(queryset)
+            notes_count = len(notes)
+
+            if notes_count == 0:
+                yield f"data: {json.dumps({'type': 'error', 'message': f'❌ No reports found for {ticker} with current filters'})}\n\n"
+                return
+
+            yield f"data: {json.dumps({'type': 'info', 'message': f'📊 Found {notes_count} reports for {ticker}'})}\n\n"
+            yield f"data: {json.dumps({'type': 'info', 'message': '🤖 Generating aggregate summary with OpenAI...'})}\n\n"
+
+            # Generate aggregate summary (this is the long-running part)
+            try:
+                summary_markdown = generate_aggregate_summary(ticker, notes)
+
+                yield f"data: {json.dumps({'type': 'info', 'message': '📝 Converting summary to HTML...'})}\n\n"
+
+                # Convert markdown to HTML
+                html_content = markdown.markdown(
+                    summary_markdown,
+                    extensions=['extra', 'codehilite']
+                )
+
+                yield f"data: {json.dumps({'type': 'success', 'message': f'✅ Successfully generated aggregate summary for {ticker}!'})}\n\n"
+
+                # Send the final result
+                yield f"data: {json.dumps({'type': 'complete', 'summary_html': mark_safe(html_content).__str__(), 'ticker': ticker, 'notes_count': notes_count})}\n\n"
+
+            except Exception as e:
+                logger.error(f"Error generating aggregate summary for {ticker}: {e}")
+                yield f"data: {json.dumps({'type': 'error', 'message': f'❌ Failed to generate summary: {str(e)}'})}\n\n"
+
+        except Exception as e:
+            logger.error(f"Error in aggregate_summary_stream for {ticker}: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': f'🚨 Critical error: {str(e)}'})}\n\n"
+
+    response = StreamingHttpResponse(
+        generate_summary_updates(),
+        content_type='text/event-stream'
+    )
+    response['Cache-Control'] = 'no-cache'
+    response['Connection'] = 'keep-alive'
+    response['X-Accel-Buffering'] = 'no'
+    return response
+
+
+@login_required
 def aggregate_summary(request, ticker):
     """Generate and display aggregate summary for a specific ticker with same filters as main page"""
-    try:
-        from django.utils import timezone
-        from datetime import timedelta
 
-        # Get user's last read time for default datetime filter (same logic as main view)
-        user_profile = request.user.profile
-        if user_profile.last_read_time:
-            default_datetime = user_profile.last_read_time
-        else:
-            default_datetime = timezone.now() - timedelta(hours=24)
+    # Check if this is a streaming request
+    if request.GET.get('stream') == 'true':
+        return aggregate_summary_stream(request, ticker)
 
-        # Get query parameters for filtering (same as main view)
-        source_filter = request.GET.get('source', '')
-        search_query = request.GET.get('search', '')
-        datetime_filter = request.GET.get('datetime', '')
+    # Check if this is a full page request (new tab) - show loading page
+    if request.GET.get('fullpage'):
+        try:
+            from django.utils import timezone
+            from datetime import timedelta
 
-        # Parse datetime filter or use default (same logic as main view)
-        if datetime_filter:
-            try:
-                from django.utils.dateparse import parse_datetime, parse_date
-                filter_datetime = parse_datetime(datetime_filter)
-                if not filter_datetime:
-                    filter_date = parse_date(datetime_filter)
-                    if filter_date:
-                        filter_datetime = timezone.make_aware(
-                            timezone.datetime.combine(filter_date, timezone.datetime.min.time())
-                        )
-                    else:
-                        filter_datetime = default_datetime
-            except:
+            # Get basic info for the loading page
+            user_profile = request.user.profile
+            if user_profile.last_read_time:
+                default_datetime = user_profile.last_read_time
+            else:
+                default_datetime = timezone.now() - timedelta(hours=24)
+
+            # Get query parameters
+            source_filter = request.GET.get('source', '')
+            search_query = request.GET.get('search', '')
+            datetime_filter = request.GET.get('datetime', '')
+
+            # Parse datetime filter
+            if datetime_filter:
+                try:
+                    from django.utils.dateparse import parse_datetime, parse_date
+                    filter_datetime = parse_datetime(datetime_filter)
+                    if not filter_datetime:
+                        filter_date = parse_date(datetime_filter)
+                        if filter_date:
+                            filter_datetime = timezone.make_aware(
+                                timezone.datetime.combine(filter_date, timezone.datetime.min.time())
+                            )
+                        else:
+                            filter_datetime = default_datetime
+                except:
+                    filter_datetime = default_datetime
+            else:
                 filter_datetime = default_datetime
-        else:
-            filter_datetime = default_datetime
 
-        # Build queryset with EXACT same filters as main research summaries page
-        queryset = ResearchNote.objects.filter(
-            status=3,  # Only summarized notes
-            parsed_ticker=ticker,
-            report_summary__isnull=False
-        ).order_by('-file_summary_time')
-
-        # Apply datetime filter - show reports updated after the filter datetime
-        queryset = queryset.filter(file_summary_time__gte=filter_datetime)
-
-        # Apply other filters (same as main view)
-        if source_filter:
-            queryset = queryset.filter(source__icontains=source_filter)
-
-        if search_query:
-            queryset = queryset.filter(
-                Q(raw_title__icontains=search_query) |
-                Q(raw_author__icontains=search_query) |
-                Q(raw_companies__icontains=search_query) |
-                Q(parsed_ticker__icontains=search_query)
+            # Get count of notes for display
+            queryset = ResearchNote.objects.filter(
+                status=3,
+                parsed_ticker=ticker,
+                report_summary__isnull=False,
+                file_summary_time__gte=filter_datetime
             )
 
-        notes = list(queryset)
+            if source_filter:
+                queryset = queryset.filter(source__icontains=source_filter)
+            if search_query:
+                queryset = queryset.filter(
+                    Q(raw_title__icontains=search_query) |
+                    Q(raw_author__icontains=search_query) |
+                    Q(raw_companies__icontains=search_query) |
+                    Q(parsed_ticker__icontains=search_query)
+                )
 
-        if not notes:
-            error_msg = f"No reports found for {ticker} with current filters"
-            if request.GET.get('fullpage'):
+            notes_count = queryset.count()
+
+            if notes_count == 0:
                 return render(request, 'research_summaries/aggregate_summary.html', {
                     'ticker': ticker,
-                    'error': error_msg,
+                    'error': f"No reports found for {ticker} with current filters",
                     'notes_count': 0
                 })
-            return JsonResponse({'success': False, 'error': error_msg})
 
-        notes_count = len(notes)
-
-        # Check if this is a full page request (new tab)
-        if request.GET.get('fullpage'):
             return render(request, 'research_summaries/aggregate_summary.html', {
                 'ticker': ticker,
                 'notes_count': notes_count,
-                'notes': notes,
                 'loading': True
             })
 
-        # Generate aggregate summary
-        try:
-            summary_markdown = generate_aggregate_summary(ticker, notes)
-
-            # Convert markdown to HTML
-            html_content = markdown.markdown(
-                summary_markdown,
-                extensions=['extra', 'codehilite']
-            )
-
-            return JsonResponse({
-                'success': True,
-                'summary_html': mark_safe(html_content),
-                'ticker': ticker,
-                'notes_count': notes_count,
-                'summary_markdown': summary_markdown
-            })
-
         except Exception as e:
-            logger.error(f"Error generating aggregate summary for {ticker}: {e}")
-            return JsonResponse({
-                'success': False,
-                'error': f"Failed to generate summary: {str(e)}"
-            })
-
-    except Exception as e:
-        logger.error(f"Error in aggregate_summary view for {ticker}: {e}")
-        error_msg = "An unexpected error occurred"
-
-        if request.GET.get('fullpage'):
+            logger.error(f"Error in aggregate_summary fullpage view for {ticker}: {e}")
             return render(request, 'research_summaries/aggregate_summary.html', {
                 'ticker': ticker,
-                'error': error_msg,
+                'error': "An unexpected error occurred",
                 'notes_count': 0
             })
-        return JsonResponse({'success': False, 'error': error_msg})
+
+    # For regular AJAX requests, return an error suggesting to use the modal instead
+    return JsonResponse({
+        'success': False,
+        'error': 'Direct AJAX requests are no longer supported. Please use the modal interface.',
+        'suggestion': 'Use the aggregate summary button on the research summaries page.'
+    })
 
 
 def generate_aggregate_summary(ticker, notes):

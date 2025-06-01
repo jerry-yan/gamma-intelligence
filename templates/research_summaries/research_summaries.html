@@ -1371,8 +1371,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Aggregate Summary functionality
+// Aggregate Summary functionality with Server-Sent Events
 let currentAggregateUrl = null;
+let aggregateEventSource = null;
 
 function openAggregateModal(ticker, reportCount) {
     const modal = new bootstrap.Modal(document.getElementById('aggregateModal'));
@@ -1383,14 +1384,22 @@ function openAggregateModal(ticker, reportCount) {
     // Update modal title
     modalLabel.textContent = `${ticker} - Aggregate Summary (${reportCount} reports)`;
 
-    // Show loading state
+    // Show loading state with progress messages
     aggregateContent.innerHTML = `
-        <div class="text-center py-4">
+        <div class="text-center py-4" id="loadingState">
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
             <p class="mt-3 text-muted">Generating aggregate summary for ${ticker}...</p>
             <small class="text-muted">This may take a few moments while we analyze all reports.</small>
+        </div>
+        <div id="progressLog" class="mt-3" style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; display: none;">
+            <div class="text-muted">Starting summary generation...</div>
+        </div>
+        <div class="mt-3 text-center">
+            <button class="btn btn-sm btn-outline-secondary" onclick="toggleProgressLog()">
+                <span id="logToggleText">Show Progress Log</span>
+            </button>
         </div>
     `;
 
@@ -1402,53 +1411,195 @@ function openAggregateModal(ticker, reportCount) {
 
     // Build URL with current filter parameters to match user's view
     const urlParams = new URLSearchParams(window.location.search);
-    const aggregateUrl = `/research/aggregate-summary/${encodeURIComponent(ticker)}/?${urlParams.toString()}`;
-    currentAggregateUrl = aggregateUrl;
+    urlParams.set('stream', 'true'); // Add stream parameter
+    const aggregateStreamUrl = `/research/aggregate-summary-stream/${encodeURIComponent(ticker)}/?${urlParams.toString()}`;
 
-    // Fetch the aggregate summary
-    fetch(aggregateUrl)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                // Display the summary
-                aggregateContent.innerHTML = `
-                    <div class="aggregate-summary">
-                        ${data.summary_html}
-                    </div>
-                `;
+    // For new tab URL (without stream parameter)
+    const newTabParams = new URLSearchParams(window.location.search);
+    currentAggregateUrl = `/research/aggregate-summary/${encodeURIComponent(ticker)}/?${newTabParams.toString()}`;
 
-                // Show new tab button
-                openInNewTabBtn.style.display = 'inline-block';
-            } else {
-                aggregateContent.innerHTML = `
-                    <div class="alert alert-danger">
-                        <h6>Error generating summary</h6>
-                        <p>${data.error || 'Unknown error occurred'}</p>
-                    </div>
-                `;
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching aggregate summary:', error);
-            aggregateContent.innerHTML = `
-                <div class="alert alert-danger">
-                    <h6>Connection Error</h6>
-                    <p>Unable to generate aggregate summary. Please try again later.</p>
-                    <small class="text-muted">Error: ${error.message}</small>
-                </div>
-            `;
-        });
+    // Start Server-Sent Events
+    startAggregateStream(aggregateStreamUrl, ticker);
 }
 
-// Handle "Open in New Tab" button
+function startAggregateStream(streamUrl, ticker) {
+    // Close any existing event source
+    if (aggregateEventSource) {
+        aggregateEventSource.close();
+    }
+
+    const progressLog = document.getElementById('progressLog');
+    const loadingState = document.getElementById('loadingState');
+    const aggregateContent = document.getElementById('aggregateContent');
+    const openInNewTabBtn = document.getElementById('openInNewTab');
+
+    function addLogMessage(message, type = 'info') {
+        if (!progressLog) return;
+
+        const timestamp = new Date().toLocaleTimeString();
+        const typeColors = {
+            'info': '#17a2b8',
+            'success': '#28a745',
+            'error': '#dc3545',
+            'complete': '#6f42c1'
+        };
+
+        const logEntry = document.createElement('div');
+        logEntry.style.color = typeColors[type] || '#666';
+        logEntry.style.marginBottom = '2px';
+        logEntry.innerHTML = `[${timestamp}] ${message}`;
+
+        progressLog.appendChild(logEntry);
+        progressLog.scrollTop = progressLog.scrollHeight;
+    }
+
+    // Initialize EventSource
+    aggregateEventSource = new EventSource(streamUrl);
+
+    aggregateEventSource.onmessage = function(event) {
+        try {
+            const data = JSON.parse(event.data);
+
+            // Add message to progress log
+            addLogMessage(data.message, data.type);
+
+            switch(data.type) {
+                case 'info':
+                case 'success':
+                    // Just log these messages
+                    break;
+
+                case 'error':
+                    // Show error state
+                    if (loadingState) {
+                        loadingState.style.display = 'none';
+                    }
+                    aggregateContent.innerHTML = `
+                        <div class="alert alert-danger">
+                            <h6>Error generating summary</h6>
+                            <p>${data.message}</p>
+                            <button class="btn btn-outline-danger btn-sm mt-2" onclick="retryAggregateModal('${ticker}')">
+                                🔄 Retry
+                            </button>
+                        </div>
+                        <div id="progressLog" class="mt-3" style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px;">
+                            ${progressLog ? progressLog.innerHTML : ''}
+                        </div>
+                    `;
+                    aggregateEventSource.close();
+                    break;
+
+                case 'complete':
+                    // Show the final summary
+                    if (loadingState) {
+                        loadingState.style.display = 'none';
+                    }
+
+                    aggregateContent.innerHTML = `
+                        <div class="aggregate-summary">
+                            ${data.summary_html}
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="showCompletionLog()">
+                                📊 View Generation Log
+                            </button>
+                        </div>
+                        <div id="completionLog" class="mt-3" style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; display: none;">
+                            ${progressLog ? progressLog.innerHTML : ''}
+                        </div>
+                    `;
+
+                    // Show new tab button
+                    openInNewTabBtn.style.display = 'inline-block';
+
+                    // Close event source
+                    aggregateEventSource.close();
+                    break;
+            }
+        } catch (e) {
+            console.error('Error parsing SSE data:', e);
+            addLogMessage('Error parsing server response', 'error');
+        }
+    };
+
+    aggregateEventSource.onerror = function(event) {
+        console.error('SSE connection error:', event);
+        addLogMessage('Connection error occurred', 'error');
+
+        if (loadingState) {
+            loadingState.style.display = 'none';
+        }
+
+        aggregateContent.innerHTML = `
+            <div class="alert alert-danger">
+                <h6>Connection Error</h6>
+                <p>Unable to maintain connection for generating aggregate summary. Please try again.</p>
+                <button class="btn btn-outline-danger btn-sm mt-2" onclick="retryAggregateModal('${ticker}')">
+                    🔄 Retry
+                </button>
+            </div>
+            <div id="progressLog" class="mt-3" style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px;">
+                ${progressLog ? progressLog.innerHTML : ''}
+            </div>
+        `;
+
+        aggregateEventSource.close();
+    };
+}
+
+function toggleProgressLog() {
+    const progressLog = document.getElementById('progressLog');
+    const toggleText = document.getElementById('logToggleText');
+
+    if (progressLog.style.display === 'none') {
+        progressLog.style.display = 'block';
+        toggleText.textContent = 'Hide Progress Log';
+    } else {
+        progressLog.style.display = 'none';
+        toggleText.textContent = 'Show Progress Log';
+    }
+}
+
+function showCompletionLog() {
+    const completionLog = document.getElementById('completionLog');
+    if (completionLog.style.display === 'none') {
+        completionLog.style.display = 'block';
+    } else {
+        completionLog.style.display = 'none';
+    }
+}
+
+function retryAggregateModal(ticker) {
+    // Close modal and reopen
+    const modal = bootstrap.Modal.getInstance(document.getElementById('aggregateModal'));
+    modal.hide();
+
+    // Small delay then reopen
+    setTimeout(() => {
+        const notes = document.querySelectorAll(`[data-note-id]`);
+        let reportCount = 0;
+        notes.forEach(note => {
+            const tickerBadge = note.querySelector('.badge.bg-primary');
+            if (tickerBadge && tickerBadge.textContent.trim() === ticker) {
+                reportCount++;
+            }
+        });
+        openAggregateModal(ticker, reportCount || 1);
+    }, 500);
+}
+
+// Handle "Open in New Tab" button (this stays the same)
 document.getElementById('openInNewTab').addEventListener('click', function() {
     if (currentAggregateUrl) {
         window.open(currentAggregateUrl + '&fullpage=true', '_blank');
+    }
+});
+
+// Clean up event source when modal is closed
+document.getElementById('aggregateModal').addEventListener('hidden.bs.modal', function() {
+    if (aggregateEventSource) {
+        aggregateEventSource.close();
+        aggregateEventSource = null;
     }
 });
 
