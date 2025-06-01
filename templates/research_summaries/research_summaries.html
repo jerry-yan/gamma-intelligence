@@ -643,6 +643,10 @@
                                                 🔗 Link
                                             </a>
                                         {% endif %}
+
+                                        <button class="btn btn-outline-warning btn-sm" onclick="event.stopPropagation(); openFlagModal({{ note.id }}, '{{ note.report_type|default:"Unknown" }}')" title="Flag for report type reassignment">
+                                            🚩
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -985,6 +989,10 @@
                                                     🔗 Original Link
                                                 </a>
                                             {% endif %}
+
+                                            <button class="btn btn-outline-warning" onclick="openFlagModal({{ note.id }}, '{{ note.report_type|default:"Unknown" }}')" title="Flag for report type reassignment">
+                                                🚩 Report
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
