@@ -62,6 +62,26 @@
             </div>
             <div class="card-body">
                 <p>Ready to download <strong id="pendingCount">{{ status_counts.not_downloaded }}</strong> PDF files.</p>
+
+                <!-- Download Method Selection -->
+                <div class="mb-3">
+                    <label class="form-label"><strong>Download Method:</strong></label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="downloadMethod" id="methodSelenium" value="selenium" checked>
+                        <label class="btn btn-outline-primary" for="methodSelenium">
+                            🤖 Selenium/Chrome
+                        </label>
+
+                        <input type="radio" class="btn-check" name="downloadMethod" id="methodPlaywright" value="playwright">
+                        <label class="btn btn-outline-success" for="methodPlaywright">
+                            🦊 Playwright/Firefox
+                        </label>
+                    </div>
+                    <small class="text-muted">
+                        Selenium uses Chrome (stable, tested). Playwright uses Firefox (lower memory usage, better for Heroku).
+                    </small>
+                </div>
+
                 <button id="startDownloading" type="button" class="btn btn-primary">
                     📥 Start File Downloads
                 </button>
@@ -86,7 +106,7 @@
                         <span class="badge bg-secondary ms-1">Not Downloaded</span>
                         <br>
                         <small class="text-muted">
-                            <strong>ID:</strong> {{ note.file_id|default:"No ID" }} | 
+                            <strong>ID:</strong> {{ note.file_id|default:"No ID" }} |
                             <strong>Source:</strong> {{ note.source|default:"Unknown" }}
                         </small>
                     </div>
@@ -171,12 +191,27 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     startBtn.addEventListener('click', function() {
+        // Get selected download method
+        const selectedMethod = document.querySelector('input[name="downloadMethod"]:checked').value;
+
+        // Determine which endpoint to use
+        let downloadEndpoint;
+        let methodLabel;
+
+        if (selectedMethod === 'playwright') {
+            downloadEndpoint = '/research/process-downloads-v2/';
+            methodLabel = 'Playwright/Firefox';
+        } else {
+            downloadEndpoint = '/research/process-downloads/';
+            methodLabel = 'Selenium/Chrome';
+        }
+
         startBtn.style.display = 'none';
         stopBtn.style.display = 'inline-block';
 
-        addLogMessage('Initiating file download process...', 'info');
+        addLogMessage(`Initiating file download process using ${methodLabel}...`, 'info');
 
-        eventSource = new EventSource('/research/process-downloads/');
+        eventSource = new EventSource(downloadEndpoint);
 
         eventSource.onmessage = function(event) {
             try {

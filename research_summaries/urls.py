@@ -26,6 +26,7 @@ urlpatterns = [
     path('process-downloads/', views.process_downloads_stream, name='process_downloads'),
     path('clean-documents-stream/', views.clean_documents_stream, name='clean_documents_stream'),
     path('summarize-documents-stream/', views.summarize_documents_stream, name='summarize_documents_stream'),
+    path('process-downloads-v2/', views.process_downloads_stream_v2, name='process_downloads_v2'),
 
     # AJAX endpoints
     path('process-emails-ajax/', views.process_emails_ajax, name='process_emails_ajax'),

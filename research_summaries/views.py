@@ -21,6 +21,7 @@ import markdown
 from django.utils.html import mark_safe
 from research_summaries.OpenAI_toolbox.prompts import AGGREGATE_SUMMARY_INSTRUCTION
 from research_summaries.openai_utils import get_openai_client
+from research_summaries.processors.file_downloader_2 import download_documents_playwright
 
 logger = logging.getLogger(__name__)
 
@@ -1031,3 +1032,32 @@ def flag_report(request, note_id):
             'success': False,
             'error': 'An unexpected error occurred'
         }, status=500)
+
+
+@login_required
+def process_downloads_stream_v2(request):
+    """GET endpoint for Server-Sent Events file downloading using Playwright/Firefox"""
+
+    def generate_updates():
+        try:
+            yield "data: " + json.dumps({"status": "info", "message": "🚀 Starting download process (Playwright/Firefox)..."}) + "\n\n"
+
+            for update in download_documents_playwright():
+                yield "data: " + json.dumps(update) + "\n\n"
+                # Reduced sleep time to avoid timeouts
+
+        except GeneratorExit:
+            # Handle case where client disconnects
+            yield "data: " + json.dumps({"status": "info", "message": "🔌 Connection closed by client"}) + "\n\n"
+            return
+        except Exception as e:
+            yield "data: " + json.dumps({"status": "error", "message": f"🚨 Unexpected error: {str(e)}"}) + "\n\n"
+
+        # Final completion message
+        yield "data: " + json.dumps({"status": "complete", "message": "✨ Download process finished (Playwright/Firefox)"}) + "\n\n"
+
+    response = StreamingHttpResponse(generate_updates(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['Connection'] = 'keep-alive'
+    response['X-Accel-Buffering'] = 'no'  # Disable nginx buffering
+    return response
