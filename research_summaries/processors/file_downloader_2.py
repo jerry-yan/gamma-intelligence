@@ -246,22 +246,43 @@ def download_single_file_playwright(page, download_link, download_dir, file_id):
         return None
 
 
+def update_note_in_database(note_id, s3_url):
+    """Update note in database - separate function to handle database operations"""
+    try:
+        # Get a fresh instance from the database
+        note = ResearchNote.objects.get(id=note_id)
+        note.status = 1
+        note.file_directory = s3_url
+        note.file_download_time = now()
+        note.save(update_fields=["status", "file_directory", "file_download_time"])
+        return True
+    except Exception as e:
+        logger.error(f"Failed to update note {note_id}: {e}")
+        return False
+
+
 def download_documents_playwright():
     """
     Generator function that yields status updates during file downloading using Playwright
     Ultra-conservative version for Heroku free tier with Firefox
     """
     try:
-        # Process only limited files at a time to minimize memory issues
+        # ✅ FIX: Get all database data BEFORE entering Playwright context
+        # This prevents the async context issue
         BATCH_SIZE = 8
-        queue = ResearchNote.objects.filter(status=0).order_by("id")[:BATCH_SIZE]
 
-        if not queue.exists():
+        # Force queryset evaluation by converting to list
+        queue_queryset = ResearchNote.objects.filter(status=0).order_by("id")[:BATCH_SIZE]
+        queue = list(queue_queryset)  # ✅ CRITICAL FIX: Force evaluation outside async context
+
+        # Get total count before Playwright context
+        total_pending = ResearchNote.objects.filter(status=0).count()
+
+        if not queue:
             yield {"status": "info", "message": "✅ No documents to download"}
             return
 
-        total_pending = ResearchNote.objects.filter(status=0).count()
-        yield {"status": "info", "message": f"📑 Processing {queue.count()} files (Playwright/Firefox)"}
+        yield {"status": "info", "message": f"📑 Processing {len(queue)} files (Playwright/Firefox)"}
         yield {"status": "info", "message": f"📊 Total pending downloads: {total_pending}"}
 
         downloaded_count = 0
@@ -333,16 +354,13 @@ def download_documents_playwright():
                             s3_key = f"{S3_DOCUMENTS_PREFIX}{note.file_id}/{pdf_path.name}"
                             s3_url = upload_to_s3(pdf_path, s3_key)
 
-                            # Update database
-                            note.status = 1
-                            note.file_directory = s3_url
-                            note.file_download_time = now()
-                            note.save(update_fields=[
-                                "status", "file_directory", "file_download_time"
-                            ])
-
-                            downloaded_count += 1
-                            yield {"status": "success", "message": f"✅ Successfully processed {note.file_id}"}
+                            # ✅ FIX: Update database using separate function
+                            if update_note_in_database(note.id, s3_url):
+                                downloaded_count += 1
+                                yield {"status": "success", "message": f"✅ Successfully processed {note.file_id}"}
+                            else:
+                                yield {"status": "error", "message": f"❌ Failed to update database for {note.file_id}"}
+                                failed_count += 1
 
                         except Exception as exc:
                             yield {"status": "error", "message": f"❌ Error: {str(exc)[:100]}"}
@@ -370,6 +388,7 @@ def download_documents_playwright():
                     except:
                         pass
 
+        # ✅ FIX: Get remaining count outside Playwright context
         remaining = ResearchNote.objects.filter(status=0).count()
 
         yield {"status": "success", "message": f"🏁 Completed! Downloaded: {downloaded_count}, Failed: {failed_count}"}
