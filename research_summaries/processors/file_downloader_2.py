@@ -34,23 +34,31 @@ def get_s3_client():
 # ── PLAYWRIGHT FIREFOX SETUP FOR HEROKU ─────────────────────────────
 def get_browser_executable_path():
     """Get Firefox executable path for Heroku or local development"""
-    # Check environment variables set by Heroku buildpack
-    firefox_path = os.getenv("FIREFOX_EXECUTABLE_PATH")
-    if firefox_path and os.path.exists(firefox_path):
-        return firefox_path
+    import glob
+    import os
 
-    # Alternative paths that might be set by the buildpack
-    possible_paths = [
-        "/app/.firefox/firefox",
-        "/app/.playwright/firefox/firefox",
-        os.getenv("PLAYWRIGHT_BROWSERS_PATH", "") + "/firefox/firefox"
+    # We now know the exact location on Heroku
+    heroku_patterns = [
+        "/app/node_modules/playwright-core/.local-browsers/firefox-*/firefox/firefox",
+        "/app/node_modules/playwright/.local-browsers/firefox-*/firefox/firefox"
     ]
 
-    for path in possible_paths:
-        if path and os.path.exists(path):
-            return path
+    for pattern in heroku_patterns:
+        matches = glob.glob(pattern)
+        if matches:
+            executable = matches[0]
+            if os.path.exists(executable) and os.access(executable, os.X_OK):
+                logger.info(f"Found Firefox executable: {executable}")
+                return executable
 
-    # Local development - let Playwright handle it
+    # Check environment variables
+    firefox_path = os.getenv("FIREFOX_EXECUTABLE_PATH")
+    if firefox_path and os.path.exists(firefox_path):
+        logger.info(f"Found Firefox via env var: {firefox_path}")
+        return firefox_path
+
+    # Local development fallback
+    logger.info("Using system Firefox for local development")
     return None
 
 
