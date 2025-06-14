@@ -39,7 +39,7 @@ class Command(BaseCommand):
 
                 self.stdout.write('📥 Downloading files...')
                 # call_command('download_files')
-                call_command('download_files_v2')
+                call_command('download_documents_playwright')
 
                 self.stdout.write('🧹 Cleaning documents...')
                 call_command('clean_documents')
