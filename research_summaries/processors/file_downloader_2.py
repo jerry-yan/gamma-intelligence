@@ -34,34 +34,23 @@ def get_s3_client():
 # ── PLAYWRIGHT FIREFOX SETUP FOR HEROKU ─────────────────────────────
 def get_browser_executable_path():
     """Get Firefox executable path for Heroku or local development"""
-    import glob
-    import os
-
-    # Check Node.js Playwright installation (from package.json)
-    # This is where the heroku-playwright-buildpack installs browsers
-    node_playwright_patterns = [
-        "/app/node_modules/playwright-core/.local-browsers/firefox-*/firefox/firefox",
-        "/app/node_modules/playwright/.local-browsers/firefox-*/firefox/firefox",
-        "/app/node_modules/playwright-firefox/firefox-*/firefox/firefox",
-        # Alternative locations the buildpack might use
-        "/app/.cache/ms-playwright/firefox-*/firefox/firefox",
-        "/app/.playwright/firefox-*/firefox/firefox"
-    ]
-
-    for pattern in node_playwright_patterns:
-        matches = glob.glob(pattern)
-        if matches and os.path.exists(matches[0]):
-            logger.info(f"Found Firefox via Node.js installation: {matches[0]}")
-            return matches[0]
-
-    # Check environment variables that might be set by buildpack
+    # Check environment variables set by Heroku buildpack
     firefox_path = os.getenv("FIREFOX_EXECUTABLE_PATH")
     if firefox_path and os.path.exists(firefox_path):
-        logger.info(f"Found Firefox via environment variable: {firefox_path}")
         return firefox_path
 
-    # Local development fallback
-    logger.info("Using system Firefox for local development")
+    # Alternative paths that might be set by the buildpack
+    possible_paths = [
+        "/app/.firefox/firefox",
+        "/app/.playwright/firefox/firefox",
+        os.getenv("PLAYWRIGHT_BROWSERS_PATH", "") + "/firefox/firefox"
+    ]
+
+    for path in possible_paths:
+        if path and os.path.exists(path):
+            return path
+
+    # Local development - let Playwright handle it
     return None
 
 
@@ -492,7 +481,6 @@ def download_documents():
     """Main entry point - delegates to Playwright implementation"""
     return download_documents_playwright()
 
-# please work
 # https://github.com/heroku/heroku-buildpack-chrome-for-testing
 # For compatibility with existing management commands and views
 download_documents_v2 = download_documents_playwright

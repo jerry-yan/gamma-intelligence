@@ -7,7 +7,7 @@
     "playwright": "^1.52.0"
   },
   "scripts": {
-    "heroku-cleanup": "yarn run playwright install chromium firefox"
+    "heroku-cleanup": "npx playwright install firefox --with-deps"
   },
   "engines": {
     "node": "18.x",
