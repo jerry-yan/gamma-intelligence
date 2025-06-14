@@ -481,6 +481,6 @@ def download_documents():
     """Main entry point - delegates to Playwright implementation"""
     return download_documents_playwright()
 
-# come on
+# https://github.com/heroku/heroku-buildpack-chrome-for-testing
 # For compatibility with existing management commands and views
 download_documents_v2 = download_documents_playwright
