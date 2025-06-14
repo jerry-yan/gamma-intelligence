@@ -34,10 +34,21 @@ def get_s3_client():
 # ── PLAYWRIGHT FIREFOX SETUP FOR HEROKU ─────────────────────────────
 def get_browser_executable_path():
     """Get Firefox executable path for Heroku or local development"""
-    # Check if we're on Heroku
+    # Check environment variables set by Heroku buildpack
     firefox_path = os.getenv("FIREFOX_EXECUTABLE_PATH")
-    if firefox_path:
+    if firefox_path and os.path.exists(firefox_path):
         return firefox_path
+
+    # Alternative paths that might be set by the buildpack
+    possible_paths = [
+        "/app/.firefox/firefox",
+        "/app/.playwright/firefox/firefox",
+        os.getenv("PLAYWRIGHT_BROWSERS_PATH", "") + "/firefox/firefox"
+    ]
+
+    for path in possible_paths:
+        if path and os.path.exists(path):
+            return path
 
     # Local development - let Playwright handle it
     return None
@@ -50,39 +61,87 @@ def create_playwright_browser_context(playwright, download_dir: Path):
     # Get executable path for Heroku compatibility
     executable_path = get_browser_executable_path()
 
-    # Firefox browser launch with Heroku compatibility
+    # Log the executable path for debugging
     if executable_path:
-        # Running on Heroku
-        browser = playwright.firefox.launch(
-            headless=True,
-            executable_path=executable_path,
-            args=[
-                "--no-sandbox",  # Required for Heroku
-                "--new-instance",
-                "--no-remote",
-                "-pref", "browser.cache.disk.enable=false",
-                "-pref", "browser.cache.memory.enable=false",
-                "-pref", "toolkit.telemetry.enabled=false",
-                "-pref", "media.autoplay.enabled=false",
-                "-pref", "browser.safebrowsing.enabled=false",
-                "-pref", "datareporting.healthreport.uploadEnabled=false",
-            ]
-        )
+        logger.info(f"Using Firefox executable at: {executable_path}")
     else:
-        # Running locally
-        browser = playwright.firefox.launch(
+        logger.info("Using system Firefox (local development)")
+
+    # Firefox browser launch arguments optimized for Heroku
+    firefox_args = [
+        "--no-sandbox",
+        "--disable-dev-shm-usage",  # Reduce shared memory usage
+        "--new-instance",
+        "--no-remote",
+        "--disable-extensions",
+        "--disable-plugins",
+        "--disable-background-networking",
+        "--disable-background-timer-throttling",
+        "--disable-renderer-backgrounding",
+        "--disable-backgrounding-occluded-windows",
+        "--disable-client-side-phishing-detection",
+        "--disable-component-update",
+        "--disable-default-apps",
+        "--disable-domain-reliability",
+        "--disable-features=TranslateUI,VizDisplayCompositor",
+        "--disable-hang-monitor",
+        "--disable-ipc-flooding-protection",
+        "--disable-popup-blocking",
+        "--disable-prompt-on-repost",
+        "--disable-sync",
+        "--disable-web-resources",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--password-store=basic",
+        "--use-mock-keychain",
+        "--memory-pressure-off",
+        # Firefox-specific preferences
+        "-pref", "browser.cache.disk.enable=false",
+        "-pref", "browser.cache.memory.enable=false",
+        "-pref", "browser.safebrowsing.enabled=false",
+        "-pref", "datareporting.healthreport.uploadEnabled=false",
+        "-pref", "toolkit.telemetry.enabled=false",
+        "-pref", "media.autoplay.enabled=false",
+        "-pref", "browser.sessionstore.enabled=false",
+        "-pref", "browser.startup.homepage=about:blank",
+        "-pref", "browser.tabs.remote.autostart=false",
+        "-pref", "gfx.canvas.azure.backends=skia",
+        "-pref", "gfx.webrender.enabled=false",
+    ]
+
+    # Firefox browser launch with Heroku compatibility
+    try:
+        if executable_path:
+            # Running on Heroku with explicit executable path
+            browser = playwright.firefox.launch(
+                headless=True,
+                executable_path=executable_path,
+                args=firefox_args,
+                timeout=60000,  # 60 second timeout for launch
+            )
+        else:
+            # Running locally
+            browser = playwright.firefox.launch(
+                headless=True,
+                args=firefox_args,
+                timeout=60000,
+            )
+    except Exception as e:
+        logger.error(f"Failed to launch Firefox: {e}")
+        # Fallback to Chromium if Firefox fails
+        logger.info("Falling back to Chromium...")
+        browser = playwright.chromium.launch(
             headless=True,
             args=[
                 "--no-sandbox",
-                "--new-instance",
-                "--no-remote",
-                "-pref", "browser.cache.disk.enable=false",
-                "-pref", "browser.cache.memory.enable=false",
-                "-pref", "browser.safebrowsing.enabled=false",
-                "-pref", "datareporting.healthreport.uploadEnabled=false",
-                "-pref", "toolkit.telemetry.enabled=false",
-                "-pref", "media.autoplay.enabled=false",
-            ]
+                "--disable-dev-shm-usage",
+                "--disable-extensions",
+                "--disable-plugins",
+                "--disable-images",
+                "--disable-javascript",  # We might need JS for login, so be careful with this
+                "--memory-pressure-off",
+            ],
+            timeout=60000,
         )
 
     # Create browser context with minimal settings and download handling
@@ -95,7 +154,9 @@ def create_playwright_browser_context(playwright, download_dir: Path):
         # Keep JavaScript enabled for login
         java_script_enabled=True,
         # Set download path
-        downloads_path=str(download_dir)
+        downloads_path=str(download_dir),
+        # Disable images and other media to save bandwidth/memory
+        ignore_https_errors=True,
     )
 
     # Set additional context preferences for Firefox
@@ -104,6 +165,18 @@ def create_playwright_browser_context(playwright, download_dir: Path):
         Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
         window.chrome = undefined;
         window.navigator.chrome = undefined;
+
+        // Disable images
+        const disableImages = () => {
+            const images = document.querySelectorAll('img');
+            images.forEach(img => img.style.display = 'none');
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', disableImages);
+        } else {
+            disableImages();
+        }
     """)
 
     return browser, context
@@ -145,15 +218,18 @@ def login_to_alphasense(page):
         username = os.getenv('ALPHASENSE_USERNAME')
         password = os.getenv('ALPHASENSE_PASSWORD')
 
-        if not username or password:
+        if not username or not password:
             yield {"status": "error", "message": "❌ AlphaSense credentials not found in environment variables"}
             return False
 
         yield {"status": "info", "message": "🔐 Navigating to AlphaSense login..."}
-        page.goto("https://research.alpha-sense.com/login")
+
+        # Navigate with longer timeout
+        page.goto("https://research.alpha-sense.com/login", timeout=30000)
 
         # Step 1: Enter username and submit
         yield {"status": "info", "message": "🔐 Entering username..."}
+        page.wait_for_selector('input[name="username"]', timeout=20000)
         page.fill('input[name="username"]', username)
         page.click('button[type="submit"]')
 
@@ -169,7 +245,7 @@ def login_to_alphasense(page):
         yield {"status": "info", "message": "🔐 Password submitted, waiting for login completion..."}
 
         # Wait for successful login (URL changes away from login page)
-        page.wait_for_function("() => !window.location.href.toLowerCase().includes('login')", timeout=20000)
+        page.wait_for_function("() => !window.location.href.toLowerCase().includes('login')", timeout=30000)
 
         yield {"status": "success", "message": "✅ Successfully logged in to AlphaSense!"}
         return True
@@ -192,8 +268,8 @@ def download_single_file_playwright(page, download_link, download_dir, file_id):
         try:
             # Set up download promise before navigation
             with page.expect_download(timeout=MAX_WAIT_SEC * 1000) as download_info:
-                # Navigate to download URL
-                page.goto(download_link)
+                # Navigate to download URL with timeout
+                page.goto(download_link, timeout=30000)
 
             # Get the download and save it
             download = download_info.value
@@ -211,7 +287,7 @@ def download_single_file_playwright(page, download_link, download_dir, file_id):
             yield {"status": "info", "message": f"⚠️ Download promise failed, trying fallback method..."}
 
             # Fallback: navigate and wait for files to appear
-            page.goto(download_link)
+            page.goto(download_link, timeout=30000)
 
             elapsed_wait = 0
             while elapsed_wait < MAX_WAIT_SEC:
@@ -267,13 +343,12 @@ def download_documents_playwright():
     Ultra-conservative version for Heroku free tier with Firefox
     """
     try:
-        # ✅ FIX: Get all database data BEFORE entering Playwright context
-        # This prevents the async context issue
-        BATCH_SIZE = 8
+        # Get all database data BEFORE entering Playwright context
+        BATCH_SIZE = 3  # Reduced batch size for better memory management
 
         # Force queryset evaluation by converting to list
         queue_queryset = ResearchNote.objects.filter(status=0).order_by("id")[:BATCH_SIZE]
-        queue = list(queue_queryset)  # ✅ CRITICAL FIX: Force evaluation outside async context
+        queue = list(queue_queryset)  # Force evaluation outside async context
 
         # Get total count before Playwright context
         total_pending = ResearchNote.objects.filter(status=0).count()
@@ -282,7 +357,7 @@ def download_documents_playwright():
             yield {"status": "info", "message": "✅ No documents to download"}
             return
 
-        yield {"status": "info", "message": f"📑 Processing {len(queue)} files (Playwright/Firefox)"}
+        yield {"status": "info", "message": f"📑 Processing {len(queue)} files (Playwright/Firefox v2)"}
         yield {"status": "info", "message": f"📊 Total pending downloads: {total_pending}"}
 
         downloaded_count = 0
@@ -296,7 +371,7 @@ def download_documents_playwright():
             try:
                 # Process files one by one to minimize memory usage
                 for i, note in enumerate(queue, 1):
-                    yield {"status": "info", "message": f"🔄 Processing: {note.file_id}"}
+                    yield {"status": "info", "message": f"🔄 Processing {i}/{len(queue)}: {note.file_id}"}
 
                     if not note.download_link:
                         yield {"status": "warning", "message": f"⚠️ {note.file_id} has no download link - skipped"}
@@ -311,7 +386,7 @@ def download_documents_playwright():
                             if browser:
                                 browser.close()  # Close previous browser instance
 
-                            yield {"status": "info", "message": f"🦊 Starting Firefox browser..."}
+                            yield {"status": "info", "message": f"🦊 Starting Firefox browser (attempt {i})..."}
                             browser, context = create_playwright_browser_context(playwright, temp_path)
                             page = context.new_page()
 
@@ -354,7 +429,7 @@ def download_documents_playwright():
                             s3_key = f"{S3_DOCUMENTS_PREFIX}{note.file_id}/{pdf_path.name}"
                             s3_url = upload_to_s3(pdf_path, s3_key)
 
-                            # ✅ FIX: Update database using separate function
+                            # Update database using separate function
                             if update_note_in_database(note.id, s3_url):
                                 downloaded_count += 1
                                 yield {"status": "success", "message": f"✅ Successfully processed {note.file_id}"}
@@ -388,7 +463,7 @@ def download_documents_playwright():
                     except:
                         pass
 
-        # ✅ FIX: Get remaining count outside Playwright context
+        # Get remaining count outside Playwright context
         remaining = ResearchNote.objects.filter(status=0).count()
 
         yield {"status": "success", "message": f"🏁 Completed! Downloaded: {downloaded_count}, Failed: {failed_count}"}
