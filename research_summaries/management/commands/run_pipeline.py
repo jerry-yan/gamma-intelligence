@@ -37,6 +37,7 @@ class Command(BaseCommand):
                     time.sleep(30 * 60)  # 30 minutes
                     continue
 
+                # Please work
                 self.stdout.write('📥 Downloading files...')
                 call_command('download_files')
 
