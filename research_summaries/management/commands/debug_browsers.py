@@ -1,69 +1,77 @@
 from django.core.management.base import BaseCommand
-import glob
-import os
 import subprocess
+import sys
 
 
 class Command(BaseCommand):
-    help = 'Debug browser installation locations'
+    help = 'Debug browser installation and test Playwright'
 
     def handle(self, *args, **options):
         self.stdout.write('=== Browser Installation Debug ===')
 
-        # Check environment
-        env_vars = [
-            'FIREFOX_EXECUTABLE_PATH',
-            'PLAYWRIGHT_BROWSERS_PATH',
-            'NODE_PATH',
-            'PATH',
-            'HOME',
-            'TMPDIR'
-        ]
-
-        for var in env_vars:
-            value = os.getenv(var, 'Not set')
-            self.stdout.write(f"{var}: {value}")
-
-        self.stdout.write('\n=== Searching for Firefox executables ===')
-
-        # Use find command to search more thoroughly
+        # Test if Playwright is installed
         try:
-            result = subprocess.run([
-                'find', '/app', '-name', '*firefox*', '-type', 'f'
-            ], capture_output=True, text=True, timeout=30)
+            import playwright
+            self.stdout.write(f"✅ Playwright installed: {playwright.__version__}")
+        except ImportError:
+            self.stdout.write("❌ Playwright not installed")
+            return
 
-            if result.stdout:
-                self.stdout.write("Found Firefox-related files in /app:")
-                for line in result.stdout.strip().split('\n')[:20]:  # First 20 results
-                    self.stdout.write(f"  {line}")
+        # Test browser installation
+        self.stdout.write('\n🔍 Testing browser installation...')
+        try:
+            from playwright.sync_api import sync_playwright
 
-            # Also search in tmp and cache directories
-            for search_dir in ['/tmp', '/app/.cache', '/app/.npm', '/app/.config']:
-                if os.path.exists(search_dir):
-                    result = subprocess.run([
-                        'find', search_dir, '-name', '*firefox*', '-type', 'f'
-                    ], capture_output=True, text=True, timeout=10)
+            with sync_playwright() as p:
+                # This will auto-install browsers if they're not present
+                browser = p.firefox.launch(headless=True)
+                page = browser.new_page()
+                page.goto('https://example.com', timeout=15000)
+                title = page.title()
+                browser.close()
 
-                    if result.stdout:
-                        self.stdout.write(f"\nFound Firefox-related files in {search_dir}:")
-                        for line in result.stdout.strip().split('\n')[:10]:
-                            self.stdout.write(f"  {line}")
+                self.stdout.write(self.style.SUCCESS(f'✅ Firefox test successful! Page title: {title}'))
 
         except Exception as e:
-            self.stdout.write(f"Error searching: {e}")
+            self.stdout.write(self.style.ERROR(f'❌ Firefox test failed: {e}'))
 
-        # Test manual installation
-        self.stdout.write('\n=== Testing manual browser installation ===')
+            # Try installing browsers
+            self.stdout.write('\n📥 Attempting to install browsers...')
+            try:
+                result = subprocess.run([
+                    sys.executable, "-m", "playwright", "install", "firefox"
+                ], capture_output=True, text=True, timeout=300)
+
+                if result.returncode == 0:
+                    self.stdout.write(self.style.SUCCESS('✅ Browser installation completed'))
+
+                    # Test again
+                    self.stdout.write('🔄 Testing again after installation...')
+                    with sync_playwright() as p:
+                        browser = p.firefox.launch(headless=True)
+                        page = browser.new_page()
+                        page.goto('https://example.com', timeout=15000)
+                        title = page.title()
+                        browser.close()
+
+                        self.stdout.write(
+                            self.style.SUCCESS(f'✅ Firefox test successful after installation! Page title: {title}'))
+
+                else:
+                    self.stdout.write(self.style.ERROR(f'❌ Browser installation failed: {result.stderr}'))
+
+            except Exception as install_error:
+                self.stdout.write(self.style.ERROR(f'❌ Installation error: {install_error}'))
+
+        # Test file downloader import
+        self.stdout.write('\n🧪 Testing file downloader import...')
         try:
-            result = subprocess.run([
-                'npx', 'playwright', 'install', 'firefox'
-            ], capture_output=True, text=True, timeout=120)
+            from research_summaries.processors.file_downloader_2 import ensure_browsers_installed
 
-            self.stdout.write(f"Installation result: {result.returncode}")
-            if result.stdout:
-                self.stdout.write(f"STDOUT: {result.stdout}")
-            if result.stderr:
-                self.stdout.write(f"STDERR: {result.stderr}")
+            if ensure_browsers_installed():
+                self.stdout.write(self.style.SUCCESS('✅ File downloader browser check passed'))
+            else:
+                self.stdout.write(self.style.ERROR('❌ File downloader browser check failed'))
 
         except Exception as e:
-            self.stdout.write(f"Manual installation failed: {e}")
+            self.stdout.write(self.style.ERROR(f'❌ File downloader import failed: {e}'))
