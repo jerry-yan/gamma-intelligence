@@ -126,11 +126,10 @@ def api_chat_stream(request):
 
                 # Build parameters for Responses API
                 stream_params = {
-                    "model": "gpt-4o",
+                    "model": "gpt-4o-mini",
                     "input": message,
                     "stream": True,
                     "temperature": 0.7,
-                    "max_tokens": 4096,
                 }
 
                 # Add tools only if knowledge base is specified
