@@ -35,6 +35,10 @@
                             <a class="nav-link {% if 'research_summaries' in request.resolver_match.url_name %}active{% endif %}" 
                                href="{% url 'research_summaries:research_summaries' %}">Research Summaries</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'agents' in request.resolver_match.namespace %}active{% endif %}"
+                               href="{% url 'agents:chat' %}">Agents</a>
+                        </li>
                     {% endif %}
                 </ul>
                 

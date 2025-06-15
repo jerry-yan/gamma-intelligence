@@ -14,6 +14,7 @@ urlpatterns = [
     path('', HomeView.as_view(), name='home'),
     path('accounts/', include('accounts.urls')),
     path('research/', include('research_summaries.urls')),
+    path('agents/', include('agents.urls')),
 ]
 
 # Serve media files during development
