@@ -8,6 +8,7 @@ from django.conf import settings
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from research_summaries.models import ResearchNote
+from research_summaries.utils import extract_publication_date_from_filename
 import boto3
 from botocore.exceptions import ClientError
 import logging
@@ -312,12 +313,18 @@ def download_documents():
                     s3_key = f"{S3_DOCUMENTS_PREFIX}{note.file_id}/{pdf_path.name}"
                     s3_url = upload_to_s3(pdf_path, s3_key)
 
+                    publication_date = extract_publication_date_from_filename(pdf_path.name)
+
                     # Update database
                     note.status = 1
                     note.file_directory = s3_url
                     note.file_download_time = now()
+                    note.publication_date = publication_date
                     note.save(update_fields=[
-                        "status", "file_directory", "file_download_time"
+                        "status",
+                        "file_directory",
+                        "file_download_time",
+                        "publication_date"
                     ])
 
                     downloaded_count += 1

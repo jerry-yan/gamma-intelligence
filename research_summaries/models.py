@@ -23,6 +23,12 @@ class ResearchNote(models.Model):
 
     report_summary = models.JSONField(null=True, blank=True)  # JSON object (Postgres-native)
 
+    # --- NEW FIELDS ---
+    publication_date = models.DateField(null=True, blank=True, help_text="Date extracted from PDF filename")
+    is_advanced_summary = models.BooleanField(default=False, help_text="Whether advanced summarization was used")
+    vector_group_id = models.PositiveIntegerField(null=True, blank=True, help_text="Vector database group assignment")
+    is_vectorized = models.BooleanField(default=False, help_text="Whether this note has been added to a vector store")
+
     # --- Timestamps
     file_download_time = models.DateTimeField(null=True, blank=True)
     file_update_time = models.DateTimeField(null=True, blank=True)
@@ -48,6 +54,12 @@ class ResearchNote(models.Model):
 
     class Meta:
         ordering = ['-file_download_time', '-created_at']
+        indexes = [
+            models.Index(fields=['parsed_ticker', '-publication_date']),
+            models.Index(fields=['vector_group_id']),
+            models.Index(fields=['is_vectorized']),
+            models.Index(fields=['status', '-file_download_time']),
+        ]
 
 
 class ResearchNoteIndustry(models.Model):
