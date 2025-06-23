@@ -14,6 +14,8 @@ urlpatterns = [
     path('aggregate-summary/<str:ticker>/', views.aggregate_summary, name='aggregate_summary'),
     path('aggregate-summary-stream/<str:ticker>/', views.aggregate_summary_stream, name='aggregate_summary_stream'),
     path('flag-report/<int:note_id>/', views.flag_report, name='flag_report'),
+    path('download-summary/<int:note_id>/', views.download_summary_pdf, name='download_summary_pdf'),
+    path('set-advanced-summary/<int:note_id>/', views.set_advanced_summary, name='set_advanced_summary'),
 
     # Test/admin pages (keep these for now)
     path('email-test/', views.email_test_view, name='email_test'),

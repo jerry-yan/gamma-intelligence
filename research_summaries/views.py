@@ -1061,3 +1061,230 @@ def process_downloads_stream_v2(request):
     response['Connection'] = 'keep-alive'
     response['X-Accel-Buffering'] = 'no'  # Disable nginx buffering
     return response
+
+
+@login_required
+@require_POST
+def download_summary_pdf(request, note_id):
+    """Generate and download a PDF of the research summary"""
+    try:
+        note = get_object_or_404(ResearchNote, id=note_id)
+
+        if not note.report_summary:
+            return JsonResponse({
+                'success': False,
+                'error': 'No summary available for this report'
+            }, status=404)
+
+        # Import reportlab for PDF generation
+        from reportlab.lib.pagesizes import letter, A4
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib import colors
+        from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_JUSTIFY
+        import io
+        from django.http import FileResponse
+
+        # Create a file-like buffer to receive PDF data
+        buffer = io.BytesIO()
+
+        # Create the PDF object, using the buffer as its "file"
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+
+        # Container for the 'Flowable' objects
+        elements = []
+
+        # Define styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            spaceAfter=30,
+            alignment=TA_CENTER
+        )
+
+        heading_style = ParagraphStyle(
+            'CustomHeading',
+            parent=styles['Heading2'],
+            fontSize=14,
+            spaceAfter=12,
+            spaceBefore=16,
+            textColor=colors.darkblue
+        )
+
+        normal_style = ParagraphStyle(
+            'CustomNormal',
+            parent=styles['Normal'],
+            fontSize=10,
+            spaceAfter=12,
+            alignment=TA_JUSTIFY
+        )
+
+        # Title
+        clean_title = note.raw_title or "Research Report Summary"
+        elements.append(Paragraph(clean_title, title_style))
+        elements.append(Spacer(1, 12))
+
+        # Metadata section
+        metadata_data = []
+        if note.source:
+            metadata_data.append(['Source:', note.source])
+        if note.parsed_ticker:
+            metadata_data.append(['Ticker:', note.parsed_ticker])
+        if note.publication_date:
+            metadata_data.append(['Publication Date:', note.publication_date.strftime('%B %d, %Y')])
+        if note.raw_author:
+            metadata_data.append(['Author(s):', note.raw_author])
+        if note.report_type:
+            metadata_data.append(['Report Type:', note.report_type])
+
+        if metadata_data:
+            metadata_table = Table(metadata_data, colWidths=[1.5 * inch, 4 * inch])
+            metadata_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+                ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ]))
+            elements.append(metadata_table)
+            elements.append(Spacer(1, 20))
+
+        # Summary content
+        summary_data = note.report_summary
+
+        # Add different sections based on report type
+        if note.report_type == "Company Update":
+            # Sentiment, Price Target, Rating
+            if summary_data.get('sentiment') or summary_data.get('price_target') or summary_data.get('stock_rating'):
+                elements.append(Paragraph("Key Metrics", heading_style))
+
+                key_metrics = []
+                if summary_data.get('sentiment'):
+                    key_metrics.append(['Sentiment:', summary_data['sentiment']])
+                if summary_data.get('price_target'):
+                    key_metrics.append(['Price Target:', f"${summary_data['price_target']}"])
+                if summary_data.get('stock_rating'):
+                    key_metrics.append(['Rating:', summary_data['stock_rating']])
+
+                if key_metrics:
+                    metrics_table = Table(key_metrics, colWidths=[1.5 * inch, 4 * inch])
+                    metrics_table.setStyle(TableStyle([
+                        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+                        ('FONTSIZE', (0, 0), (-1, -1), 10),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                    ]))
+                    elements.append(metrics_table)
+                    elements.append(Spacer(1, 12))
+
+            # Executive Summary
+            if summary_data.get('executive_summary'):
+                elements.append(Paragraph("Executive Summary", heading_style))
+                elements.append(Paragraph(summary_data['executive_summary'], normal_style))
+
+            # Bull Points
+            if summary_data.get('bull_points'):
+                elements.append(Paragraph("Bullish Points", heading_style))
+                for point in summary_data['bull_points']:
+                    elements.append(Paragraph(f"• {point}", normal_style))
+
+            # Bear Points
+            if summary_data.get('bear_points'):
+                elements.append(Paragraph("Bearish Points", heading_style))
+                for point in summary_data['bear_points']:
+                    elements.append(Paragraph(f"• {point}", normal_style))
+
+            # Valuation Analysis
+            if summary_data.get('valuation_analysis'):
+                elements.append(Paragraph("Valuation Analysis", heading_style))
+                elements.append(Paragraph(summary_data['valuation_analysis'], normal_style))
+
+            # Extra Details
+            if summary_data.get('extra_details'):
+                elements.append(Paragraph("Additional Details", heading_style))
+                elements.append(Paragraph(summary_data['extra_details'], normal_style))
+
+        else:
+            # Generic handling for other report types
+            for key, value in summary_data.items():
+                if key in ['stock_ticker', 'title', 'source', 'authors']:
+                    continue  # Skip metadata we already showed
+
+                if value:
+                    # Convert key to readable format
+                    readable_key = key.replace('_', ' ').title()
+                    elements.append(Paragraph(readable_key, heading_style))
+
+                    if isinstance(value, list):
+                        for item in value:
+                            if isinstance(item, dict):
+                                # Handle complex objects like stock_recaps
+                                for sub_key, sub_value in item.items():
+                                    if sub_value:
+                                        elements.append(
+                                            Paragraph(f"<b>{sub_key.replace('_', ' ').title()}:</b> {sub_value}",
+                                                      normal_style))
+                            else:
+                                elements.append(Paragraph(f"• {item}", normal_style))
+                    else:
+                        elements.append(Paragraph(str(value), normal_style))
+
+        # Build PDF
+        doc.build(elements)
+
+        # Get the value of the BytesIO buffer and return it as a response
+        buffer.seek(0)
+
+        # Create filename
+        base_filename = (note.raw_title or "Research_Report").replace('"', '').replace('\\', '').replace('/', '_')[:50]
+        filename = f"{base_filename}_summary.pdf"
+
+        response = FileResponse(
+            buffer,
+            as_attachment=True,
+            filename=filename,
+            content_type='application/pdf'
+        )
+
+        return response
+
+    except ImportError:
+        return JsonResponse({
+            'success': False,
+            'error': 'PDF generation library not available. Please install reportlab.'
+        }, status=500)
+    except Exception as e:
+        logger.error(f"Error generating PDF for note {note_id}: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'An error occurred while generating the PDF'
+        }, status=500)
+
+
+@login_required
+@require_POST
+def set_advanced_summary(request, note_id):
+    """Set the advanced summary flag for a research note"""
+    try:
+        note = get_object_or_404(ResearchNote, id=note_id)
+
+        # Toggle the advanced summary flag
+        note.is_advanced_summary = not note.is_advanced_summary
+        note.save(update_fields=['is_advanced_summary'])
+
+        return JsonResponse({
+            'success': True,
+            'is_advanced_summary': note.is_advanced_summary,
+            'message': f'Advanced summary {"enabled" if note.is_advanced_summary else "disabled"} for this report'
+        })
+
+    except Exception as e:
+        logger.error(f"Error setting advanced summary for note {note_id}: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'An error occurred while updating the advanced summary flag'
+        }, status=500)

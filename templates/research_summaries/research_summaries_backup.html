@@ -212,14 +212,7 @@
                                         <div class="flex-grow-1 cursor-pointer card-expand-trigger">
                                             <strong class="text-primary">{{ note.source|default:"Unknown Source" }}</strong>
                                             <span class="mx-2">•</span>
-                                            {% if note.publication_date %}
-                                                <span class="text-muted">{{ note.publication_date|date:"Y-M-d" }}</span>
-                                                <span class="mx-2">•</span>
-                                            {% endif %}
                                             <span>{{ note.raw_title|default:"Untitled Research Report" }}</span>
-                                            {% if note.is_advanced_summary %}
-                                                <span class="badge bg-warning ms-1" title="Advanced Summary Enabled">🧠</span>
-                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
@@ -243,22 +236,11 @@
                                             </a>
                                         {% endif %}
 
-                                        {% if note.report_summary %}
-                                            <button class="btn btn-outline-success btn-sm" onclick="event.stopPropagation(); downloadSummaryPDF({{ note.id }})" title="Download Summary as PDF">
-                                                📥
-                                            </button>
-                                        {% endif %}
-
-                                        <button class="btn {% if note.is_advanced_summary %}btn-info{% else %}btn-outline-info{% endif %} btn-sm" onclick="event.stopPropagation(); toggleAdvancedSummary({{ note.id }})" title="{% if note.is_advanced_summary %}Advanced Summary Enabled - Click to disable{% else %}Advanced Summary Disabled - Click to enable{% endif %}">
-                                            🧠
-                                        </button>
-
                                         <button class="btn btn-outline-warning btn-sm" onclick="event.stopPropagation(); openFlagModal({{ note.id }}, '{{ note.report_type|default:"Unknown" }}')" title="Flag for report type reassignment">
                                             🚩
                                         </button>
                                     </div>
                                 </div>
-
                             </div>
                         </div>
 
@@ -272,12 +254,8 @@
                                             <h5 class="mb-1">{{ note.raw_title|default:"Untitled Research Report" }}</h5>
                                             <div class="text-muted">
                                                 <strong>{{ note.source|default:"Unknown Source" }}</strong>
-                                                {% if note.publication_date %} • {{ note.publication_date|date:"M d, Y" }}{% endif %}
                                                 {% if note.raw_author %} • {{ note.raw_author }}{% endif %}
                                                 {% if note.report_type %} • {{ note.report_type }}{% endif %}
-                                                {% if note.is_advanced_summary %}
-                                                    <span class="badge bg-warning ms-1" title="Advanced Summary Enabled">🧠 Advanced</span>
-                                                {% endif %}
                                             </div>
                                         </div>
                                         <button class="btn btn-sm btn-outline-secondary card-collapse-trigger">
@@ -606,24 +584,12 @@
                                                 </a>
                                             {% endif %}
 
-                                            <!-- NEW DOWNLOAD BUTTON -->
-                                            {% if note.report_summary %}
-                                                <button class="btn btn-outline-success" onclick="downloadSummaryPDF({{ note.id }})" title="Download Summary as PDF">
-                                                    📥 Download Summary
-                                                </button>
-                                            {% endif %}
-
-                                            <!-- NEW ADVANCED SUMMARY BUTTON -->
-                                            <button class="btn {% if note.is_advanced_summary %}btn-info{% else %}btn-outline-info{% endif %}" onclick="toggleAdvancedSummary({{ note.id }})" title="{% if note.is_advanced_summary %}Advanced Summary Enabled - Click to disable{% else %}Advanced Summary Disabled - Click to enable{% endif %}">
-                                                🧠 Advanced Summary
-                                            </button>
-
                                             <button class="btn btn-outline-warning" onclick="openFlagModal({{ note.id }}, '{{ note.report_type|default:"Unknown" }}')" title="Flag for report type reassignment">
                                                 🚩 Report
                                             </button>
+
                                         </div>
                                     </div>
-
                                 </div>
                             </div>
                         </div>
@@ -1803,182 +1769,6 @@ document.getElementById('submitFlag').addEventListener('click', function() {
         submitBtn.disabled = false;
     });
 });
-
-// Add these JavaScript functions to the script section in research_summaries.html
-
-function downloadSummaryPDF(noteId) {
-    // Show loading state
-    const button = event.target;
-    const originalText = button.innerHTML;
-    button.innerHTML = '⏳ Generating...';
-    button.disabled = true;
-
-    // Create a form and submit it for file download
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/research/download-summary/${noteId}/`;
-    form.style.display = 'none';
-
-    // Add CSRF token
-    const csrfToken = getCookie('csrftoken');
-    const csrfInput = document.createElement('input');
-    csrfInput.type = 'hidden';
-    csrfInput.name = 'csrfmiddlewaretoken';
-    csrfInput.value = csrfToken;
-    form.appendChild(csrfInput);
-
-    document.body.appendChild(form);
-
-    // Submit the form to trigger download
-    form.submit();
-
-    // Clean up
-    document.body.removeChild(form);
-
-    // Restore button state after a delay
-    setTimeout(() => {
-        button.innerHTML = originalText;
-        button.disabled = false;
-    }, 2000);
-}
-
-function toggleAdvancedSummary(noteId) {
-    // Show loading state
-    const button = event.target;
-    const originalText = button.innerHTML;
-    button.innerHTML = '⏳';
-    button.disabled = true;
-
-    fetch(`/research/set-advanced-summary/${noteId}/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Update button appearance based on new state
-            if (data.is_advanced_summary) {
-                button.classList.remove('btn-outline-info');
-                button.classList.add('btn-info');
-                button.title = 'Advanced Summary Enabled - Click to disable';
-            } else {
-                button.classList.remove('btn-info');
-                button.classList.add('btn-outline-info');
-                button.title = 'Advanced Summary Disabled - Click to enable';
-            }
-
-            // Show success message
-            showToastMessage(data.message, 'success');
-
-            // Update any badges in the card
-            updateAdvancedSummaryBadges(noteId, data.is_advanced_summary);
-        } else {
-            showToastMessage('Error: ' + (data.error || 'Unknown error'), 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToastMessage('Failed to update advanced summary setting', 'error');
-    })
-    .finally(() => {
-        // Restore button state
-        button.innerHTML = originalText;
-        button.disabled = false;
-    });
-}
-
-function updateAdvancedSummaryBadges(noteId, isAdvanced) {
-    // Find the card for this note and update any advanced summary badges
-    const card = document.querySelector(`[data-note-id="${noteId}"]`);
-    if (!card) return;
-
-    // Update or add/remove badges in both collapsed and expanded views
-    const titleElements = card.querySelectorAll('.card-expand-trigger, .expanded-view h5');
-
-    titleElements.forEach(element => {
-        let badge = element.querySelector('.badge[title*="Advanced Summary"]');
-
-        if (isAdvanced) {
-            if (!badge) {
-                // Create new badge
-                badge = document.createElement('span');
-                badge.className = 'badge bg-warning ms-1';
-                badge.title = 'Advanced Summary Enabled';
-                badge.textContent = '🧠';
-                element.appendChild(badge);
-            }
-        } else {
-            if (badge) {
-                // Remove existing badge
-                badge.remove();
-            }
-        }
-    });
-
-    // Also update the expanded view subtitle if it exists
-    const subtitle = card.querySelector('.expanded-view .text-muted');
-    if (subtitle) {
-        let advancedBadge = subtitle.querySelector('.badge[title*="Advanced Summary"]');
-
-        if (isAdvanced) {
-            if (!advancedBadge) {
-                const badgeHtml = '<span class="badge bg-warning ms-1" title="Advanced Summary Enabled">🧠 Advanced</span>';
-                subtitle.insertAdjacentHTML('beforeend', badgeHtml);
-            }
-        } else {
-            if (advancedBadge) {
-                advancedBadge.remove();
-            }
-        }
-    }
-}
-
-function showToastMessage(message, type = 'info') {
-    // Simple toast notification - you can enhance this with a proper toast library
-    const toastColors = {
-        'success': '#28a745',
-        'error': '#dc3545',
-        'warning': '#ffc107',
-        'info': '#17a2b8'
-    };
-
-    // Create toast element
-    const toast = document.createElement('div');
-    toast.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background-color: ${toastColors[type] || toastColors.info};
-        color: white;
-        padding: 12px 20px;
-        border-radius: 5px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        z-index: 9999;
-        font-size: 14px;
-        max-width: 300px;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-    `;
-    toast.textContent = message;
-
-    document.body.appendChild(toast);
-
-    // Fade in
-    setTimeout(() => {
-        toast.style.opacity = '1';
-    }, 100);
-
-    // Fade out and remove after 3 seconds
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        setTimeout(() => {
-            document.body.removeChild(toast);
-        }, 300);
-    }, 3000);
-}
 
 </script>
 
