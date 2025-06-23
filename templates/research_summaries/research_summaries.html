@@ -213,7 +213,7 @@
                                             <strong class="text-primary">{{ note.source|default:"Unknown Source" }}</strong>
                                             <span class="mx-2">•</span>
                                             {% if note.publication_date %}
-                                                <span class="text-muted">{{ note.publication_date|date:"Y-M-d" }}</span>
+                                                <span class="text-muted">{{ note.publication_date|date:"Y-m-d" }}</span>
                                                 <span class="mx-2">•</span>
                                             {% endif %}
                                             <span>{{ note.raw_title|default:"Untitled Research Report" }}</span>
@@ -245,12 +245,12 @@
 
                                         {% if note.report_summary %}
                                             <button class="btn btn-outline-success btn-sm" onclick="event.stopPropagation(); downloadSummaryPDF({{ note.id }})" title="Download Summary as PDF">
-                                                📥
+                                                📥 Download
                                             </button>
                                         {% endif %}
 
                                         <button class="btn {% if note.is_advanced_summary %}btn-info{% else %}btn-outline-info{% endif %} btn-sm" onclick="event.stopPropagation(); toggleAdvancedSummary({{ note.id }})" title="{% if note.is_advanced_summary %}Advanced Summary Enabled - Click to disable{% else %}Advanced Summary Disabled - Click to enable{% endif %}">
-                                            🧠
+                                            🧠 o3
                                         </button>
 
                                         <button class="btn btn-outline-warning btn-sm" onclick="event.stopPropagation(); openFlagModal({{ note.id }}, '{{ note.report_type|default:"Unknown" }}')" title="Flag for report type reassignment">
@@ -272,7 +272,7 @@
                                             <h5 class="mb-1">{{ note.raw_title|default:"Untitled Research Report" }}</h5>
                                             <div class="text-muted">
                                                 <strong>{{ note.source|default:"Unknown Source" }}</strong>
-                                                {% if note.publication_date %} • {{ note.publication_date|date:"M d, Y" }}{% endif %}
+                                                {% if note.publication_date %} • {{ note.publication_date|date:"Y-m-d" }}{% endif %}
                                                 {% if note.raw_author %} • {{ note.raw_author }}{% endif %}
                                                 {% if note.report_type %} • {{ note.report_type }}{% endif %}
                                                 {% if note.is_advanced_summary %}
@@ -654,7 +654,14 @@
                                         <div class="flex-grow-1 cursor-pointer card-expand-trigger">
                                             <strong class="text-primary">{{ note.source|default:"Unknown Source" }}</strong>
                                             <span class="mx-2">•</span>
+                                            {% if note.publication_date %}
+                                                <span class="text-muted">{{ note.publication_date|date:"Y-m-d" }}</span>
+                                                <span class="mx-2">•</span>
+                                            {% endif %}
                                             <span>{{ note.raw_title|default:"Untitled Research Report" }}</span>
+                                            {% if note.is_advanced_summary %}
+                                                <span class="badge bg-warning ms-1" title="Advanced Summary Enabled">🧠</span>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
@@ -678,10 +685,22 @@
                                             </a>
                                         {% endif %}
 
+                                        {% if note.report_summary %}
+                                            <button class="btn btn-outline-success btn-sm" onclick="event.stopPropagation(); downloadSummaryPDF({{ note.id }})" title="Download Summary as PDF">
+                                                📥 Download
+                                            </button>
+                                        {% endif %}
+
+                                        <button class="btn {% if note.is_advanced_summary %}btn-info{% else %}btn-outline-info{% endif %} btn-sm" onclick="event.stopPropagation(); toggleAdvancedSummary({{ note.id }})" title="{% if note.is_advanced_summary %}Advanced Summary Enabled - Click to disable{% else %}Advanced Summary Disabled - Click to enable{% endif %}">
+                                            🧠 o3
+                                        </button>
+
                                         <button class="btn btn-outline-warning btn-sm" onclick="event.stopPropagation(); openFlagModal({{ note.id }}, '{{ note.report_type|default:"Unknown" }}')" title="Flag for report type reassignment">
                                             🚩
                                         </button>
                                     </div>
+
+
                                 </div>
                             </div>
                         </div>
@@ -696,8 +715,12 @@
                                             <h5 class="mb-1">{{ note.raw_title|default:"Untitled Research Report" }}</h5>
                                             <div class="text-muted">
                                                 <strong>{{ note.source|default:"Unknown Source" }}</strong>
+                                                {% if note.publication_date %} • {{ note.publication_date|date:"Y-m-d" }}{% endif %}
                                                 {% if note.raw_author %} • {{ note.raw_author }}{% endif %}
                                                 {% if note.report_type %} • {{ note.report_type }}{% endif %}
+                                                {% if note.is_advanced_summary %}
+                                                    <span class="badge bg-warning ms-1" title="Advanced Summary Enabled">🧠 Advanced</span>
+                                                {% endif %}
                                             </div>
                                         </div>
                                         <button class="btn btn-sm btn-outline-secondary card-collapse-trigger">
@@ -1024,11 +1047,22 @@
                                                 </a>
                                             {% endif %}
 
+                                            {% if note.report_summary %}
+                                                <button class="btn btn-outline-success" onclick="downloadSummaryPDF({{ note.id }})" title="Download Summary as PDF">
+                                                    📥 Download Summary
+                                                </button>
+                                            {% endif %}
+
+                                            <button class="btn {% if note.is_advanced_summary %}btn-info{% else %}btn-outline-info{% endif %}" onclick="toggleAdvancedSummary({{ note.id }})" title="{% if note.is_advanced_summary %}Advanced Summary Enabled - Click to disable{% else %}Advanced Summary Disabled - Click to enable{% endif %}">
+                                                🧠 Advanced Summary
+                                            </button>
+
                                             <button class="btn btn-outline-warning" onclick="openFlagModal({{ note.id }}, '{{ note.report_type|default:"Unknown" }}')" title="Flag for report type reassignment">
                                                 🚩 Report
                                             </button>
                                         </div>
                                     </div>
+
                                 </div>
                             </div>
                         </div>
