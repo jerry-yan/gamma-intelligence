@@ -437,7 +437,7 @@ def clean_documents_stream(request):
 
         try:
             # Import here to avoid circular imports
-            from research_summaries.management.commands.clean_documents import clean_pdf_from_s3
+            from research_summaries.processors.document_cleaner import clean_pdf_from_s3
             from django.utils.timezone import now
 
             # Get initial counts
@@ -465,13 +465,16 @@ def clean_documents_stream(request):
 
                     yield f"data: {json.dumps({'type': 'progress', 'message': f'🔄 Processing {i}/{total_count}: {note.file_id}', 'current': i, 'total': total_count})}\n\n"
 
-                    # Clean the document
-                    if clean_pdf_from_s3(s3_key):
+                    # Clean the document and get hash
+                    success, file_hash = clean_pdf_from_s3(s3_key)
+
+                    if success:
                         note.status = 2
                         note.file_update_time = now()
-                        note.save(update_fields=["status", "file_update_time"])
+                        note.file_hash_id = file_hash
+                        note.save(update_fields=["status", "file_update_time", "file_hash_id"])
                         success_count += 1
-                        yield f"data: {json.dumps({'type': 'success', 'message': f'✅ Cleaned & updated {note.file_id}'})}\n\n"
+                        yield f"data: {json.dumps({'type': 'success', 'message': f'✅ Cleaned & updated {note.file_id} with hash: {file_hash[:8]}...'})}\n\n"
                     else:
                         yield f"data: {json.dumps({'type': 'error', 'message': f'❌ Failed to clean {note.file_id}'})}\n\n"
 
@@ -482,14 +485,15 @@ def clean_documents_stream(request):
             yield f"data: {json.dumps({'type': 'complete', 'message': f'🏁 Cleaning completed! {success_count}/{total_count} files processed successfully.'})}\n\n"
 
         except Exception as e:
-            yield f"data: {json.dumps({'type': 'error', 'message': f'Fatal error during cleaning: {str(e)}'})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'message': f'❌ Fatal error during cleaning: {str(e)}'})}\n\n"
+            yield f"data: {json.dumps({'type': 'complete', 'message': 'Process terminated due to error.'})}\n\n"
 
+    # Return StreamingHttpResponse with correct content type for SSE
     response = StreamingHttpResponse(
         generate_cleaning_updates(),
         content_type='text/event-stream'
     )
     response['Cache-Control'] = 'no-cache'
-    response['Connection'] = 'keep-alive'
     response['X-Accel-Buffering'] = 'no'
     return response
 
@@ -505,8 +509,6 @@ def get_cleaning_status(request):
         'cleaned_count': cleaned_count,
     })
 
-
-# Add these new view functions to your existing views.py:
 
 @login_required
 def document_summarizer_page(request):

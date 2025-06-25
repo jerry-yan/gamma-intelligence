@@ -11,6 +11,7 @@ class ResearchNote(models.Model):
     download_link = models.URLField(max_length=1000, null=True, blank=True)  # long URLs
 
     file_directory = models.CharField(max_length=1000, null=True, blank=True)  # file path
+    file_hash_id = models.CharField(max_length=64, null=True, blank=True)
 
     raw_companies = models.CharField(max_length=1000, null=True, blank=True)
     raw_company_count = models.PositiveIntegerField(null=True, blank=True)  # 0, 1, 2, etc.
@@ -23,7 +24,6 @@ class ResearchNote(models.Model):
 
     report_summary = models.JSONField(null=True, blank=True)  # JSON object (Postgres-native)
 
-    # --- NEW FIELDS ---
     publication_date = models.DateField(null=True, blank=True, help_text="Date extracted from PDF filename")
     is_advanced_summary = models.BooleanField(default=False, help_text="Whether advanced summarization was used")
     vector_group_id = models.PositiveIntegerField(null=True, blank=True, help_text="Vector database group assignment")
@@ -44,6 +44,7 @@ class ResearchNote(models.Model):
         (1, "Downloaded"),
         (2, "Preprocessed"),
         (3, "Summarized"),
+        (4, "Advanced Summarized"),
         (10, "Error 1"),
         (11, "Error 2"),
     ]

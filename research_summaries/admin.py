@@ -19,6 +19,7 @@ class ResearchNoteAdmin(admin.ModelAdmin):
         'raw_author',
         'raw_company_count',
         'status',
+        'file_hash_id',
         'is_advanced_summary',
         'is_vectorized',
         'vector_group_id',
@@ -47,7 +48,8 @@ class ResearchNoteAdmin(admin.ModelAdmin):
     ]
     readonly_fields = [
         'created_at',
-        'updated_at'
+        'updated_at',
+        'file_hash_id'
     ]
     inlines = [ResearchNoteIndustryInline]
 
@@ -74,7 +76,7 @@ class ResearchNoteAdmin(admin.ModelAdmin):
             'description': 'Advanced processing and vectorization status'
         }),
         ('File Management', {
-            'fields': ('file_directory', 'file_download_time', 'file_update_time', 'file_summary_time')
+            'fields': ('file_directory', 'file_hash_id', 'file_download_time', 'file_update_time', 'file_summary_time')
         }),
         ('Summary', {
             'fields': ('report_summary',),
@@ -96,7 +98,6 @@ class ResearchNoteAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         return super().get_queryset(request).select_related()
 
-    # Add some useful actions
     actions = ['mark_for_is_advanced_summary', 'mark_as_vectorized', 'clear_vector_assignment']
 
     def mark_for_is_advanced_summary(self, request, queryset):

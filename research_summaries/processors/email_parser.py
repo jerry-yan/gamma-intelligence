@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 # ── ACCOUNT ─────────────────────────────────────────────────────────
 IMAP_HOST = "imap.gmx.com"
 USERNAME = "gamma.invest@gmx.com"
-PASSWORD = os.getenv("GMX_PW", "Premiumyield1")  # export GMX_PW=…
+PASSWORD = os.getenv("GMX_PW", "Premiumyield1")
 
 # ── FILTERS ─────────────────────────────────────────────────────────
 LOOKBACK_HOURS = 28

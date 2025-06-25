@@ -2,9 +2,10 @@
 Clean PDFs for all ResearchNote objects whose status == 1.
 
  ↳  Downloads each PDF from S3
+ ↳  Computes hash of first page content (text + images)
  ↳  Removes everything from broker‑specific "disclosure" headings onward
  ↳  Uploads cleaned PDF back to S3, replacing the original
- ↳  Updates note.file_update_time and sets status = 2 on success
+ ↳  Updates note.file_update_time, file_hash_id and sets status = 2 on success
 """
 
 import os
@@ -12,6 +13,7 @@ import re
 import tempfile
 import boto3
 import fitz  # PyMuPDF
+import hashlib
 from django.utils.timezone import now
 from django.conf import settings
 from research_summaries.models import ResearchNote
@@ -56,7 +58,40 @@ def get_s3_client():
     )
 
 
-# ── PDF HELPER UTILITIES ─────────────────────────────────
+# ── HASH COMPUTATION FUNCTIONS ─────────────────────────────
+def extract_first_page_content(pdf_path):
+    """Extract text and image content from the first page of a PDF"""
+    doc = fitz.open(pdf_path)
+    page = doc.load_page(0)  # Load the first page
+
+    # Extract text
+    text = page.get_text()
+
+    # Extract images
+    images = page.get_images(full=True)
+    image_bytes = b''
+    for img_index, img in enumerate(images):
+        xref = img[0]
+        try:
+            base_image = doc.extract_image(xref)
+            image_bytes += base_image["image"]
+        except:
+            # Skip if image extraction fails
+            pass
+
+    doc.close()
+
+    # Combine text and image bytes
+    combined_content = text.encode('utf-8') + image_bytes
+    return combined_content
+
+
+def hash_content(content):
+    """Generate SHA256 hash of content"""
+    return hashlib.sha256(content).hexdigest()
+
+
+# ── PDF HELPER UTILITIES ─────────────────────────────────────────
 def determine_cutoff_headings(doc):
     text_content = "\n".join(doc.load_page(i).get_text("text")
                              for i in range(doc.page_count))
@@ -98,8 +133,8 @@ def _mk_line(words_on_line):
 
 def clean_pdf_from_s3(s3_key: str):
     """
-    Download PDF from S3, clean it, then upload back to S3.
-    Returns True if cleaned successfully.
+    Download PDF from S3, compute hash, clean it, then upload back to S3.
+    Returns (success: bool, hash_id: str or None)
     """
     s3_client = get_s3_client()
     bucket_name = settings.AWS_STORAGE_BUCKET_NAME
@@ -115,6 +150,12 @@ def clean_pdf_from_s3(s3_key: str):
         # Download from S3
         print(f"📥 Downloading {s3_key} from S3...")
         s3_client.download_file(bucket_name, s3_key, temp_input_path)
+
+        # Compute hash of first page
+        print(f"🔐 Computing hash for {s3_key}...")
+        first_page_content = extract_first_page_content(temp_input_path)
+        file_hash = hash_content(first_page_content)
+        print(f"📊 Hash: {file_hash}")
 
         # Clean the PDF
         doc = fitz.open(temp_input_path)
@@ -153,11 +194,11 @@ def clean_pdf_from_s3(s3_key: str):
         print(f"📤 Uploading cleaned PDF back to S3...")
         s3_client.upload_file(temp_output_path, bucket_name, s3_key)
 
-        return True
+        return True, file_hash
 
     except Exception as e:
         print(f"❌ Error processing {s3_key}: {e}")
-        return False
+        return False, None
 
     finally:
         # Clean up temporary files
@@ -181,7 +222,6 @@ def clean_documents():
     for note in notes:
         try:
             # Extract S3 key from file_directory
-            # Assuming file_directory contains the full S3 path
             s3_key = note.file_directory
             if s3_key.startswith('https://'):
                 # Extract key from URL if it's a full S3 URL
@@ -192,12 +232,15 @@ def clean_documents():
 
             print(f"🔄 Processing {note.file_id}: {s3_key}")
 
-            if clean_pdf_from_s3(s3_key):
+            success, file_hash = clean_pdf_from_s3(s3_key)
+
+            if success:
                 note.status = 2
                 note.file_update_time = now()
-                note.save(update_fields=["status", "file_update_time"])
+                note.file_hash_id = file_hash
+                note.save(update_fields=["status", "file_update_time", "file_hash_id"])
                 success_count += 1
-                print(f"✅ Cleaned & updated {note.file_id}")
+                print(f"✅ Cleaned & updated {note.file_id} with hash: {file_hash}")
             else:
                 print(f"❌ Failed to clean {note.file_id}")
 
@@ -217,11 +260,14 @@ def process_single_document(note):
         elif s3_key.startswith('s3://'):
             s3_key = s3_key.split('/', 3)[-1]
 
-        # Clean the document
-        if clean_pdf_from_s3(s3_key):
+        # Clean the document and get hash
+        success, file_hash = clean_pdf_from_s3(s3_key)
+
+        if success:
             note.status = 2
             note.file_update_time = now()
-            note.save(update_fields=["status", "file_update_time"])
+            note.file_hash_id = file_hash
+            note.save(update_fields=["status", "file_update_time", "file_hash_id"])
             return True
         else:
             return False
