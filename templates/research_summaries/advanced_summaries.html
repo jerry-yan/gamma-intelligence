@@ -325,22 +325,155 @@
             </div>
             {% endfor %}
 
-            <!-- Report Type Groups -->
-            {% if report_type_groups %}
-            <hr class="my-4">
-            <h4 class="mb-3">By Report Type</h4>
+            <!-- Report Type Groups (No Ticker) -->
             {% for report_type, notes in report_type_groups.items %}
-                <div class="mb-4">
-                    <h5 class="text-secondary">{{ report_type }} ({{ notes|length }})</h5>
-                    {% for note in notes %}
-                        <!-- Similar card structure as above - copy the same card structure from ticker groups -->
-                        <div class="card mb-3 research-card">
-                            <!-- ... same card content as ticker groups ... -->
-                        </div>
-                    {% endfor %}
+            <div class="mb-4">
+                <div class="d-flex align-items-center mb-3">
+                    <h4 class="mb-0">
+                        <span class="badge bg-secondary fs-6 me-2">{{ report_type }}</span>
+                        <span class="text-muted fs-6">({{ notes|length }} report{{ notes|length|pluralize }})</span>
+                    </h4>
                 </div>
+
+                {% for note in notes %}
+                <div class="card mb-3 ms-3 research-card" data-note-id="{{ note.id }}">
+                    <div class="card-body">
+                        <!-- Collapsed View (Default) -->
+                        <div class="collapsed-view">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-grow-1 cursor-pointer card-expand-trigger">
+                                            <strong class="text-primary">{{ note.source|default:"Unknown Source" }}</strong>
+                                            <span class="mx-2">•</span>
+                                            {% if note.publication_date %}
+                                                <span class="text-muted">{{ note.publication_date|date:"Y-m-d" }}</span>
+                                                <span class="mx-2">•</span>
+                                            {% endif %}
+                                            <span>{{ note.raw_title|default:"Untitled Research Report" }}</span>
+                                            {% if note.is_advanced_summary %}
+                                                <span class="badge bg-warning ms-1" title="Advanced Summary Enabled">🧠</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4 text-end">
+                                    <!-- Action Buttons (Always Visible) -->
+                                    <div class="btn-group-sm d-inline-flex gap-1">
+                                        <a href="{% url 'research_summaries:note_detail' note.id %}" class="btn btn-primary btn-sm">
+                                            📄 Summary
+                                        </a>
+
+                                        {% if note.file_directory %}
+                                            <button class="btn btn-outline-primary btn-sm" onclick="event.stopPropagation(); viewPDF('{{ note.file_directory }}', {{ note.id }})">
+                                                📎 PDF
+                                            </button>
+                                        {% endif %}
+
+                                        {% if note.download_link %}
+                                            <a href="{{ note.download_link }}" target="_blank" class="btn btn-outline-secondary btn-sm" onclick="event.stopPropagation()">
+                                                🔗 Link
+                                            </a>
+                                        {% endif %}
+
+                                        {% if note.report_summary %}
+                                            <button class="btn btn-outline-success btn-sm" onclick="event.stopPropagation(); downloadSummaryPDF({{ note.id }})" title="Download Summary as PDF">
+                                                📥 Save
+                                            </button>
+                                        {% endif %}
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Expanded View (Hidden by Default) -->
+                        <div class="expanded-view" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <!-- Header with Close -->
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div>
+                                            <h5 class="mb-1">{{ note.raw_title|default:"Untitled Research Report" }}</h5>
+                                            <div class="text-muted">
+                                                <strong>{{ note.source|default:"Unknown Source" }}</strong>
+                                                {% if note.publication_date %} • {{ note.publication_date|date:"Y-m-d" }}{% endif %}
+                                                {% if note.raw_author %} • {{ note.raw_author }}{% endif %}
+                                                {% if note.report_type %} • {{ note.report_type }}{% endif %}
+                                                {% if note.is_advanced_summary %}
+                                                    <span class="badge bg-warning ms-1" title="Advanced Summary Enabled">🧠 Advanced</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-secondary card-collapse-trigger">
+                                            ✕ Collapse
+                                        </button>
+                                    </div>
+
+                                    <!-- Metadata -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            {% if note.raw_companies %}
+                                                <p class="mb-1"><strong>Companies:</strong> {{ note.raw_companies }} ({{ note.raw_company_count|default:0 }})</p>
+                                            {% endif %}
+                                            {% if note.raw_page_count %}
+                                                <p class="mb-1"><strong>Pages:</strong> {{ note.raw_page_count }}</p>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p class="mb-1"><strong>Created:</strong> {{ note.created_at|date:"M d, Y H:i" }}</p>
+                                            {% if note.file_summary_time %}
+                                                <p class="mb-1"><strong>Summarized:</strong> {{ note.file_summary_time|date:"M d, Y H:i" }}</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <!-- Summary Content -->
+                                    {% if note.report_summary %}
+                                        <div class="summary-content mb-3">
+                                            <!-- Include the abstracted summary content -->
+                                            {% include 'research_summaries/components/summary_content_advanced.html' with summary=note.report_summary report_type=note.report_type %}
+                                        </div>
+                                    {% else %}
+                                        <p class="text-muted">Summary content not available.</p>
+                                    {% endif %}
+
+                                    <!-- Action Buttons in Expanded View -->
+                                    <div class="border-top pt-3">
+                                        <div class="btn-group gap-2">
+                                            <a href="{% url 'research_summaries:note_detail' note.id %}" class="btn btn-primary">
+                                                📄 View Full Summary
+                                            </a>
+
+                                            {% if note.file_directory %}
+                                                <button class="btn btn-outline-primary" onclick="viewPDF('{{ note.file_directory }}', {{ note.id }})">
+                                                    📎 View PDF
+                                                </button>
+                                            {% endif %}
+
+                                            {% if note.download_link %}
+                                                <a href="{{ note.download_link }}" target="_blank" class="btn btn-outline-secondary">
+                                                    🔗 Original Link
+                                                </a>
+                                            {% endif %}
+
+                                            {% if note.report_summary %}
+                                                <button class="btn btn-outline-success" onclick="downloadSummaryPDF({{ note.id }})" title="Download Summary as PDF">
+                                                    📥 Download Summary
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
             {% endfor %}
-            {% endif %}
 
         {% else %}
         <!-- No Results -->
@@ -513,8 +646,53 @@ function getCookie(name) {
 }
 
 // View PDF function
-function viewPDF(filePath, noteId) {
-    window.open(`/research/view-pdf/${noteId}/`, '_blank');
+function viewPDF(fileDirectory, noteId) {
+    // Show loading state
+    const originalText = event.target.innerHTML;
+    const button = event.target;
+    button.innerHTML = '⏳ Loading...';
+    button.disabled = true;
+
+    // Use noteId if available (preferred method)
+    if (noteId) {
+        fetch(`/research/pdf/${noteId}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Open PDF in new tab
+                    const newWindow = window.open(data.url, '_blank');
+                    if (!newWindow) {
+                        alert('Pop-up blocked! Please allow pop-ups for this site and try again.');
+                    }
+                } else {
+                    alert('Error loading PDF: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to load PDF. Please try again.');
+            })
+            .finally(() => {
+                // Restore button state
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
+    } else {
+        // Fallback for direct URLs (if somehow noteId is not available)
+        if (fileDirectory) {
+            if (fileDirectory.startsWith('http')) {
+                window.open(fileDirectory, '_blank');
+            } else {
+                alert('Invalid PDF URL format');
+            }
+        } else {
+            alert('No PDF file available');
+        }
+
+        // Restore button state
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
 }
 
 // Download Summary PDF function
