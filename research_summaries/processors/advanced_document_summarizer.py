@@ -134,7 +134,6 @@ def categorize_document(client, model: str, file_id: str, company_count: int, co
                 },
             },
         },
-        temperature=0.001,
     )
 
     return json.loads(response.output_text).get('report_type')
@@ -160,7 +159,6 @@ def summarize_document(client, model: str, file_id: str, instructions: str, sche
             }
         ],
         text=schema,
-        temperature=0.1,
     )
 
     return json.loads(response.output_text)
