@@ -88,7 +88,7 @@ class ResearchSummariesView(LoginRequiredMixin, TemplateView):
         from collections import defaultdict, OrderedDict
 
         # Get all results for grouping (limit to reasonable number for performance)
-        all_results = list(queryset[:200])  # Limit to 200 most recent results
+        all_results = list(queryset[:400])  # Limit to 200 most recent results
 
         # Separate reports with tickers from those without
         ticker_groups = defaultdict(list)
@@ -1353,24 +1353,38 @@ class AdvancedSummariesView(LoginRequiredMixin, TemplateView):
                 Q(parsed_ticker__icontains=search_query)
             )
 
-        # Get results with limit
-        limit = 50
-        all_results = list(queryset[:limit])
+        # Group the results
+        from collections import defaultdict, OrderedDict
 
-        # Group by ticker and type
-        ticker_groups = {}
-        report_type_groups = {}
+        # Get all results for grouping (limit to reasonable number for performance)
+        all_results = list(queryset[:400])  # Limit to 200 most recent results
+
+        # Separate reports with tickers from those without
+        ticker_groups = defaultdict(list)
+        report_type_groups = defaultdict(list)
 
         for note in all_results:
             if note.parsed_ticker:
                 ticker_groups[note.parsed_ticker].append(note)
-            else:  # Only if NO ticker
+            else:
                 report_type = note.report_type or "Uncategorized"
                 report_type_groups[report_type].append(note)
 
-        # Sort groups
-        sorted_ticker_groups = dict(sorted(ticker_groups.items()))
-        sorted_report_type_groups = dict(sorted(report_type_groups.items()))
+        # Sort ticker groups alphabetically and sort reports within each group by summary time
+        sorted_ticker_groups = OrderedDict()
+        for ticker in sorted(ticker_groups.keys()):
+            sorted_ticker_groups[ticker] = sorted(
+                ticker_groups[ticker],
+                key=lambda x: (x.source or '', x.raw_title or '')
+            )
+
+        # Sort report type groups alphabetically and sort reports within each group by summary time
+        sorted_report_type_groups = OrderedDict()
+        for report_type in sorted(report_type_groups.keys()):
+            sorted_report_type_groups[report_type] = sorted(
+                report_type_groups[report_type],
+                key=lambda x: (x.source or '', x.raw_title or '')
+            )
 
         # Calculate total results
         total_results = len(all_results)

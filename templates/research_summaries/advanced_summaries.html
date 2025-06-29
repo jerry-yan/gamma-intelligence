@@ -199,13 +199,14 @@
                         <span class="text-muted fs-6">({{ notes|length }} report{{ notes|length|pluralize }})</span>
                     </h4>
 
-                    <!-- Aggregate Summary Button -->
-                    <button class="btn btn-info btn-sm ms-3 aggregate-summary-btn"
-                            data-ticker="{{ ticker }}"
-                            data-bs-toggle="modal"
-                            data-bs-target="#aggregateModal">
-                        📊 Generate Combined Analysis
-                    </button>
+                    <!-- Add Aggregate Summary button if more than 1 report -->
+                    {% if notes|length > 1 %}
+                        <button class="btn btn-outline-success btn-sm ms-3"
+                                onclick="openAggregateModal('{{ ticker }}', {{ notes|length }})"
+                                title="Generate aggregate summary for all {{ ticker }} reports">
+                            📊 Aggregate Summary
+                        </button>
+                    {% endif %}
                 </div>
 
                 <!-- Individual Notes -->
