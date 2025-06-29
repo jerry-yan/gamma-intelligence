@@ -203,25 +203,41 @@
     <!-- Stock Recaps (Industry Note) -->
     {% if summary.stock_recaps %}
         <div class="mb-3">
-            <strong>Individual Stock Analysis:</strong>
-            {% for stock in summary.stock_recaps %}
-                <div class="card mb-2">
-                    <div class="card-body">
-                        <h6 class="card-title">
-                            <span class="badge bg-primary">{{ stock.stock_ticker }}</span>
-                            {% if stock.stock_rating %}
-                                <span class="badge bg-info ms-2">{{ stock.stock_rating }}</span>
-                            {% endif %}
-                        </h6>
-                        {% if stock.stock_outlook %}
-                            <p class="mb-2"><strong>Outlook:</strong> {{ stock.stock_outlook }}</p>
-                        {% endif %}
-                        {% if stock.stock_valuation %}
-                            <p class="mb-0"><strong>Valuation:</strong> {{ stock.stock_valuation }}</p>
-                        {% endif %}
-                    </div>
-                </div>
-            {% endfor %}
+            <strong class="">Stock Coverage:</strong>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th class="">Ticker</th>
+                            <th class="">Rating</th>
+                            <th class="">Outlook</th>
+                            <th class="">Valuation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stock in summary.stock_recaps %}
+                            <tr>
+                                <td class=""><strong>{{ stock.stock_ticker }}</strong></td>
+                                <td class="">
+                                    {% if stock.stock_rating and stock.stock_rating != "None" %}
+                                        {% if stock.stock_rating == "Buy" %}
+                                            <span class="badge bg-success">{{ stock.stock_rating }}</span>
+                                        {% elif stock.stock_rating == "Sell" %}
+                                            <span class="badge bg-danger">{{ stock.stock_rating }}</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">{{ stock.stock_rating }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td class="">{{ stock.stock_outlook|default:"-" }}</td>
+                                <td class="">{{ stock.stock_valuation|default:"-" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     {% endif %}
 
