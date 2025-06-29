@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Advanced Summaries - Gamma Intelligence{% endblock %}
+{% block title %}Research Summaries - Gamma Intelligence{% endblock %}
 
 {% block content %}
 {% csrf_token %}
@@ -9,19 +9,8 @@
     <div class="col-md-12">
         <div class="d-flex justify-content-between align-items-center">
             <div>
-                <div class="d-flex align-items-center gap-3">
-                    <div class="dropdown">
-                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            <strong>Advanced Summaries</strong>
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{% url 'research_summaries:research_summaries' %}">Standard Summaries</a></li>
-                            <li><a class="dropdown-item active" href="{% url 'research_summaries:advanced_summaries' %}">Advanced Summaries</a></li>
-                        </ul>
-                    </div>
-                    <h2 class="mb-0">Research Reports</h2>
-                </div>
-                <p class="text-muted">Advanced AI-enhanced financial research reports</p>
+                <h2>Research Summaries</h2>
+                <p class="text-muted">Manage and explore your financial research reports</p>
             </div>
             <div class="dropdown">
                 <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -44,116 +33,119 @@
         <div class="card text-center">
             <div class="card-body py-3">
                 <h4 class="text-success mb-0">{{ status_counts.filtered_count }}</h4>
-                <small class="text-muted">New Advanced</small>
+                <small class="text-muted">New Reports</small>
             </div>
         </div>
     </div>
     <div class="col-md-2">
         <div class="card text-center">
             <div class="card-body py-3">
-                <h4 class="text-primary mb-0">{{ status_counts.total_advanced }}</h4>
-                <small class="text-muted">Total Advanced</small>
+                <h4 class="text-primary mb-0">{{ status_counts.summarized }}</h4>
+                <small class="text-muted">Total Summarized</small>
             </div>
         </div>
     </div>
     <div class="col-md-2">
         <div class="card text-center">
             <div class="card-body py-3">
-                <h4 class="text-info mb-0">{{ status_counts.last_24h }}</h4>
-                <small class="text-muted">Last 24h</small>
+                <h4 class="text-secondary mb-0">{{ status_counts.not_downloaded }}</h4>
+                <small class="text-muted">Pending</small>
             </div>
         </div>
     </div>
     <div class="col-md-2">
         <div class="card text-center">
             <div class="card-body py-3">
-                <h4 class="text-warning mb-0">{{ status_counts.last_7d }}</h4>
-                <small class="text-muted">Last 7 Days</small>
+                <h4 class="text-info mb-0">{{ status_counts.downloaded }}</h4>
+                <small class="text-muted">Downloaded</small>
             </div>
         </div>
     </div>
     <div class="col-md-2">
         <div class="card text-center">
             <div class="card-body py-3">
-                <h4 class="text-secondary mb-0">{{ status_counts.by_source|default:0 }}</h4>
-                <small class="text-muted">By Source</small>
+                <h4 class="text-warning mb-0">{{ status_counts.preprocessed }}</h4>
+                <small class="text-muted">Cleaned</small>
             </div>
         </div>
     </div>
     <div class="col-md-2">
         <div class="card text-center">
             <div class="card-body py-3">
-                <h4 class="text-dark mb-0">{{ status_counts.by_ticker|default:0 }}</h4>
-                <small class="text-muted">By Ticker</small>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Filters Section -->
-<div class="row mb-4">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-body">
-                <form method="GET" class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Filter by Source</label>
-                        <select name="source" class="form-select">
-                            <option value="">All Sources</option>
-                            {% for source in sources %}
-                                <option value="{{ source }}" {% if source == current_filters.source %}selected{% endif %}>
-                                    {{ source }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Search</label>
-                        <input type="text" name="search" class="form-control"
-                               placeholder="Search titles, companies..."
-                               value="{{ current_filters.search }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Show Since</label>
-                        <input type="datetime-local" name="datetime" class="form-control"
-                               value="{{ current_filters.datetime }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">&nbsp;</label>
-                        <div>
-                            <button type="submit" class="btn btn-primary">Apply Filters</button>
-                            <a href="{% url 'research_summaries:advanced_summaries' %}" class="btn btn-outline-secondary">Clear</a>
-                        </div>
-                    </div>
-                </form>
+                {% if user_last_read_time %}
+                    <h6 class="text-muted mb-0">{{ user_last_read_time|date:"M d, H:i" }}</h6>
+                    <small class="text-muted">Last Read</small>
+                {% else %}
+                    <h6 class="text-muted mb-0">Never</h6>
+                    <small class="text-muted">Last Read</small>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
 
 <div class="row">
-    <!-- Sidebar -->
+    <!-- Filters Sidebar -->
     <div class="col-md-3">
         <div class="card">
             <div class="card-header">
-                <h6 class="mb-0">Recent Advanced Summaries</h6>
+                <h5>Filters & Search</h5>
             </div>
             <div class="card-body">
-                <div class="recent-summaries-list">
+                <form method="get" action="">
+                    <!-- Search -->
+                    <div class="mb-3">
+                        <label class="form-label">Search</label>
+                        <input type="text" name="search" class="form-control" placeholder="Title, author, company..." value="{{ current_filters.search }}">
+                    </div>
+
+                    <!-- Datetime Filter -->
+                    <div class="mb-3">
+                        <label class="form-label">Show reports after</label>
+                        <input type="datetime-local" name="datetime" class="form-control" value="{{ formatted_datetime }}">
+                        <small class="text-muted">
+                            {% if user_last_read_time %}
+                                Default: your last read time
+                            {% else %}
+                                Default: last 24 hours
+                            {% endif %}
+                        </small>
+                    </div>
+
+                    <!-- Source Filter -->
+                    <div class="mb-3">
+                        <label class="form-label">Source</label>
+                        <select name="source" class="form-select">
+                            <option value="">All Sources</option>
+                            {% for source in sources %}
+                                <option value="{{ source }}" {% if current_filters.source == source %}selected{% endif %}>
+                                    {{ source }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 mb-2">Apply Filters</button>
+                    <a href="{% url 'research_summaries:research_summaries' %}" class="btn btn-outline-secondary w-100">Reset to Default</a>
+                </form>
+
+                <!-- Recent Activity -->
+                <hr class="mt-4">
+                <h6>Recent Summaries</h6>
+                <div style="max-height: 200px; overflow-y: auto;">
                     {% for note in recent_summaries %}
                         <div class="border-bottom pb-2 mb-2">
-                            <small class="text-primary d-block">{{ note.raw_companies|default:note.parsed_ticker|default:"General" }}</small>
-                            <small>{{ note.raw_title|truncatechars:50 }}</small>
-                            <small class="text-muted d-block">
-                                {% if note.file_summary_time %}
-                                    {{ note.file_summary_time|date:"M d" }}
-                                {% else %}
-                                    {{ note.created_at|date:"M d" }}
-                                {% endif %}
+                            <a href="{% url 'research_summaries:note_detail' note.id %}" class="text-decoration-none">
+                                <strong class="">{{ note.raw_title|default:"Untitled"|truncatechars:30 }}</strong>
+                            </a>
+                            <br>
+                            <small class="text-muted">
+                                {% if note.parsed_ticker %}{{ note.parsed_ticker }} | {% endif %}
+                                {{ note.file_summary_time|date:"M d" }}
                             </small>
                         </div>
                     {% empty %}
-                        <p class="text-muted small">No recent advanced summaries</p>
+                        <p class="text-muted small">No recent summaries</p>
                     {% endfor %}
                 </div>
             </div>
@@ -165,7 +157,7 @@
         <!-- Results Header -->
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
-                <h5>Advanced Research Reports</h5>
+                <h5>New Research Reports</h5>
                 <small class="text-muted">
                     {% if results_info.showing_count %}
                         Showing {{ results_info.showing_count }} reports
@@ -199,20 +191,20 @@
                         <span class="text-muted fs-6">({{ notes|length }} report{{ notes|length|pluralize }})</span>
                     </h4>
 
-                    <!-- Aggregate Summary Button -->
-                    <button class="btn btn-info btn-sm ms-3 aggregate-summary-btn"
-                            data-ticker="{{ ticker }}"
-                            data-bs-toggle="modal"
-                            data-bs-target="#aggregateModal">
-                        📊 Generate Combined Analysis
-                    </button>
+                    <!-- Add Aggregate Summary button if more than 1 report -->
+                    {% if notes|length > 1 %}
+                        <button class="btn btn-outline-success btn-sm ms-3"
+                                onclick="openAggregateModal('{{ ticker }}', {{ notes|length }})"
+                                title="Generate aggregate summary for all {{ ticker }} reports">
+                            📊 Aggregate Summary
+                        </button>
+                    {% endif %}
                 </div>
 
-                <!-- Individual Notes -->
                 {% for note in notes %}
-                <div class="card mb-3 research-card">
+                <div class="card mb-3 ms-3 research-card" data-note-id="{{ note.id }}">
                     <div class="card-body">
-                        <!-- Collapsed View -->
+                        <!-- Collapsed View (Default) -->
                         <div class="collapsed-view">
                             <div class="row">
                                 <div class="col-md-8">
@@ -224,8 +216,10 @@
                                                 <span class="text-muted">{{ note.publication_date|date:"Y-m-d" }}</span>
                                                 <span class="mx-2">•</span>
                                             {% endif %}
-                                            <span>{{ note.raw_title|default:"Untitled Report" }}</span>
-                                            <span class="badge bg-success ms-1">Advanced AI Summary</span>
+                                            <span>{{ note.raw_title|default:"Untitled Research Report" }}</span>
+                                            {% if note.is_advanced_summary %}
+                                                <span class="badge bg-warning ms-1" title="Advanced Summary Enabled">🧠</span>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
@@ -254,13 +248,22 @@
                                                 📥 Save
                                             </button>
                                         {% endif %}
+
+                                        <button class="btn {% if note.is_advanced_summary %}btn-info{% else %}btn-outline-info{% endif %} btn-sm" onclick="event.stopPropagation(); toggleAdvancedSummary({{ note.id }})" title="{% if note.is_advanced_summary %}Advanced Summary Enabled - Click to disable{% else %}Advanced Summary Disabled - Click to enable{% endif %}">
+                                            🧠 o3
+                                        </button>
+
+                                        <button class="btn btn-outline-warning btn-sm" onclick="event.stopPropagation(); openFlagModal({{ note.id }}, '{{ note.report_type|default:"Unknown" }}')" title="Flag for report type reassignment">
+                                            🚩
+                                        </button>
                                     </div>
                                 </div>
+
                             </div>
                         </div>
 
-                        <!-- Expanded View (Hidden by default) -->
-                        <div class="expanded-view" id="expanded-{{ note.id }}" style="display: none;">
+                        <!-- Expanded View (Hidden by Default) -->
+                        <div class="expanded-view" style="display: none;">
                             <div class="row">
                                 <div class="col-md-12">
                                     <!-- Header with Close -->
@@ -272,7 +275,9 @@
                                                 {% if note.publication_date %} • {{ note.publication_date|date:"Y-m-d" }}{% endif %}
                                                 {% if note.raw_author %} • {{ note.raw_author }}{% endif %}
                                                 {% if note.report_type %} • {{ note.report_type }}{% endif %}
-                                                <span class="badge bg-success ms-1">Advanced Summary</span>
+                                                {% if note.is_advanced_summary %}
+                                                    <span class="badge bg-warning ms-1" title="Advanced Summary Enabled">🧠 Advanced</span>
+                                                {% endif %}
                                             </div>
                                         </div>
                                         <button class="btn btn-sm btn-outline-secondary card-collapse-trigger">
@@ -280,14 +285,747 @@
                                         </button>
                                     </div>
 
-                                    <!-- Summary Content -->
-                                    {% if note.report_summary %}
-                                        <div class="summary-content mb-3">
-                                            <!-- Include the abstracted summary content -->
-                                            {% include 'research_summaries/components/summary_content_advanced.html' with summary=note.report_summary report_type=note.report_type %}
+                                    <!-- Metadata -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            {% if note.raw_companies %}
+                                                <p class="mb-1"><strong>Companies:</strong> {{ note.raw_companies }} ({{ note.raw_company_count|default:0 }})</p>
+                                            {% endif %}
+                                            {% if note.raw_page_count %}
+                                                <p class="mb-1"><strong>Pages:</strong> {{ note.raw_page_count }}</p>
+                                            {% endif %}
                                         </div>
-                                    {% else %}
-                                        <p class="text-muted">Summary content not available.</p>
+                                        <div class="col-md-6">
+                                            <p class="mb-1"><strong>Created:</strong> {{ note.created_at|date:"M d, Y H:i" }}</p>
+                                            {% if note.file_summary_time %}
+                                                <p class="mb-1"><strong>Summarized:</strong> {{ note.file_summary_time|date:"M d, Y H:i" }}</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <!-- JSON Summary Display -->
+                                    {% if note.report_summary %}
+                                    <div class="mb-3">
+                                        <h6 class="border-bottom pb-2">AI Summary</h6>
+
+                                        <!-- Top Row: Sentiment, Price Target, Stock Rating -->
+                                        <div class="row mb-3">
+                                            {% if note.report_summary.sentiment %}
+                                                <div class="col-md-4">
+                                                    <div class="mb-2">
+                                                        <strong>Sentiment:</strong>
+                                                        {% if note.report_summary.sentiment == "Positive" %}
+                                                            <span class="badge bg-success">{{ note.report_summary.sentiment }}</span>
+                                                        {% elif note.report_summary.sentiment == "Negative" %}
+                                                            <span class="badge bg-danger">{{ note.report_summary.sentiment }}</span>
+                                                        {% else %}
+                                                            <span class="badge bg-secondary">{{ note.report_summary.sentiment }}</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                            {% if note.report_summary.price_target %}
+                                                <div class="col-md-4">
+                                                    <div class="mb-2"><strong>Price Target:</strong> ${{ note.report_summary.price_target }}</div>
+                                                </div>
+                                            {% endif %}
+                                            {% if note.report_summary.stock_rating %}
+                                                <div class="col-md-4">
+                                                    <div class="mb-2">
+                                                        <strong>Rating:</strong>
+                                                        {% if note.report_summary.stock_rating == "Buy" %}
+                                                            <span class="badge bg-success">{{ note.report_summary.stock_rating }}</span>
+                                                        {% elif note.report_summary.stock_rating == "Sell" %}
+                                                            <span class="badge bg-danger">{{ note.report_summary.stock_rating }}</span>
+                                                        {% else %}
+                                                            <span class="badge bg-warning">{{ note.report_summary.stock_rating }}</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- Authors -->
+                                        {% if note.report_summary.authors %}
+                                            <div class="mb-3">
+                                                <strong>Authors:</strong> {{ note.report_summary.authors|join:", " }}
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Recap -->
+                                        {% if note.report_summary.recap %}
+                                            <div class="mb-3">
+                                                <strong class="">Recap:</strong>
+                                                <p class="">{{ note.report_summary.recap }}</p>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Summary -->
+                                        {% if note.report_summary.summary %}
+                                            <div class="mb-3">
+                                                <strong class="">Summary:</strong>
+                                                <p class="">{{ note.report_summary.summary }}</p>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Executive Summary -->
+                                        {% if note.report_summary.executive_summary %}
+                                            <div class="mb-3">
+                                                <strong class="">Executive Summary:</strong>
+                                                <p class="">{{ note.report_summary.executive_summary }}</p>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Expectations -->
+                                        {% if note.report_summary.expectations %}
+                                            <div class="mb-3">
+                                                <strong class="">Expectations:</strong>
+                                                <p class="">{{ note.report_summary.expectations }}</p>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Risk Points and Opportunity Points Side by Side -->
+                                        {% if note.report_summary.risk_points or note.report_summary.opportunity_points %}
+                                            <div class="row mb-3">
+                                                {% if note.report_summary.risk_points %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-danger">Risk Points:</strong>
+                                                        <ul class="">
+                                                            {% for point in note.report_summary.risk_points %}
+                                                                <li class="">{{ point }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                {% endif %}
+                                                {% if note.report_summary.opportunity_points %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-success">Opportunity Points:</strong>
+                                                        <ul class="">
+                                                            {% for point in note.report_summary.opportunity_points %}
+                                                                <li class="">{{ point }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Bull Points and Bear Points Side by Side -->
+                                        {% if note.report_summary.bull_points or note.report_summary.bear_points %}
+                                            <div class="row mb-3">
+                                                {% if note.report_summary.bull_points %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-success">Bullish Points:</strong>
+                                                        <ul class="">
+                                                            {% for point in note.report_summary.bull_points %}
+                                                                <li class="">{{ point }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                {% endif %}
+                                                {% if note.report_summary.bear_points %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-danger">Bearish Points:</strong>
+                                                        <ul class="">
+                                                            {% for point in note.report_summary.bear_points %}
+                                                                <li class="">{{ point }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Key Themes -->
+                                        {% if note.report_summary.key_themes %}
+                                            <div class="mb-3">
+                                                <strong class="">Key Themes:</strong>
+                                                <ul class="">
+                                                    {% for theme in note.report_summary.key_themes %}
+                                                        <li class="">{{ theme }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Key Dynamics -->
+                                        {% if note.report_summary.key_dynamics %}
+                                            <div class="mb-3">
+                                                <strong class="">Key Industry Dynamics:</strong>
+                                                <ul class="">
+                                                    {% for dynamic in note.report_summary.key_dynamics %}
+                                                        <li class="">{{ dynamic }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Positive and Negative Dynamics Side by Side -->
+                                        {% if note.report_summary.positive_dynamics or note.report_summary.negative_dynamics %}
+                                            <div class="row mb-3">
+                                                {% if note.report_summary.positive_dynamics %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-success">Positive Dynamics:</strong>
+                                                        <ul class="">
+                                                            {% for dynamic in note.report_summary.positive_dynamics %}
+                                                                <li class="">{{ dynamic }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                {% endif %}
+                                                {% if note.report_summary.negative_dynamics %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-danger">Negative Dynamics:</strong>
+                                                        <ul class="">
+                                                            {% for dynamic in note.report_summary.negative_dynamics %}
+                                                                <li class="">{{ dynamic }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Upside and Downside Valuation Side by Side -->
+                                        {% if note.report_summary.upside_valuation or note.report_summary.downside_valuation %}
+                                            <div class="row mb-3">
+                                                {% if note.report_summary.upside_valuation %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-success">Upside Valuation:</strong>
+                                                        <p class="">{{ note.report_summary.upside_valuation }}</p>
+                                                    </div>
+                                                {% endif %}
+                                                {% if note.report_summary.downside_valuation %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-danger">Downside Valuation:</strong>
+                                                        <p class="">{{ note.report_summary.downside_valuation }}</p>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Valuation Analysis -->
+                                        {% if note.report_summary.valuation_analysis %}
+                                            <div class="mb-3">
+                                                <strong class="">Valuation:</strong>
+                                                {% with first=note.report_summary.valuation_analysis.0 %}
+                                                    {% if first|stringformat:"s" != first %}
+                                                        <!-- It's a list/array -->
+                                                        <ul class="">
+                                                            {% for analysis in note.report_summary.valuation_analysis %}
+                                                                <li class="">{{ analysis }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    {% else %}
+                                                        <!-- It's a string -->
+                                                        <p class="">{{ note.report_summary.valuation_analysis }}</p>
+                                                    {% endif %}
+                                                {% endwith %}
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Stock Recaps -->
+                                        {% if note.report_summary.stock_recaps %}
+                                            <div class="mb-3">
+                                                <strong class="">Stock Coverage:</strong>
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm">
+                                                        <thead>
+                                                            <tr>
+                                                                <th class="">Ticker</th>
+                                                                <th class="">Rating</th>
+                                                                <th class="">Outlook</th>
+                                                                <th class="">Valuation</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for stock in note.report_summary.stock_recaps %}
+                                                                <tr>
+                                                                    <td class=""><strong>{{ stock.stock_ticker }}</strong></td>
+                                                                    <td class="">
+                                                                        {% if stock.stock_rating and stock.stock_rating != "None" %}
+                                                                            {% if stock.stock_rating == "Buy" %}
+                                                                                <span class="badge bg-success">{{ stock.stock_rating }}</span>
+                                                                            {% elif stock.stock_rating == "Sell" %}
+                                                                                <span class="badge bg-danger">{{ stock.stock_rating }}</span>
+                                                                            {% else %}
+                                                                                <span class="badge bg-warning">{{ stock.stock_rating }}</span>
+                                                                            {% endif %}
+                                                                        {% else %}
+                                                                            -
+                                                                        {% endif %}
+                                                                    </td>
+                                                                    <td class="">{{ stock.stock_outlook|default:"-" }}</td>
+                                                                    <td class="">{{ stock.stock_valuation|default:"-" }}</td>
+                                                                </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Strategic Recommendations -->
+                                        {% if note.report_summary.strategic_recommendations %}
+                                            <div class="mb-3">
+                                                <strong class="">Strategic Recommendations:</strong>
+                                                <ul class="">
+                                                    {% for recommendation in note.report_summary.strategic_recommendations %}
+                                                        <li class="">{{ recommendation }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Conclusion -->
+                                        {% if note.report_summary.conclusion %}
+                                            <div class="mb-3">
+                                                <strong class="">Conclusion:</strong>
+                                                <p class="">{{ note.report_summary.conclusion }}</p>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- Action Buttons in Expanded View -->
+                                    <div class="border-top pt-3">
+                                        <div class="btn-group gap-2">
+                                            <a href="{% url 'research_summaries:note_detail' note.id %}" class="btn btn-primary">
+                                                📄 View Full Summary
+                                            </a>
+
+                                            {% if note.file_directory %}
+                                                <button class="btn btn-outline-primary" onclick="viewPDF('{{ note.file_directory }}', {{ note.id }})">
+                                                    📎 View PDF
+                                                </button>
+                                            {% endif %}
+
+                                            {% if note.download_link %}
+                                                <a href="{{ note.download_link }}" target="_blank" class="btn btn-outline-secondary">
+                                                    🔗 Original Link
+                                                </a>
+                                            {% endif %}
+
+                                            <!-- NEW DOWNLOAD BUTTON -->
+                                            {% if note.report_summary %}
+                                                <button class="btn btn-outline-success" onclick="downloadSummaryPDF({{ note.id }})" title="Download Summary as PDF">
+                                                    📥 Download Summary
+                                                </button>
+                                            {% endif %}
+
+                                            <!-- NEW ADVANCED SUMMARY BUTTON -->
+                                            <button class="btn {% if note.is_advanced_summary %}btn-info{% else %}btn-outline-info{% endif %}" onclick="toggleAdvancedSummary({{ note.id }})" title="{% if note.is_advanced_summary %}Advanced Summary Enabled - Click to disable{% else %}Advanced Summary Disabled - Click to enable{% endif %}">
+                                                🧠 Advanced Summary
+                                            </button>
+
+                                            <button class="btn btn-outline-warning" onclick="openFlagModal({{ note.id }}, '{{ note.report_type|default:"Unknown" }}')" title="Flag for report type reassignment">
+                                                🚩 Report
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+
+            <!-- Report Type Groups (No Ticker) -->
+            {% for report_type, notes in report_type_groups.items %}
+            <div class="mb-4">
+                <div class="d-flex align-items-center mb-3">
+                    <h4 class="mb-0">
+                        <span class="badge bg-secondary fs-6 me-2">{{ report_type }}</span>
+                        <span class="text-muted fs-6">({{ notes|length }} report{{ notes|length|pluralize }})</span>
+                    </h4>
+                </div>
+
+                {% for note in notes %}
+                <div class="card mb-3 ms-3 research-card" data-note-id="{{ note.id }}">
+                    <div class="card-body">
+                        <!-- Collapsed View (Default) -->
+                        <div class="collapsed-view">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-grow-1 cursor-pointer card-expand-trigger">
+                                            <strong class="text-primary">{{ note.source|default:"Unknown Source" }}</strong>
+                                            <span class="mx-2">•</span>
+                                            {% if note.publication_date %}
+                                                <span class="text-muted">{{ note.publication_date|date:"Y-m-d" }}</span>
+                                                <span class="mx-2">•</span>
+                                            {% endif %}
+                                            <span>{{ note.raw_title|default:"Untitled Research Report" }}</span>
+                                            {% if note.is_advanced_summary %}
+                                                <span class="badge bg-warning ms-1" title="Advanced Summary Enabled">🧠</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4 text-end">
+                                    <!-- Action Buttons (Always Visible) -->
+                                    <div class="btn-group-sm d-inline-flex gap-1">
+                                        <a href="{% url 'research_summaries:note_detail' note.id %}" class="btn btn-primary btn-sm">
+                                            📄 Summary
+                                        </a>
+
+                                        {% if note.file_directory %}
+                                            <button class="btn btn-outline-primary btn-sm" onclick="event.stopPropagation(); viewPDF('{{ note.file_directory }}', {{ note.id }})">
+                                                📎 PDF
+                                            </button>
+                                        {% endif %}
+
+                                        {% if note.download_link %}
+                                            <a href="{{ note.download_link }}" target="_blank" class="btn btn-outline-secondary btn-sm" onclick="event.stopPropagation()">
+                                                🔗 Link
+                                            </a>
+                                        {% endif %}
+
+                                        {% if note.report_summary %}
+                                            <button class="btn btn-outline-success btn-sm" onclick="event.stopPropagation(); downloadSummaryPDF({{ note.id }})" title="Download Summary as PDF">
+                                                📥 Save
+                                            </button>
+                                        {% endif %}
+
+                                        <button class="btn {% if note.is_advanced_summary %}btn-info{% else %}btn-outline-info{% endif %} btn-sm" onclick="event.stopPropagation(); toggleAdvancedSummary({{ note.id }})" title="{% if note.is_advanced_summary %}Advanced Summary Enabled - Click to disable{% else %}Advanced Summary Disabled - Click to enable{% endif %}">
+                                            🧠 o3
+                                        </button>
+
+                                        <button class="btn btn-outline-warning btn-sm" onclick="event.stopPropagation(); openFlagModal({{ note.id }}, '{{ note.report_type|default:"Unknown" }}')" title="Flag for report type reassignment">
+                                            🚩
+                                        </button>
+                                    </div>
+
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Expanded View (Hidden by Default) -->
+                        <div class="expanded-view" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <!-- Header with Close -->
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div>
+                                            <h5 class="mb-1">{{ note.raw_title|default:"Untitled Research Report" }}</h5>
+                                            <div class="text-muted">
+                                                <strong>{{ note.source|default:"Unknown Source" }}</strong>
+                                                {% if note.publication_date %} • {{ note.publication_date|date:"Y-m-d" }}{% endif %}
+                                                {% if note.raw_author %} • {{ note.raw_author }}{% endif %}
+                                                {% if note.report_type %} • {{ note.report_type }}{% endif %}
+                                                {% if note.is_advanced_summary %}
+                                                    <span class="badge bg-warning ms-1" title="Advanced Summary Enabled">🧠 Advanced</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-secondary card-collapse-trigger">
+                                            ✕ Collapse
+                                        </button>
+                                    </div>
+
+                                    <!-- Metadata -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            {% if note.raw_companies %}
+                                                <p class="mb-1"><strong>Companies:</strong> {{ note.raw_companies }} ({{ note.raw_company_count|default:0 }})</p>
+                                            {% endif %}
+                                            {% if note.raw_page_count %}
+                                                <p class="mb-1"><strong>Pages:</strong> {{ note.raw_page_count }}</p>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p class="mb-1"><strong>Created:</strong> {{ note.created_at|date:"M d, Y H:i" }}</p>
+                                            {% if note.file_summary_time %}
+                                                <p class="mb-1"><strong>Summarized:</strong> {{ note.file_summary_time|date:"M d, Y H:i" }}</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <!-- JSON Summary Display -->
+                                    {% if note.report_summary %}
+                                    <div class="mb-3">
+                                        <h6 class="border-bottom pb-2">AI Summary</h6>
+
+                                        <!-- Top Row: Sentiment, Price Target, Stock Rating -->
+                                        <div class="row mb-3">
+                                            {% if note.report_summary.sentiment %}
+                                                <div class="col-md-4">
+                                                    <div class="mb-2">
+                                                        <strong>Sentiment:</strong>
+                                                        {% if note.report_summary.sentiment == "Positive" %}
+                                                            <span class="badge bg-success">{{ note.report_summary.sentiment }}</span>
+                                                        {% elif note.report_summary.sentiment == "Negative" %}
+                                                            <span class="badge bg-danger">{{ note.report_summary.sentiment }}</span>
+                                                        {% else %}
+                                                            <span class="badge bg-secondary">{{ note.report_summary.sentiment }}</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                            {% if note.report_summary.price_target %}
+                                                <div class="col-md-4">
+                                                    <div class="mb-2"><strong>Price Target:</strong> ${{ note.report_summary.price_target }}</div>
+                                                </div>
+                                            {% endif %}
+                                            {% if note.report_summary.stock_rating %}
+                                                <div class="col-md-4">
+                                                    <div class="mb-2">
+                                                        <strong>Rating:</strong>
+                                                        {% if note.report_summary.stock_rating == "Buy" %}
+                                                            <span class="badge bg-success">{{ note.report_summary.stock_rating }}</span>
+                                                        {% elif note.report_summary.stock_rating == "Sell" %}
+                                                            <span class="badge bg-danger">{{ note.report_summary.stock_rating }}</span>
+                                                        {% else %}
+                                                            <span class="badge bg-warning">{{ note.report_summary.stock_rating }}</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- Authors -->
+                                        {% if note.report_summary.authors %}
+                                            <div class="mb-3">
+                                                <strong>Authors:</strong> {{ note.report_summary.authors|join:", " }}
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Recap -->
+                                        {% if note.report_summary.recap %}
+                                            <div class="mb-3">
+                                                <strong class="">Recap:</strong>
+                                                <p class=" text-justify">{{ note.report_summary.recap }}</p>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Summary -->
+                                        {% if note.report_summary.summary %}
+                                            <div class="mb-3">
+                                                <strong class="">Summary:</strong>
+                                                <p class=" text-justify">{{ note.report_summary.summary }}</p>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Executive Summary -->
+                                        {% if note.report_summary.executive_summary %}
+                                            <div class="mb-3">
+                                                <strong class="">Executive Summary:</strong>
+                                                <p class=" text-justify">{{ note.report_summary.executive_summary }}</p>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Expectations -->
+                                        {% if note.report_summary.expectations %}
+                                            <div class="mb-3">
+                                                <strong class="">Expectations:</strong>
+                                                <p class=" text-justify">{{ note.report_summary.expectations }}</p>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Risk Points and Opportunity Points Side by Side -->
+                                        {% if note.report_summary.risk_points or note.report_summary.opportunity_points %}
+                                            <div class="row mb-3">
+                                                {% if note.report_summary.risk_points %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-danger">Risk Points:</strong>
+                                                        <ul class="">
+                                                            {% for point in note.report_summary.risk_points %}
+                                                                <li class="">{{ point }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                {% endif %}
+                                                {% if note.report_summary.opportunity_points %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-success">Opportunity Points:</strong>
+                                                        <ul class="">
+                                                            {% for point in note.report_summary.opportunity_points %}
+                                                                <li class="">{{ point }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Bull Points and Bear Points Side by Side -->
+                                        {% if note.report_summary.bull_points or note.report_summary.bear_points %}
+                                            <div class="row mb-3">
+                                                {% if note.report_summary.bull_points %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-success">Bullish Points:</strong>
+                                                        <ul class="">
+                                                            {% for point in note.report_summary.bull_points %}
+                                                                <li class="">{{ point }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                {% endif %}
+                                                {% if note.report_summary.bear_points %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-danger">Bearish Points:</strong>
+                                                        <ul class="">
+                                                            {% for point in note.report_summary.bear_points %}
+                                                                <li class="">{{ point }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Key Themes -->
+                                        {% if note.report_summary.key_themes %}
+                                            <div class="mb-3">
+                                                <strong class="">Key Themes:</strong>
+                                                <ul class="">
+                                                    {% for theme in note.report_summary.key_themes %}
+                                                        <li class="">{{ theme }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Key Dynamics -->
+                                        {% if note.report_summary.key_dynamics %}
+                                            <div class="mb-3">
+                                                <strong class="">Key Industry Dynamics:</strong>
+                                                <ul class="">
+                                                    {% for dynamic in note.report_summary.key_dynamics %}
+                                                        <li class="">{{ dynamic }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Positive and Negative Dynamics Side by Side -->
+                                        {% if note.report_summary.positive_dynamics or note.report_summary.negative_dynamics %}
+                                            <div class="row mb-3">
+                                                {% if note.report_summary.positive_dynamics %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-success">Positive Dynamics:</strong>
+                                                        <ul class="">
+                                                            {% for dynamic in note.report_summary.positive_dynamics %}
+                                                                <li class="">{{ dynamic }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                {% endif %}
+                                                {% if note.report_summary.negative_dynamics %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-danger">Negative Dynamics:</strong>
+                                                        <ul class="">
+                                                            {% for dynamic in note.report_summary.negative_dynamics %}
+                                                                <li class="">{{ dynamic }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Upside and Downside Valuation Side by Side -->
+                                        {% if note.report_summary.upside_valuation or note.report_summary.downside_valuation %}
+                                            <div class="row mb-3">
+                                                {% if note.report_summary.upside_valuation %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-success">Upside Valuation:</strong>
+                                                        <p class=" text-justify">{{ note.report_summary.upside_valuation }}</p>
+                                                    </div>
+                                                {% endif %}
+                                                {% if note.report_summary.downside_valuation %}
+                                                    <div class="col-md-6">
+                                                        <strong class="text-danger">Downside Valuation:</strong>
+                                                        <p class=" text-justify">{{ note.report_summary.downside_valuation }}</p>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Valuation Analysis -->
+                                        {% if note.report_summary.valuation_analysis %}
+                                            <div class="mb-3">
+                                                <strong class="">Valuation Analysis:</strong>
+                                                {% if note.report_summary.valuation_analysis|first %}
+                                                    <!-- List of items -->
+                                                    <ul class="">
+                                                        {% for analysis in note.report_summary.valuation_analysis %}
+                                                            <li class="">{{ analysis }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                {% else %}
+                                                    <!-- Single string value -->
+                                                    <p class=" text-justify">{{ note.report_summary.valuation_analysis }}</p>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Stock Recaps -->
+                                        {% if note.report_summary.stock_recaps %}
+                                            <div class="mb-3">
+                                                <strong class="">Stock Coverage:</strong>
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm">
+                                                        <thead>
+                                                            <tr>
+                                                                <th class="">Ticker</th>
+                                                                <th class="">Rating</th>
+                                                                <th class="">Outlook</th>
+                                                                <th class="">Valuation</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for stock in note.report_summary.stock_recaps %}
+                                                                <tr>
+                                                                    <td class=""><strong>{{ stock.stock_ticker }}</strong></td>
+                                                                    <td class="">
+                                                                        {% if stock.stock_rating and stock.stock_rating != "None" %}
+                                                                            {% if stock.stock_rating == "Buy" %}
+                                                                                <span class="badge bg-success">{{ stock.stock_rating }}</span>
+                                                                            {% elif stock.stock_rating == "Sell" %}
+                                                                                <span class="badge bg-danger">{{ stock.stock_rating }}</span>
+                                                                            {% else %}
+                                                                                <span class="badge bg-warning">{{ stock.stock_rating }}</span>
+                                                                            {% endif %}
+                                                                        {% else %}
+                                                                            -
+                                                                        {% endif %}
+                                                                    </td>
+                                                                    <td class="">{{ stock.stock_outlook|default:"-" }}</td>
+                                                                    <td class="">{{ stock.stock_valuation|default:"-" }}</td>
+                                                                </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Strategic Recommendations -->
+                                        {% if note.report_summary.strategic_recommendations %}
+                                            <div class="mb-3">
+                                                <strong class="">Strategic Recommendations:</strong>
+                                                <ul class="">
+                                                    {% for recommendation in note.report_summary.strategic_recommendations %}
+                                                        <li class="">{{ recommendation }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Conclusion -->
+                                        {% if note.report_summary.conclusion %}
+                                            <div class="mb-3">
+                                                <strong class="">Conclusion:</strong>
+                                                <p class=" text-justify">{{ note.report_summary.conclusion }}</p>
+                                            </div>
+                                        {% endif %}
+                                    </div>
                                     {% endif %}
 
                                     <!-- Action Buttons in Expanded View -->
@@ -314,8 +1052,17 @@
                                                     📥 Download Summary
                                                 </button>
                                             {% endif %}
+
+                                            <button class="btn {% if note.is_advanced_summary %}btn-info{% else %}btn-outline-info{% endif %}" onclick="toggleAdvancedSummary({{ note.id }})" title="{% if note.is_advanced_summary %}Advanced Summary Enabled - Click to disable{% else %}Advanced Summary Disabled - Click to enable{% endif %}">
+                                                🧠 Advanced Summary
+                                            </button>
+
+                                            <button class="btn btn-outline-warning" onclick="openFlagModal({{ note.id }}, '{{ note.report_type|default:"Unknown" }}')" title="Flag for report type reassignment">
+                                                🚩 Report
+                                            </button>
                                         </div>
                                     </div>
+
                                 </div>
                             </div>
                         </div>
@@ -325,35 +1072,17 @@
             </div>
             {% endfor %}
 
-            <!-- Report Type Groups -->
-            {% if report_type_groups %}
-            <hr class="my-4">
-            <h4 class="mb-3">By Report Type</h4>
-            {% for report_type, notes in report_type_groups.items %}
-                <div class="mb-4">
-                    <h5 class="text-secondary">{{ report_type }} ({{ notes|length }})</h5>
-                    {% for note in notes %}
-                        <!-- Similar card structure as above - copy the same card structure from ticker groups -->
-                        <div class="card mb-3 research-card">
-                            <!-- ... same card content as ticker groups ... -->
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endfor %}
-            {% endif %}
-
         {% else %}
-        <!-- No Results -->
         <div class="text-center py-5">
-            <h4 class="text-muted">No Advanced Reports Found</h4>
+            <h4 class="text-muted">No New Research Reports</h4>
             <p class="text-muted">
-                {% if current_filters.source or current_filters.search or current_filters.datetime %}
-                    Try adjusting your filters to see more results.
+                {% if filter_datetime %}
+                    No new reports have been summarized since {{ filter_datetime|date:"M d, Y g:i A" }}.
                 {% else %}
-                    No advanced reports found. Advanced reports are AI-enhanced summaries with status 4.
+                    No summarized reports found. Try adjusting your filters.
                 {% endif %}
             </p>
-            <a href="{% url 'research_summaries:advanced_summaries' %}" class="btn btn-outline-primary">
+            <a href="{% url 'research_summaries:research_summaries' %}" class="btn btn-outline-primary">
                 Reset Filters
             </a>
         </div>
@@ -361,7 +1090,8 @@
     </div>
 </div>
 
-<!-- Include modals -->
+
+<!-- Aggregate Summary Modal -->
 <div class="modal fade" id="aggregateModal" tabindex="-1" aria-labelledby="aggregateModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -383,6 +1113,7 @@
         </div>
     </div>
 </div>
+
 
 <style>
 .cursor-pointer {
@@ -411,92 +1142,218 @@
     border-radius: 4px;
     padding: 2px;
 }
-
-.btn-group-sm {
-    font-size: 0.875rem;
-}
-
-.recent-summaries-list {
-    max-height: 600px;
-    overflow-y: auto;
-}
 </style>
 
+<!-- Flag Modal for Report Type Reassignment -->
+<div class="modal fade" id="flagModal" tabindex="-1" aria-labelledby="flagModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="flagModalLabel">🚩 Flag Report for Reassignment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="flagContent">
+                    <p class="mb-3">
+                        <strong>Current Report Type:</strong> <span id="currentReportType">Unknown</span>
+                    </p>
+                    <p class="text-muted mb-3">
+                        Select a new report type. This will revert the document to "Preprocessed" status and trigger re-summarization with the new type.
+                    </p>
+
+                    <form id="flagForm">
+                        <div class="mb-3">
+                            <label class="form-label"><strong>New Report Type:</strong></label>
+                            <div class="d-flex flex-column gap-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="new_report_type" value="Initiation Report" id="type_initiation">
+                                    <label class="form-check-label" for="type_initiation">
+                                        📈 Initiation Report
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="new_report_type" value="Company Update" id="type_update">
+                                    <label class="form-check-label" for="type_update">
+                                        📊 Company Update
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="new_report_type" value="Quarter Preview" id="type_preview">
+                                    <label class="form-check-label" for="type_preview">
+                                        📅 Quarter Preview
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="new_report_type" value="Quarter Review" id="type_review">
+                                    <label class="form-check-label" for="type_review">
+                                        📋 Quarter Review
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="new_report_type" value="Industry Note" id="type_industry">
+                                    <label class="form-check-label" for="type_industry">
+                                        🏭 Industry Note
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="new_report_type" value="Macro/Strategy Report" id="type_macro">
+                                    <label class="form-check-label" for="type_macro">
+                                        🌍 Macro/Strategy Report
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="new_report_type" value="Invalid" id="type_invalid">
+                                    <label class="form-check-label" for="type_invalid">
+                                        ❌ Invalid
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning" role="alert">
+                            <small>
+                                <strong>⚠️ Warning:</strong> Flagging this report will change its status back to "Preprocessed" and will trigger re-summarization with the new report type.
+                            </small>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="submitFlag" disabled>
+                    🚩 Flag & Reassign
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Mark as read functionality
-    const markAsReadBtn = document.getElementById('markAsReadBtn');
+function viewPDF(fileDirectory, noteId) {
+    // Show loading state
+    const originalText = event.target.innerHTML;
+    const button = event.target;
+    button.innerHTML = '⏳ Loading...';
+    button.disabled = true;
 
-    if (markAsReadBtn) {
-        markAsReadBtn.addEventListener('click', function() {
-            const latestReportTime = '{{ latest_report_time|date:"c" }}';
-
-            fetch("{% url 'research_summaries:mark_as_read_advanced' %}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({
-                    latest_report_time: latestReportTime
-                })
-            })
+    // Use noteId if available (preferred method)
+    if (noteId) {
+        fetch(`/research/pdf/${noteId}/`)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    window.location.reload();
+                    // Open PDF in new tab
+                    const newWindow = window.open(data.url, '_blank');
+                    if (!newWindow) {
+                        alert('Pop-up blocked! Please allow pop-ups for this site and try again.');
+                    }
+                } else {
+                    alert('Error loading PDF: ' + (data.error || 'Unknown error'));
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to load PDF. Please try again.');
+            })
+            .finally(() => {
+                // Restore button state
+                button.innerHTML = originalText;
+                button.disabled = false;
             });
-        });
+    } else {
+        // Fallback for direct URLs (if somehow noteId is not available)
+        if (fileDirectory) {
+            if (fileDirectory.startsWith('http')) {
+                window.open(fileDirectory, '_blank');
+            } else {
+                alert('Invalid PDF URL format');
+            }
+        } else {
+            alert('No PDF file available');
+        }
+
+        // Restore button state
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+// Alternative function for cases where you only have the file directory
+function viewPDFDirect(fileDirectory) {
+    if (fileDirectory && fileDirectory.startsWith('http')) {
+        window.open(fileDirectory, '_blank');
+    } else {
+        alert('PDF file not available or invalid URL');
+    }
+}
+
+// Toggle card expand/collapse functionality
+function toggleCard(noteId) {
+    console.log('toggleCard called with noteId:', noteId);
+
+    const card = document.querySelector(`[data-note-id="${noteId}"]`);
+    console.log('Found card:', card);
+
+    if (!card) {
+        console.error('Card not found for noteId:', noteId);
+        return;
     }
 
-    // Card expand/collapse functionality
-    document.querySelectorAll('.card-expand-trigger').forEach(trigger => {
-        trigger.addEventListener('click', function() {
-            const card = this.closest('.research-card');
-            const collapsedView = card.querySelector('.collapsed-view');
-            const expandedView = card.querySelector('.expanded-view');
+    const collapsedView = card.querySelector('.collapsed-view');
+    const expandedView = card.querySelector('.expanded-view');
 
-            collapsedView.style.display = 'none';
-            expandedView.style.display = 'block';
-        });
+    console.log('collapsedView:', collapsedView);
+    console.log('expandedView:', expandedView);
+    console.log('expandedView current display:', expandedView.style.display);
+
+    if (expandedView.style.display === 'none' || expandedView.style.display === '') {
+        // Expand the card
+        console.log('Expanding card');
+        collapsedView.style.display = 'none';
+        expandedView.style.display = 'block';
+        card.classList.add('expanded');
+    } else {
+        // Collapse the card
+        console.log('Collapsing card');
+        collapsedView.style.display = 'block';
+        expandedView.style.display = 'none';
+        card.classList.remove('expanded');
+    }
+}
+
+// Mark as Read functionality
+function markAsRead() {
+    {% if latest_report_time %}
+    const latestReportTime = '{{ latest_report_time|date:"c" }}';
+
+    fetch('{% url "research_summaries:mark_as_read" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            latest_report_time: latestReportTime
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            // Refresh the page to show updated results
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to mark as read');
     });
+    {% endif %}
+}
 
-    document.querySelectorAll('.card-collapse-trigger').forEach(trigger => {
-        trigger.addEventListener('click', function() {
-            const card = this.closest('.research-card');
-            const collapsedView = card.querySelector('.collapsed-view');
-            const expandedView = card.querySelector('.expanded-view');
-
-            collapsedView.style.display = 'block';
-            expandedView.style.display = 'none';
-        });
-    });
-
-    // Aggregate summary functionality
-    document.querySelectorAll('.aggregate-summary-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const ticker = this.dataset.ticker;
-            const modal = document.getElementById('aggregateModal');
-            const content = document.getElementById('aggregateContent');
-
-            content.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
-
-            fetch(`/research/aggregate-summary/?ticker=${ticker}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        content.innerHTML = `<div class="formatted-content">${data.summary}</div>`;
-                        document.getElementById('openInNewTab').style.display = 'block';
-                    } else {
-                        content.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
-                    }
-                });
-        });
-    });
-});
-
-// Helper function to get CSRF token
+// Get CSRF token from cookie
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -512,12 +1369,477 @@ function getCookie(name) {
     return cookieValue;
 }
 
-// View PDF function
-function viewPDF(filePath, noteId) {
-    window.open(`/research/view-pdf/${noteId}/`, '_blank');
+// Auto-submit form on select change for better UX
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM Content Loaded - Setting up event listeners');
+
+    // Handle select changes
+    const selects = document.querySelectorAll('select[name="source"]');
+    selects.forEach(select => {
+        select.addEventListener('change', function() {
+            this.form.submit();
+        });
+    });
+
+    // Handle mark as read button
+    const markAsReadBtn = document.getElementById('markAsReadBtn');
+    if (markAsReadBtn) {
+        markAsReadBtn.addEventListener('click', markAsRead);
+    }
+
+    // Add CSRF token to forms that don't have it
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        if (!form.querySelector('[name=csrfmiddlewaretoken]')) {
+            const csrfToken = getCookie('csrftoken');
+            if (csrfToken) {
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = csrfToken;
+                form.appendChild(csrfInput);
+            }
+        }
+    });
+
+    // Set up card click handlers - FIXED VERSION
+    const expandTriggers = document.querySelectorAll('.card-expand-trigger');
+    const collapseTriggers = document.querySelectorAll('.card-collapse-trigger');
+
+    console.log('Found', expandTriggers.length, 'expand triggers');
+    console.log('Found', collapseTriggers.length, 'collapse triggers');
+
+    // Handle expand clicks
+    expandTriggers.forEach(trigger => {
+        trigger.addEventListener('click', function(e) {
+            // Prevent event if clicking on buttons or links inside
+            if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON') {
+                console.log('Click prevented - target is', e.target.tagName);
+                return;
+            }
+
+            const card = this.closest('.research-card');
+            const noteId = card.getAttribute('data-note-id');
+
+            console.log('Expand trigger clicked for noteId:', noteId);
+
+            if (noteId) {
+                toggleCard(noteId);
+            }
+        });
+    });
+
+    // Handle collapse clicks
+    collapseTriggers.forEach(trigger => {
+        trigger.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const card = this.closest('.research-card');
+            const noteId = card.getAttribute('data-note-id');
+
+            console.log('Collapse trigger clicked for noteId:', noteId);
+
+            if (noteId) {
+                toggleCard(noteId);
+            }
+        });
+    });
+});
+
+// Aggregate Summary functionality with Server-Sent Events
+let currentAggregateUrl = null;
+let aggregateEventSource = null;
+
+function openAggregateModal(ticker, reportCount) {
+    const modal = new bootstrap.Modal(document.getElementById('aggregateModal'));
+    const modalLabel = document.getElementById('aggregateModalLabel');
+    const aggregateContent = document.getElementById('aggregateContent');
+    const openInNewTabBtn = document.getElementById('openInNewTab');
+
+    // Update modal title
+    modalLabel.textContent = `${ticker} - Aggregate Summary (${reportCount} reports)`;
+
+    // Show loading state with progress messages
+    aggregateContent.innerHTML = `
+        <div class="text-center py-4" id="loadingState">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 text-muted">Generating aggregate summary for ${ticker}...</p>
+            <small class="text-muted">This may take a few moments while we analyze all reports.</small>
+        </div>
+        <div id="progressLog" class="mt-3" style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; display: none;">
+            <div class="text-muted">Starting summary generation...</div>
+        </div>
+        <div class="mt-3 text-center">
+            <button class="btn btn-sm btn-outline-secondary" onclick="toggleProgressLog()">
+                <span id="logToggleText">Show Progress Log</span>
+            </button>
+        </div>
+    `;
+
+    // Hide new tab button initially
+    openInNewTabBtn.style.display = 'none';
+
+    // Show modal
+    modal.show();
+
+    // Build URL with current filter parameters to match user's view
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('stream', 'true'); // Add stream parameter
+    const aggregateStreamUrl = `/research/aggregate-summary-stream/${encodeURIComponent(ticker)}/?${urlParams.toString()}`;
+
+    // For new tab URL (without stream parameter)
+    const newTabParams = new URLSearchParams(window.location.search);
+    currentAggregateUrl = `/research/aggregate-summary/${encodeURIComponent(ticker)}/?${newTabParams.toString()}`;
+
+    // Start Server-Sent Events
+    startAggregateStream(aggregateStreamUrl, ticker);
 }
 
-// Download Summary PDF function
+function startAggregateStream(streamUrl, ticker) {
+    // Close any existing event source
+    if (aggregateEventSource) {
+        aggregateEventSource.close();
+    }
+
+    const progressLog = document.getElementById('progressLog');
+    const loadingState = document.getElementById('loadingState');
+    const aggregateContent = document.getElementById('aggregateContent');
+    const openInNewTabBtn = document.getElementById('openInNewTab');
+
+    function addLogMessage(message, type = 'info') {
+        if (!progressLog) return;
+
+        const timestamp = new Date().toLocaleTimeString();
+        const typeColors = {
+            'info': '#17a2b8',
+            'success': '#28a745',
+            'error': '#dc3545',
+            'complete': '#6f42c1'
+        };
+
+        const logEntry = document.createElement('div');
+        logEntry.style.color = typeColors[type] || '#666';
+        logEntry.style.marginBottom = '2px';
+        logEntry.innerHTML = `[${timestamp}] ${message}`;
+
+        progressLog.appendChild(logEntry);
+        progressLog.scrollTop = progressLog.scrollHeight;
+    }
+
+    // Initialize EventSource
+    aggregateEventSource = new EventSource(streamUrl);
+
+    aggregateEventSource.onmessage = function(event) {
+        try {
+            const data = JSON.parse(event.data);
+
+            // Add message to progress log
+            addLogMessage(data.message, data.type);
+
+            switch(data.type) {
+                case 'info':
+                case 'success':
+                    // Just log these messages
+                    break;
+
+                case 'error':
+                    // Show error state
+                    if (loadingState) {
+                        loadingState.style.display = 'none';
+                    }
+                    aggregateContent.innerHTML = `
+                        <div class="alert alert-danger">
+                            <h6>Error generating summary</h6>
+                            <p>${data.message}</p>
+                            <button class="btn btn-outline-danger btn-sm mt-2" onclick="retryAggregateModal('${ticker}')">
+                                🔄 Retry
+                            </button>
+                        </div>
+                        <div id="progressLog" class="mt-3" style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px;">
+                            ${progressLog ? progressLog.innerHTML : ''}
+                        </div>
+                    `;
+                    aggregateEventSource.close();
+                    break;
+
+                case 'complete':
+                    // Show the final summary
+                    if (loadingState) {
+                        loadingState.style.display = 'none';
+                    }
+
+                    aggregateContent.innerHTML = `
+                        <div class="aggregate-summary">
+                            ${data.summary_html}
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="showCompletionLog()">
+                                📊 View Generation Log
+                            </button>
+                        </div>
+                        <div id="completionLog" class="mt-3" style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; display: none;">
+                            ${progressLog ? progressLog.innerHTML : ''}
+                        </div>
+                    `;
+
+                    // Show new tab button
+                    openInNewTabBtn.style.display = 'inline-block';
+
+                    // Close event source
+                    aggregateEventSource.close();
+                    break;
+            }
+        } catch (e) {
+            console.error('Error parsing SSE data:', e);
+            addLogMessage('Error parsing server response', 'error');
+        }
+    };
+
+    aggregateEventSource.onerror = function(event) {
+        console.error('SSE connection error:', event);
+        addLogMessage('Connection error occurred', 'error');
+
+        if (loadingState) {
+            loadingState.style.display = 'none';
+        }
+
+        aggregateContent.innerHTML = `
+            <div class="alert alert-danger">
+                <h6>Connection Error</h6>
+                <p>Unable to maintain connection for generating aggregate summary. Please try again.</p>
+                <button class="btn btn-outline-danger btn-sm mt-2" onclick="retryAggregateModal('${ticker}')">
+                    🔄 Retry
+                </button>
+            </div>
+            <div id="progressLog" class="mt-3" style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px;">
+                ${progressLog ? progressLog.innerHTML : ''}
+            </div>
+        `;
+
+        aggregateEventSource.close();
+    };
+}
+
+function toggleProgressLog() {
+    const progressLog = document.getElementById('progressLog');
+    const toggleText = document.getElementById('logToggleText');
+
+    if (progressLog.style.display === 'none') {
+        progressLog.style.display = 'block';
+        toggleText.textContent = 'Hide Progress Log';
+    } else {
+        progressLog.style.display = 'none';
+        toggleText.textContent = 'Show Progress Log';
+    }
+}
+
+function showCompletionLog() {
+    const completionLog = document.getElementById('completionLog');
+    if (completionLog.style.display === 'none') {
+        completionLog.style.display = 'block';
+    } else {
+        completionLog.style.display = 'none';
+    }
+}
+
+function retryAggregateModal(ticker) {
+    // Close modal and reopen
+    const modal = bootstrap.Modal.getInstance(document.getElementById('aggregateModal'));
+    modal.hide();
+
+    // Small delay then reopen
+    setTimeout(() => {
+        const notes = document.querySelectorAll(`[data-note-id]`);
+        let reportCount = 0;
+        notes.forEach(note => {
+            const tickerBadge = note.querySelector('.badge.bg-primary');
+            if (tickerBadge && tickerBadge.textContent.trim() === ticker) {
+                reportCount++;
+            }
+        });
+        openAggregateModal(ticker, reportCount || 1);
+    }, 500);
+}
+
+// Handle "Open in New Tab" button (this stays the same)
+document.getElementById('openInNewTab').addEventListener('click', function() {
+    if (currentAggregateUrl) {
+        window.open(currentAggregateUrl + '&fullpage=true', '_blank');
+    }
+});
+
+// Clean up event source when modal is closed
+document.getElementById('aggregateModal').addEventListener('hidden.bs.modal', function() {
+    if (aggregateEventSource) {
+        aggregateEventSource.close();
+        aggregateEventSource = null;
+    }
+});
+
+// Add CSS for the aggregate summary styling
+const aggregateStyles = `
+<style>
+.aggregate-summary {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+
+.aggregate-summary h1, .aggregate-summary h2, .aggregate-summary h3 {
+    color: #2c3e50;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.aggregate-summary h1 { font-size: 1.5rem; }
+.aggregate-summary h2 { font-size: 1.3rem; }
+.aggregate-summary h3 { font-size: 1.1rem; }
+
+.aggregate-summary ul, .aggregate-summary ol {
+    margin-bottom: 1rem;
+}
+
+.aggregate-summary li {
+    margin-bottom: 0.5rem;
+}
+
+.aggregate-summary blockquote {
+    border-left: 4px solid #007bff;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    font-style: italic;
+    background-color: #ffffff;
+    border-radius: 4px;
+}
+
+.aggregate-summary code {
+    background-color: #e9ecef;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+.aggregate-summary table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+}
+
+.aggregate-summary th, .aggregate-summary td {
+    border: 1px solid #dee2e6;
+    padding: 0.5rem;
+    text-align: left;
+}
+
+.aggregate-summary th {
+    background-color: #e9ecef;
+    font-weight: 600;
+}
+</style>
+`;
+
+// Inject styles (do this only once)
+if (!document.getElementById('aggregate-styles')) {
+    const styleElement = document.createElement('div');
+    styleElement.id = 'aggregate-styles';
+    styleElement.innerHTML = aggregateStyles;
+    document.head.appendChild(styleElement);
+}
+
+
+let currentNoteId = null;
+
+function openFlagModal(noteId, currentType) {
+    currentNoteId = noteId;
+    document.getElementById('currentReportType').textContent = currentType;
+
+    // Clear any previous selections
+    const radioButtons = document.querySelectorAll('input[name="new_report_type"]');
+    radioButtons.forEach(radio => {
+        radio.checked = false;
+    });
+
+    // Enable/disable submit button based on selection
+    updateSubmitButton();
+
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('flagModal'));
+    modal.show();
+}
+
+function updateSubmitButton() {
+    const submitBtn = document.getElementById('submitFlag');
+    const checkedRadio = document.querySelector('input[name="new_report_type"]:checked');
+    submitBtn.disabled = !checkedRadio;
+}
+
+// Listen for radio button changes
+document.querySelectorAll('input[name="new_report_type"]').forEach(radio => {
+    radio.addEventListener('change', updateSubmitButton);
+});
+
+// Handle form submission
+document.getElementById('submitFlag').addEventListener('click', function() {
+    const checkedRadio = document.querySelector('input[name="new_report_type"]:checked');
+
+    if (!checkedRadio || !currentNoteId) {
+        alert('Please select a report type');
+        return;
+    }
+
+    const newReportType = checkedRadio.value;
+
+    // Show loading state
+    const submitBtn = this;
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '⏳ Processing...';
+    submitBtn.disabled = true;
+
+    // Submit the flag request
+    fetch(`/research/flag-report/${currentNoteId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            new_report_type: newReportType
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('flagModal'));
+            modal.hide();
+
+            // Show success message
+            alert(`Report successfully flagged and reassigned to "${newReportType}". Status reverted to "Preprocessed".`);
+
+            // Refresh the page to show updated status
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error occurred'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to flag report. Please try again.');
+    })
+    .finally(() => {
+        // Restore button state
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+});
+
+// Add these JavaScript functions to the script section in research_summaries.html
+
 function downloadSummaryPDF(noteId) {
     // Show loading state
     const button = event.target;
@@ -553,6 +1875,145 @@ function downloadSummaryPDF(noteId) {
         button.disabled = false;
     }, 2000);
 }
+
+function toggleAdvancedSummary(noteId) {
+    // Show loading state
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.innerHTML = '⏳';
+    button.disabled = true;
+
+    fetch(`/research/set-advanced-summary/${noteId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update button appearance based on new state
+            if (data.is_advanced_summary) {
+                button.classList.remove('btn-outline-info');
+                button.classList.add('btn-info');
+                button.title = 'Advanced Summary Enabled - Click to disable';
+            } else {
+                button.classList.remove('btn-info');
+                button.classList.add('btn-outline-info');
+                button.title = 'Advanced Summary Disabled - Click to enable';
+            }
+
+            // Show success message
+            showToastMessage(data.message, 'success');
+
+            // Update any badges in the card
+            updateAdvancedSummaryBadges(noteId, data.is_advanced_summary);
+        } else {
+            showToastMessage('Error: ' + (data.error || 'Unknown error'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToastMessage('Failed to update advanced summary setting', 'error');
+    })
+    .finally(() => {
+        // Restore button state
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+function updateAdvancedSummaryBadges(noteId, isAdvanced) {
+    // Find the card for this note and update any advanced summary badges
+    const card = document.querySelector(`[data-note-id="${noteId}"]`);
+    if (!card) return;
+
+    // Update or add/remove badges in both collapsed and expanded views
+    const titleElements = card.querySelectorAll('.card-expand-trigger, .expanded-view h5');
+
+    titleElements.forEach(element => {
+        let badge = element.querySelector('.badge[title*="Advanced Summary"]');
+
+        if (isAdvanced) {
+            if (!badge) {
+                // Create new badge
+                badge = document.createElement('span');
+                badge.className = 'badge bg-warning ms-1';
+                badge.title = 'Advanced Summary Enabled';
+                badge.textContent = '🧠';
+                element.appendChild(badge);
+            }
+        } else {
+            if (badge) {
+                // Remove existing badge
+                badge.remove();
+            }
+        }
+    });
+
+    // Also update the expanded view subtitle if it exists
+    const subtitle = card.querySelector('.expanded-view .text-muted');
+    if (subtitle) {
+        let advancedBadge = subtitle.querySelector('.badge[title*="Advanced Summary"]');
+
+        if (isAdvanced) {
+            if (!advancedBadge) {
+                const badgeHtml = '<span class="badge bg-warning ms-1" title="Advanced Summary Enabled">🧠 Advanced</span>';
+                subtitle.insertAdjacentHTML('beforeend', badgeHtml);
+            }
+        } else {
+            if (advancedBadge) {
+                advancedBadge.remove();
+            }
+        }
+    }
+}
+
+function showToastMessage(message, type = 'info') {
+    // Simple toast notification - you can enhance this with a proper toast library
+    const toastColors = {
+        'success': '#28a745',
+        'error': '#dc3545',
+        'warning': '#ffc107',
+        'info': '#17a2b8'
+    };
+
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color: ${toastColors[type] || toastColors.info};
+        color: white;
+        padding: 12px 20px;
+        border-radius: 5px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        z-index: 9999;
+        font-size: 14px;
+        max-width: 300px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    `;
+    toast.textContent = message;
+
+    document.body.appendChild(toast);
+
+    // Fade in
+    setTimeout(() => {
+        toast.style.opacity = '1';
+    }, 100);
+
+    // Fade out and remove after 3 seconds
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            document.body.removeChild(toast);
+        }, 300);
+    }, 3000);
+}
+
 </script>
 
 {% endblock %}

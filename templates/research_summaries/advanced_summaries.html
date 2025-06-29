@@ -51,7 +51,7 @@
     <div class="col-md-2">
         <div class="card text-center">
             <div class="card-body py-3">
-                <h4 class="text-primary mb-0">{{ status_counts.advanced }}</h4>
+                <h4 class="text-primary mb-0">{{ status_counts.total_advanced }}</h4>
                 <small class="text-muted">Total Advanced</small>
             </div>
         </div>
@@ -59,100 +59,97 @@
     <div class="col-md-2">
         <div class="card text-center">
             <div class="card-body py-3">
-                <h4 class="text-secondary mb-0">{{ status_counts.not_downloaded }}</h4>
-                <small class="text-muted">Pending</small>
+                <h4 class="text-info mb-0">{{ status_counts.last_24h }}</h4>
+                <small class="text-muted">Last 24h</small>
             </div>
         </div>
     </div>
     <div class="col-md-2">
         <div class="card text-center">
             <div class="card-body py-3">
-                <h4 class="text-info mb-0">{{ status_counts.downloaded }}</h4>
-                <small class="text-muted">Downloaded</small>
+                <h4 class="text-warning mb-0">{{ status_counts.last_7d }}</h4>
+                <small class="text-muted">Last 7 Days</small>
             </div>
         </div>
     </div>
     <div class="col-md-2">
         <div class="card text-center">
             <div class="card-body py-3">
-                <h4 class="text-warning mb-0">{{ status_counts.preprocessed }}</h4>
-                <small class="text-muted">Cleaned</small>
+                <h4 class="text-secondary mb-0">{{ status_counts.by_source|default:0 }}</h4>
+                <small class="text-muted">By Source</small>
             </div>
         </div>
     </div>
     <div class="col-md-2">
         <div class="card text-center">
             <div class="card-body py-3">
-                {% if user_last_read_time %}
-                    <h6 class="text-muted mb-0">{{ user_last_read_time|date:"M d, H:i" }}</h6>
-                    <small class="text-muted">Last Read</small>
-                {% else %}
-                    <h6 class="text-muted mb-0">Never</h6>
-                    <small class="text-muted">Last Read</small>
-                {% endif %}
+                <h4 class="text-dark mb-0">{{ status_counts.by_ticker|default:0 }}</h4>
+                <small class="text-muted">By Ticker</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters Section -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Filter by Source</label>
+                        <select name="source" class="form-select">
+                            <option value="">All Sources</option>
+                            {% for source in sources %}
+                                <option value="{{ source }}" {% if source == current_filters.source %}selected{% endif %}>
+                                    {{ source }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Search</label>
+                        <input type="text" name="search" class="form-control"
+                               placeholder="Search titles, companies..."
+                               value="{{ current_filters.search }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Show Since</label>
+                        <input type="datetime-local" name="datetime" class="form-control"
+                               value="{{ current_filters.datetime }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div>
+                            <button type="submit" class="btn btn-primary">Apply Filters</button>
+                            <a href="{% url 'research_summaries:advanced_summaries' %}" class="btn btn-outline-secondary">Clear</a>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 </div>
 
 <div class="row">
-    <!-- Filters Sidebar -->
+    <!-- Sidebar -->
     <div class="col-md-3">
         <div class="card">
             <div class="card-header">
-                <h5>Filters & Search</h5>
+                <h6 class="mb-0">Recent Advanced Summaries</h6>
             </div>
             <div class="card-body">
-                <form method="get" action="">
-                    <!-- Search -->
-                    <div class="mb-3">
-                        <label class="form-label">Search</label>
-                        <input type="text" name="search" class="form-control" placeholder="Title, author, company..." value="{{ current_filters.search }}">
-                    </div>
-
-                    <!-- Datetime Filter -->
-                    <div class="mb-3">
-                        <label class="form-label">Show reports after</label>
-                        <input type="datetime-local" name="datetime" class="form-control" value="{{ formatted_datetime }}">
-                        <small class="text-muted">
-                            {% if user_last_read_time %}
-                                Default: your last read time
-                            {% else %}
-                                Default: last 24 hours
-                            {% endif %}
-                        </small>
-                    </div>
-
-                    <!-- Source Filter -->
-                    <div class="mb-3">
-                        <label class="form-label">Source</label>
-                        <select name="source" class="form-select">
-                            <option value="">All Sources</option>
-                            {% for source in sources %}
-                                <option value="{{ source }}" {% if current_filters.source == source %}selected{% endif %}>
-                                    {{ source }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary w-100 mb-2">Apply Filters</button>
-                    <a href="{% url 'research_summaries:advanced_summaries' %}" class="btn btn-outline-secondary w-100">Reset to Default</a>
-                </form>
-
-                <!-- Recent Activity -->
-                <hr class="mt-4">
-                <h6>Recent Advanced Summaries</h6>
-                <div style="max-height: 200px; overflow-y: auto;">
+                <div class="recent-summaries-list">
                     {% for note in recent_summaries %}
                         <div class="border-bottom pb-2 mb-2">
-                            <a href="{% url 'research_summaries:note_detail' note.id %}" class="text-decoration-none">
-                                <strong class="">{{ note.raw_title|default:"Untitled"|truncatechars:30 }}</strong>
-                            </a>
-                            <br>
-                            <small class="text-muted">
-                                {% if note.parsed_ticker %}{{ note.parsed_ticker }} | {% endif %}
-                                {{ note.file_summary_time|date:"M d" }}
+                            <small class="text-primary d-block">{{ note.raw_companies|default:note.parsed_ticker|default:"General" }}</small>
+                            <small>{{ note.raw_title|truncatechars:50 }}</small>
+                            <small class="text-muted d-block">
+                                {% if note.file_summary_time %}
+                                    {{ note.file_summary_time|date:"M d" }}
+                                {% else %}
+                                    {{ note.created_at|date:"M d" }}
+                                {% endif %}
                             </small>
                         </div>
                     {% empty %}
@@ -168,7 +165,7 @@
         <!-- Results Header -->
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
-                <h5>New Advanced Research Reports</h5>
+                <h5>Advanced Research Reports</h5>
                 <small class="text-muted">
                     {% if results_info.showing_count %}
                         Showing {{ results_info.showing_count }} reports
@@ -202,14 +199,13 @@
                         <span class="text-muted fs-6">({{ notes|length }} report{{ notes|length|pluralize }})</span>
                     </h4>
 
-                    <!-- Add Aggregate Summary button if more than 1 report -->
-                    {% if notes|length > 1 %}
-                        <button class="btn btn-outline-success btn-sm ms-3"
-                                onclick="openAggregateModal('{{ ticker }}', {{ notes|length }})"
-                                title="Generate aggregate summary for all {{ ticker }} reports">
-                            📊 Aggregate Summary
-                        </button>
-                    {% endif %}
+                    <!-- Aggregate Summary Button -->
+                    <button class="btn btn-info btn-sm ms-3 aggregate-summary-btn"
+                            data-ticker="{{ ticker }}"
+                            data-bs-toggle="modal"
+                            data-bs-target="#aggregateModal">
+                        📊 Generate Combined Analysis
+                    </button>
                 </div>
 
                 <!-- Individual Notes -->
@@ -217,56 +213,110 @@
                 <div class="card mb-3 research-card">
                     <div class="card-body">
                         <!-- Collapsed View -->
-                        <div class="collapsed-view cursor-pointer card-expand-trigger" data-note-id="{{ note.id }}">
-                            <div class="row align-items-center">
+                        <div class="collapsed-view">
+                            <div class="row">
                                 <div class="col-md-8">
-                                    <h5 class="card-title mb-1">{{ note.raw_title|default:"Untitled Report" }}</h5>
-                                    <p class="text-muted mb-0">
-                                        <strong>Source:</strong> {{ note.source|default:"Unknown" }} |
-                                        <strong>Author:</strong> {{ note.raw_author|default:"Unknown" }}
-                                        {% if note.raw_companies %}
-                                            | <strong>Companies:</strong> {{ note.raw_companies|truncatechars:50 }}
-                                        {% endif %}
-                                    </p>
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-grow-1 cursor-pointer card-expand-trigger">
+                                            <strong class="text-primary">{{ note.source|default:"Unknown Source" }}</strong>
+                                            <span class="mx-2">•</span>
+                                            {% if note.publication_date %}
+                                                <span class="text-muted">{{ note.publication_date|date:"Y-m-d" }}</span>
+                                                <span class="mx-2">•</span>
+                                            {% endif %}
+                                            <span>{{ note.raw_title|default:"Untitled Report" }}</span>
+                                            <span class="badge bg-success ms-1">Advanced AI Summary</span>
+                                        </div>
+                                    </div>
                                 </div>
+
                                 <div class="col-md-4 text-end">
-                                    <small class="text-muted">{{ note.file_summary_time|date:"M d, Y g:i A" }}</small>
-                                    <br>
-                                    <span class="badge bg-success">Advanced AI Summary</span>
+                                    <!-- Action Buttons (Always Visible) -->
+                                    <div class="btn-group-sm d-inline-flex gap-1">
+                                        <a href="{% url 'research_summaries:note_detail' note.id %}" class="btn btn-primary btn-sm">
+                                            📄 Summary
+                                        </a>
+
+                                        {% if note.file_directory %}
+                                            <button class="btn btn-outline-primary btn-sm" onclick="event.stopPropagation(); viewPDF('{{ note.file_directory }}', {{ note.id }})">
+                                                📎 PDF
+                                            </button>
+                                        {% endif %}
+
+                                        {% if note.download_link %}
+                                            <a href="{{ note.download_link }}" target="_blank" class="btn btn-outline-secondary btn-sm" onclick="event.stopPropagation()">
+                                                🔗 Link
+                                            </a>
+                                        {% endif %}
+
+                                        {% if note.report_summary %}
+                                            <button class="btn btn-outline-success btn-sm" onclick="event.stopPropagation(); downloadSummaryPDF({{ note.id }})" title="Download Summary as PDF">
+                                                📥 Save
+                                            </button>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Expanded View (Hidden by default) -->
                         <div class="expanded-view" id="expanded-{{ note.id }}" style="display: none;">
-                            <hr>
-                            
-                            <!-- Summary Content -->
-                            {% if note.report_summary %}
-                                <div class="summary-content mb-3">
-                                    <!-- Display summary sections here - similar to standard summaries -->
-                                    {% include 'research_summaries/components/summary_content.html' with summary=note.report_summary %}
-                                </div>
-                            {% else %}
-                                <p class="text-muted">Summary content not available.</p>
-                            {% endif %}
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <!-- Header with Close -->
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div>
+                                            <h5 class="mb-1">{{ note.raw_title|default:"Untitled Research Report" }}</h5>
+                                            <div class="text-muted">
+                                                <strong>{{ note.source|default:"Unknown Source" }}</strong>
+                                                {% if note.publication_date %} • {{ note.publication_date|date:"Y-m-d" }}{% endif %}
+                                                {% if note.raw_author %} • {{ note.raw_author }}{% endif %}
+                                                {% if note.report_type %} • {{ note.report_type }}{% endif %}
+                                                <span class="badge bg-success ms-1">Advanced Summary</span>
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-secondary card-collapse-trigger">
+                                            ✕ Collapse
+                                        </button>
+                                    </div>
 
-                            <!-- Action Buttons (No flag or O3 buttons) -->
-                            <div class="btn-group mt-3">
-                                <a href="{% url 'research_summaries:note_detail' note.id %}" 
-                                   class="btn btn-sm btn-outline-primary">
-                                    View Full Details
-                                </a>
-                                {% if note.file_id %}
-                                    <button class="btn btn-sm btn-outline-secondary pdf-preview-btn" 
-                                            data-note-id="{{ note.id }}">
-                                        📄 View PDF
-                                    </button>
-                                {% endif %}
-                                <button class="btn btn-sm btn-outline-info download-summary-btn"
-                                        data-note-id="{{ note.id }}">
-                                    ⬇️ Download Summary
-                                </button>
+                                    <!-- Summary Content -->
+                                    {% if note.report_summary %}
+                                        <div class="summary-content mb-3">
+                                            <!-- Include the abstracted summary content -->
+                                            {% include 'research_summaries/components/summary_content_advanced.html' with summary=note.report_summary report_type=note.report_type %}
+                                        </div>
+                                    {% else %}
+                                        <p class="text-muted">Summary content not available.</p>
+                                    {% endif %}
+
+                                    <!-- Action Buttons in Expanded View -->
+                                    <div class="border-top pt-3">
+                                        <div class="btn-group gap-2">
+                                            <a href="{% url 'research_summaries:note_detail' note.id %}" class="btn btn-primary">
+                                                📄 View Full Summary
+                                            </a>
+
+                                            {% if note.file_directory %}
+                                                <button class="btn btn-outline-primary" onclick="viewPDF('{{ note.file_directory }}', {{ note.id }})">
+                                                    📎 View PDF
+                                                </button>
+                                            {% endif %}
+
+                                            {% if note.download_link %}
+                                                <a href="{{ note.download_link }}" target="_blank" class="btn btn-outline-secondary">
+                                                    🔗 Original Link
+                                                </a>
+                                            {% endif %}
+
+                                            {% if note.report_summary %}
+                                                <button class="btn btn-outline-success" onclick="downloadSummaryPDF({{ note.id }})" title="Download Summary as PDF">
+                                                    📥 Download Summary
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -283,7 +333,10 @@
                 <div class="mb-4">
                     <h5 class="text-secondary">{{ report_type }} ({{ notes|length }})</h5>
                     {% for note in notes %}
-                        <!-- Similar card structure as above -->
+                        <!-- Similar card structure as above - copy the same card structure from ticker groups -->
+                        <div class="card mb-3 research-card">
+                            <!-- ... same card content as ticker groups ... -->
+                        </div>
                     {% endfor %}
                 </div>
             {% endfor %}
@@ -308,7 +361,7 @@
     </div>
 </div>
 
-<!-- Include modals and JavaScript -->
+<!-- Include modals -->
 <div class="modal fade" id="aggregateModal" tabindex="-1" aria-labelledby="aggregateModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -358,34 +411,40 @@
     border-radius: 4px;
     padding: 2px;
 }
+
+.btn-group-sm {
+    font-size: 0.875rem;
+}
+
+.recent-summaries-list {
+    max-height: 600px;
+    overflow-y: auto;
+}
 </style>
 
 <script>
-// Update the mark as read endpoint for advanced summaries
 document.addEventListener('DOMContentLoaded', function() {
+    // Mark as read functionality
     const markAsReadBtn = document.getElementById('markAsReadBtn');
-    
+
     if (markAsReadBtn) {
         markAsReadBtn.addEventListener('click', function() {
             const latestReportTime = '{{ latest_report_time|date:"c" }}';
-            
+
             fetch("{% url 'research_summaries:mark_as_read_advanced' %}", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    'X-CSRFToken': getCookie('csrftoken')
                 },
                 body: JSON.stringify({
-                    'latest_report_time': latestReportTime
+                    latest_report_time: latestReportTime
                 })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert(data.message);
-                    location.reload();
-                } else {
-                    alert('Error: ' + data.message);
+                    window.location.reload();
                 }
             });
         });
@@ -394,19 +453,106 @@ document.addEventListener('DOMContentLoaded', function() {
     // Card expand/collapse functionality
     document.querySelectorAll('.card-expand-trigger').forEach(trigger => {
         trigger.addEventListener('click', function() {
-            const noteId = this.dataset.noteId;
-            const expandedView = document.getElementById(`expanded-${noteId}`);
-            
-            if (expandedView.style.display === 'none') {
-                expandedView.style.display = 'block';
-            } else {
-                expandedView.style.display = 'none';
-            }
+            const card = this.closest('.research-card');
+            const collapsedView = card.querySelector('.collapsed-view');
+            const expandedView = card.querySelector('.expanded-view');
+
+            collapsedView.style.display = 'none';
+            expandedView.style.display = 'block';
         });
     });
 
-    // Add other JavaScript functionality as needed
+    document.querySelectorAll('.card-collapse-trigger').forEach(trigger => {
+        trigger.addEventListener('click', function() {
+            const card = this.closest('.research-card');
+            const collapsedView = card.querySelector('.collapsed-view');
+            const expandedView = card.querySelector('.expanded-view');
+
+            collapsedView.style.display = 'block';
+            expandedView.style.display = 'none';
+        });
+    });
+
+    // Aggregate summary functionality
+    document.querySelectorAll('.aggregate-summary-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const ticker = this.dataset.ticker;
+            const modal = document.getElementById('aggregateModal');
+            const content = document.getElementById('aggregateContent');
+
+            content.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+
+            fetch(`/research/aggregate-summary/?ticker=${ticker}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        content.innerHTML = `<div class="formatted-content">${data.summary}</div>`;
+                        document.getElementById('openInNewTab').style.display = 'block';
+                    } else {
+                        content.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                    }
+                });
+        });
+    });
 });
+
+// Helper function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// View PDF function
+function viewPDF(filePath, noteId) {
+    window.open(`/research/view-pdf/${noteId}/`, '_blank');
+}
+
+// Download Summary PDF function
+function downloadSummaryPDF(noteId) {
+    // Show loading state
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.innerHTML = '⏳ Generating...';
+    button.disabled = true;
+
+    // Create a form and submit it for file download
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/research/download-summary/${noteId}/`;
+    form.style.display = 'none';
+
+    // Add CSRF token
+    const csrfToken = getCookie('csrftoken');
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
+    document.body.appendChild(form);
+
+    // Submit the form to trigger download
+    form.submit();
+
+    // Clean up
+    document.body.removeChild(form);
+
+    // Restore button state after a delay
+    setTimeout(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }, 2000);
+}
 </script>
 
 {% endblock %}
