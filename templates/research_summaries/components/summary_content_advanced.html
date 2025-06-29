@@ -1,0 +1,272 @@
+<!-- templates/research_summaries/components/summary_content_advanced.html -->
+<!-- This partial displays the advanced summary content with proper field mapping -->
+
+{% if summary %}
+    <!-- Report Type and Date -->
+    {% if report_type or summary.report_date %}
+        <div class="mb-3">
+            {% if report_type %}
+                <span class="badge bg-secondary me-2">{{ report_type }}</span>
+            {% endif %}
+            {% if summary.report_date %}
+                <span class="text-muted">Report Date: {{ summary.report_date }}</span>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- Stock Ticker (for Company Updates) -->
+    {% if summary.stock_ticker %}
+        <div class="mb-2">
+            <strong>Stock Ticker:</strong> <span class="badge bg-primary">{{ summary.stock_ticker }}</span>
+        </div>
+    {% endif %}
+
+    <!-- Title -->
+    {% if summary.title %}
+        <div class="mb-2">
+            <strong>Report Title:</strong> {{ summary.title }}
+        </div>
+    {% endif %}
+
+    <!-- Source -->
+    {% if summary.source %}
+        <div class="mb-2">
+            <strong>Source:</strong> {{ summary.source }}
+        </div>
+    {% endif %}
+
+    <!-- Authors -->
+    {% if summary.authors %}
+        <div class="mb-3">
+            <strong>Authors:</strong> {{ summary.authors|join:", " }}
+        </div>
+    {% endif %}
+
+    <!-- Sentiment -->
+    {% if summary.sentiment %}
+        <div class="mb-3">
+            <strong>Sentiment:</strong>
+            {% if summary.sentiment == "Positive" %}
+                <span class="badge bg-success">{{ summary.sentiment }}</span>
+            {% elif summary.sentiment == "Negative" %}
+                <span class="badge bg-danger">{{ summary.sentiment }}</span>
+            {% else %}
+                <span class="badge bg-secondary">{{ summary.sentiment }}</span>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- Price Target and Stock Rating (Company Update specific) -->
+    {% if summary.price_target or summary.stock_rating %}
+        <div class="mb-3">
+            {% if summary.price_target %}
+                <strong>Price Target:</strong> <span class="text-success">${{ summary.price_target }}</span>
+            {% endif %}
+            {% if summary.stock_rating %}
+                <span class="ms-3"><strong>Rating:</strong> <span class="badge bg-info">{{ summary.stock_rating }}</span></span>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- Recap (Company Update) -->
+    {% if summary.recap %}
+        <div class="mb-3">
+            <strong>Recap:</strong>
+            <p class="text-justify">{{ summary.recap }}</p>
+        </div>
+    {% endif %}
+
+    <!-- Executive Summary -->
+    {% if summary.executive_summary %}
+        <div class="mb-3">
+            <strong>Executive Summary:</strong>
+            <p class="text-justify">{{ summary.executive_summary }}</p>
+        </div>
+    {% endif %}
+
+    <!-- Summary (general) -->
+    {% if summary.summary and not summary.executive_summary %}
+        <div class="mb-3">
+            <strong>Summary:</strong>
+            <p class="text-justify">{{ summary.summary }}</p>
+        </div>
+    {% endif %}
+
+    <!-- Bull and Bear Points (Company Update) Side by Side -->
+    {% if summary.bull_points or summary.bear_points %}
+        <div class="row mb-3">
+            {% if summary.bull_points %}
+                <div class="col-md-6">
+                    <strong>🐂 Bull Points:</strong>
+                    <ul>
+                        {% for point in summary.bull_points %}
+                            <li>{{ point }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+            {% if summary.bear_points %}
+                <div class="col-md-6">
+                    <strong>🐻 Bear Points:</strong>
+                    <ul>
+                        {% for point in summary.bear_points %}
+                            <li>{{ point }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- Risk Points and Opportunity Points (Alternative format) -->
+    {% if summary.risk_points or summary.opportunity_points %}
+        <div class="row mb-3">
+            {% if summary.risk_points %}
+                <div class="col-md-6">
+                    <strong>🚨 Risk Points:</strong>
+                    <ul>
+                        {% for risk in summary.risk_points %}
+                            <li>{{ risk }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+            {% if summary.opportunity_points %}
+                <div class="col-md-6">
+                    <strong>💡 Opportunity Points:</strong>
+                    <ul>
+                        {% for opportunity in summary.opportunity_points %}
+                            <li>{{ opportunity }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- Key Themes (Industry Note, Macro Report) -->
+    {% if summary.key_themes %}
+        <div class="mb-3">
+            <strong>Key Themes:</strong>
+            <ul>
+                {% for theme in summary.key_themes %}
+                    <li>{{ theme }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <!-- Key Dynamics (Industry Note) -->
+    {% if summary.key_dynamics %}
+        <div class="mb-3">
+            <strong>Key Industry Dynamics:</strong>
+            <ul>
+                {% for dynamic in summary.key_dynamics %}
+                    <li>{{ dynamic }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <!-- Valuation Analysis -->
+    {% if summary.valuation_analysis %}
+        <div class="mb-3">
+            <strong>Valuation Analysis:</strong>
+            {% if summary.valuation_analysis|length == 1 and summary.valuation_analysis.0|length < 100 %}
+                <p>{{ summary.valuation_analysis.0 }}</p>
+            {% else %}
+                <ul>
+                    {% for analysis in summary.valuation_analysis %}
+                        <li>{{ analysis }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- Strategic Recommendations -->
+    {% if summary.strategic_recommendations %}
+        <div class="mb-3">
+            <strong>Strategic Recommendations:</strong>
+            <ul>
+                {% for recommendation in summary.strategic_recommendations %}
+                    <li>{{ recommendation }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <!-- Extra Details (Company Update Advanced) -->
+    {% if summary.extra_details %}
+        <div class="mb-3">
+            <strong>Additional Details:</strong>
+            <p class="text-justify">{{ summary.extra_details }}</p>
+        </div>
+    {% endif %}
+
+    <!-- Stock Recaps (Industry Note) -->
+    {% if summary.stock_recaps %}
+        <div class="mb-3">
+            <strong>Individual Stock Analysis:</strong>
+            {% for stock in summary.stock_recaps %}
+                <div class="card mb-2">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <span class="badge bg-primary">{{ stock.stock_ticker }}</span>
+                            {% if stock.stock_rating %}
+                                <span class="badge bg-info ms-2">{{ stock.stock_rating }}</span>
+                            {% endif %}
+                        </h6>
+                        {% if stock.stock_outlook %}
+                            <p class="mb-2"><strong>Outlook:</strong> {{ stock.stock_outlook }}</p>
+                        {% endif %}
+                        {% if stock.stock_valuation %}
+                            <p class="mb-0"><strong>Valuation:</strong> {{ stock.stock_valuation }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Upside/Downside Scenarios (Initiation Report) -->
+    {% if summary.upside_scenario %}
+        <div class="mb-3">
+            <strong>📈 Upside Scenario:</strong>
+            <p class="text-justify">{{ summary.upside_scenario }}</p>
+        </div>
+    {% endif %}
+    {% if summary.downside_scenario %}
+        <div class="mb-3">
+            <strong>📉 Downside Scenario:</strong>
+            <p class="text-justify">{{ summary.downside_scenario }}</p>
+        </div>
+    {% endif %}
+
+    <!-- Conclusion -->
+    {% if summary.conclusion %}
+        <div class="mb-3">
+            <strong>Conclusion:</strong>
+            <p class="text-justify">{{ summary.conclusion }}</p>
+        </div>
+    {% endif %}
+
+    <!-- Expectations (Quarter Preview) -->
+    {% if summary.expectations %}
+        <div class="mb-3">
+            <strong>Expectations:</strong>
+            <p class="text-justify">{{ summary.expectations }}</p>
+        </div>
+    {% endif %}
+
+    <!-- Results (Quarter Review) -->
+    {% if summary.results %}
+        <div class="mb-3">
+            <strong>Results:</strong>
+            <p class="text-justify">{{ summary.results }}</p>
+        </div>
+    {% endif %}
+
+{% else %}
+    <p class="text-muted">Summary data not available.</p>
+{% endif %}
