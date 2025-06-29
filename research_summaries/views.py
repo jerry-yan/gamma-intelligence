@@ -1362,17 +1362,11 @@ class AdvancedSummariesView(LoginRequiredMixin, TemplateView):
         report_type_groups = {}
 
         for note in all_results:
-            # Group by ticker
             if note.parsed_ticker:
-                if note.parsed_ticker not in ticker_groups:
-                    ticker_groups[note.parsed_ticker] = []
                 ticker_groups[note.parsed_ticker].append(note)
-
-            # Group by report type
-            report_type = note.report_type or 'Other Reports'
-            if report_type not in report_type_groups:
-                report_type_groups[report_type] = []
-            report_type_groups[report_type].append(note)
+            else:  # Only if NO ticker
+                report_type = note.report_type or "Uncategorized"
+                report_type_groups[report_type].append(note)
 
         # Sort groups
         sorted_ticker_groups = dict(sorted(ticker_groups.items()))
