@@ -90,70 +90,68 @@
     </div>
 </div>
 
-<!-- Filters Section -->
-<div class="row mb-4">
-    <div class="col-md-12">
+<div class="row">
+    <!-- Filters Sidebar -->
+    <div class="col-md-3">
         <div class="card">
+            <div class="card-header">
+                <h5>Filters & Search</h5>
+            </div>
             <div class="card-body">
-                <form method="GET" class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Filter by Source</label>
+                <form method="get" action="">
+                    <!-- Search -->
+                    <div class="mb-3">
+                        <label class="form-label">Search</label>
+                        <input type="text" name="search" class="form-control" placeholder="Title, author, company..." value="{{ current_filters.search }}">
+                    </div>
+
+                    <!-- Datetime Filter -->
+                    <div class="mb-3">
+                        <label class="form-label">Show reports after</label>
+                        <input type="datetime-local" name="datetime" class="form-control" value="{{ formatted_datetime }}">
+                        <small class="text-muted">
+                            {% if user_last_read_time %}
+                                Default: your last read time
+                            {% else %}
+                                Default: last 24 hours
+                            {% endif %}
+                        </small>
+                    </div>
+
+                    <!-- Source Filter -->
+                    <div class="mb-3">
+                        <label class="form-label">Source</label>
                         <select name="source" class="form-select">
                             <option value="">All Sources</option>
                             {% for source in sources %}
-                                <option value="{{ source }}" {% if source == current_filters.source %}selected{% endif %}>
+                                <option value="{{ source }}" {% if current_filters.source == source %}selected{% endif %}>
                                     {{ source }}
                                 </option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Search</label>
-                        <input type="text" name="search" class="form-control"
-                               placeholder="Search titles, companies..."
-                               value="{{ current_filters.search }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Show Since</label>
-                        <input type="datetime-local" name="datetime" class="form-control"
-                               value="{{ current_filters.datetime }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">&nbsp;</label>
-                        <div>
-                            <button type="submit" class="btn btn-primary">Apply Filters</button>
-                            <a href="{% url 'research_summaries:advanced_summaries' %}" class="btn btn-outline-secondary">Clear</a>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
 
-<div class="row">
-    <!-- Sidebar -->
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-header">
-                <h6 class="mb-0">Recent Advanced Summaries</h6>
-            </div>
-            <div class="card-body">
-                <div class="recent-summaries-list">
+                    <button type="submit" class="btn btn-primary w-100 mb-2">Apply Filters</button>
+                    <a href="{% url 'research_summaries:research_summaries' %}" class="btn btn-outline-secondary w-100">Reset to Default</a>
+                </form>
+
+                <!-- Recent Activity -->
+                <hr class="mt-4">
+                <h6>Recent Summaries</h6>
+                <div style="max-height: 200px; overflow-y: auto;">
                     {% for note in recent_summaries %}
                         <div class="border-bottom pb-2 mb-2">
-                            <small class="text-primary d-block">{{ note.raw_companies|default:note.parsed_ticker|default:"General" }}</small>
-                            <small>{{ note.raw_title|truncatechars:50 }}</small>
-                            <small class="text-muted d-block">
-                                {% if note.file_summary_time %}
-                                    {{ note.file_summary_time|date:"M d" }}
-                                {% else %}
-                                    {{ note.created_at|date:"M d" }}
-                                {% endif %}
+                            <a href="{% url 'research_summaries:note_detail' note.id %}" class="text-decoration-none">
+                                <strong class="">{{ note.raw_title|default:"Untitled"|truncatechars:30 }}</strong>
+                            </a>
+                            <br>
+                            <small class="text-muted">
+                                {% if note.parsed_ticker %}{{ note.parsed_ticker }} | {% endif %}
+                                {{ note.file_summary_time|date:"M d" }}
                             </small>
                         </div>
                     {% empty %}
-                        <p class="text-muted small">No recent advanced summaries</p>
+                        <p class="text-muted small">No recent summaries</p>
                     {% endfor %}
                 </div>
             </div>
@@ -226,7 +224,7 @@
                                                 <span class="mx-2">•</span>
                                             {% endif %}
                                             <span>{{ note.raw_title|default:"Untitled Report" }}</span>
-                                            <span class="badge bg-success ms-1">Advanced AI Summary</span>
+                                            <span class="badge bg-success ms-1">🧠</span>
                                         </div>
                                     </div>
                                 </div>
@@ -273,7 +271,7 @@
                                                 {% if note.publication_date %} • {{ note.publication_date|date:"Y-m-d" }}{% endif %}
                                                 {% if note.raw_author %} • {{ note.raw_author }}{% endif %}
                                                 {% if note.report_type %} • {{ note.report_type }}{% endif %}
-                                                <span class="badge bg-success ms-1">Advanced Summary</span>
+                                                <span class="badge bg-success ms-1">🧠</span>
                                             </div>
                                         </div>
                                         <button class="btn btn-sm btn-outline-secondary card-collapse-trigger">
@@ -403,7 +401,7 @@
                                                 {% if note.raw_author %} • {{ note.raw_author }}{% endif %}
                                                 {% if note.report_type %} • {{ note.report_type }}{% endif %}
                                                 {% if note.is_advanced_summary %}
-                                                    <span class="badge bg-warning ms-1" title="Advanced Summary Enabled">🧠 Advanced</span>
+                                                    <span class="badge bg-success ms-1" title="Advanced Summary Enabled">🧠 Advanced</span>
                                                 {% endif %}
                                             </div>
                                         </div>
