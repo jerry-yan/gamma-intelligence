@@ -24,7 +24,15 @@ class Command(BaseCommand):
                 # Check if there are any notes that need processing
                 # Status 0: Not Downloaded, 1: Downloaded, 2: Preprocessed
                 pending_notes = ResearchNote.objects.filter(status__in=[0, 1, 2])
+                advanced_ready_notes = ResearchNote.objects.filter(status=3, is_advanced_summary=True)
+
                 pending_count = pending_notes.count()
+                advanced_count = advanced_ready_notes.count()
+
+                # Run advanced summarization if there are notes marked for it
+                if advanced_count > 0:
+                    self.stdout.write(f'🧠 Advanced summarizing {advanced_count} documents with GPT o3-mini...')
+                    call_command('summarize_documents_advanced')
 
                 if pending_count == 0:
                     elapsed = timezone.now() - start_time
@@ -37,15 +45,14 @@ class Command(BaseCommand):
                     time.sleep(30 * 60)  # 30 minutes
                     continue
 
-                # Please work
+                self.stdout.write('📝 Summarizing documents...')
+                call_command('summarize_documents')
+
                 self.stdout.write('📥 Downloading files...')
                 call_command('download_files')
 
                 self.stdout.write('🧹 Cleaning documents...')
                 call_command('clean_documents')
-
-                self.stdout.write('📝 Summarizing documents...')
-                call_command('summarize_documents')
 
                 elapsed = timezone.now() - start_time
                 self.stdout.write(
