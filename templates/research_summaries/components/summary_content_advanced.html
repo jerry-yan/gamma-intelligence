@@ -97,7 +97,7 @@
         <div class="row mb-3">
             {% if summary.bull_points %}
                 <div class="col-md-6">
-                    <strong>🐂 Bull Points:</strong>
+                    <strong>Bull Points:</strong>
                     <ul>
                         {% for point in summary.bull_points %}
                             <li>{{ point }}</li>
@@ -107,7 +107,7 @@
             {% endif %}
             {% if summary.bear_points %}
                 <div class="col-md-6">
-                    <strong>🐻 Bear Points:</strong>
+                    <strong>Bear Points:</strong>
                     <ul>
                         {% for point in summary.bear_points %}
                             <li>{{ point }}</li>
@@ -171,16 +171,20 @@
     <!-- Valuation Analysis -->
     {% if summary.valuation_analysis %}
         <div class="mb-3">
-            <strong>Valuation Analysis:</strong>
-            {% if summary.valuation_analysis|length == 1 and summary.valuation_analysis.0|length < 100 %}
-                <p>{{ summary.valuation_analysis.0 }}</p>
-            {% else %}
-                <ul>
-                    {% for analysis in summary.valuation_analysis %}
-                        <li>{{ analysis }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
+            <strong class="">Valuation:</strong>
+            {% with first=note.report_summary.valuation_analysis.0 %}
+                {% if first|stringformat:"s" != first %}
+                    <!-- It's a list/array -->
+                    <ul class="">
+                        {% for analysis in note.report_summary.valuation_analysis %}
+                            <li class="">{{ analysis }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <!-- It's a string -->
+                    <p class="">{{ note.report_summary.valuation_analysis }}</p>
+                {% endif %}
+            {% endwith %}
         </div>
     {% endif %}
 
@@ -193,14 +197,6 @@
                     <li>{{ recommendation }}</li>
                 {% endfor %}
             </ul>
-        </div>
-    {% endif %}
-
-    <!-- Extra Details (Company Update Advanced) -->
-    {% if summary.extra_details %}
-        <div class="mb-3">
-            <strong>Additional Details:</strong>
-            <p class="text-justify">{{ summary.extra_details }}</p>
         </div>
     {% endif %}
 
