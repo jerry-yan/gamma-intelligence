@@ -7,8 +7,10 @@ app_name = 'research_summaries'
 urlpatterns = [
     # Main research summaries page
     path('summaries/', views.ResearchSummariesView.as_view(), name='research_summaries'),
+    path('summaries/advanced/', views.AdvancedSummariesView.as_view(), name='advanced_summaries'),
     path('note/<int:note_id>/', views.research_note_detail, name='note_detail'),
     path('mark-as-read/', views.mark_as_read, name='mark_as_read'),
+    path('mark-as-read-advanced/', views.mark_as_read_advanced, name='mark_as_read_advanced'),
     path('toggle-favorite/<int:note_id>/', views.toggle_note_favorite, name='toggle_favorite'),
     path('pdf/<int:note_id>/', views.get_pdf_url, name='get_pdf_url'),
     path('aggregate-summary/<str:ticker>/', views.aggregate_summary, name='aggregate_summary'),

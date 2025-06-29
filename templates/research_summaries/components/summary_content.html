@@ -1,0 +1,99 @@
+<!-- templates/research_summaries/partials/summary_content.html -->
+<!-- This partial displays the summary content and can be included in both standard and advanced templates -->
+
+{% if summary %}
+    <!-- Report Type and Date -->
+    {% if summary.report_type or summary.report_date %}
+        <div class="mb-3">
+            {% if summary.report_type %}
+                <span class="badge bg-secondary me-2">{{ summary.report_type }}</span>
+            {% endif %}
+            {% if summary.report_date %}
+                <span class="text-muted">Report Date: {{ summary.report_date }}</span>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- Authors -->
+    {% if summary.authors %}
+        <div class="mb-3">
+            <strong>Authors:</strong> {{ summary.authors|join:", " }}
+        </div>
+    {% endif %}
+
+    <!-- Recap -->
+    {% if summary.recap %}
+        <div class="mb-3">
+            <strong>Recap:</strong>
+            <p class="text-justify">{{ summary.recap }}</p>
+        </div>
+    {% endif %}
+
+    <!-- Summary -->
+    {% if summary.summary %}
+        <div class="mb-3">
+            <strong>Summary:</strong>
+            <p class="text-justify">{{ summary.summary }}</p>
+        </div>
+    {% endif %}
+
+    <!-- Executive Summary -->
+    {% if summary.executive_summary %}
+        <div class="mb-3">
+            <strong>Executive Summary:</strong>
+            <p class="text-justify">{{ summary.executive_summary }}</p>
+        </div>
+    {% endif %}
+
+    <!-- Expectations -->
+    {% if summary.expectations %}
+        <div class="mb-3">
+            <strong>Expectations:</strong>
+            <p class="text-justify">{{ summary.expectations }}</p>
+        </div>
+    {% endif %}
+
+    <!-- Risk Points and Opportunity Points Side by Side -->
+    {% if summary.risk_points or summary.opportunity_points %}
+        <div class="row mb-3">
+            {% if summary.risk_points %}
+                <div class="col-md-6">
+                    <strong>🚨 Risk Points:</strong>
+                    <ul>
+                        {% for risk in summary.risk_points %}
+                            <li>{{ risk }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+            {% if summary.opportunity_points %}
+                <div class="col-md-6">
+                    <strong>💡 Opportunity Points:</strong>
+                    <ul>
+                        {% for opportunity in summary.opportunity_points %}
+                            <li>{{ opportunity }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- Additional Metrics if available -->
+    {% if summary.price_target or summary.rating or summary.recommendation %}
+        <div class="mb-3">
+            <strong>Analyst View:</strong>
+            {% if summary.rating %}
+                <span class="badge bg-info me-2">{{ summary.rating }}</span>
+            {% endif %}
+            {% if summary.recommendation %}
+                <span class="badge bg-warning me-2">{{ summary.recommendation }}</span>
+            {% endif %}
+            {% if summary.price_target %}
+                <span class="badge bg-success">Target: ${{ summary.price_target }}</span>
+            {% endif %}
+        </div>
+    {% endif %}
+{% else %}
+    <p class="text-muted">Summary content not available.</p>
+{% endif %}

@@ -1290,3 +1290,189 @@ def set_advanced_summary(request, note_id):
             'success': False,
             'error': 'An error occurred while updating the advanced summary flag'
         }, status=500)
+
+
+class AdvancedSummariesView(LoginRequiredMixin, TemplateView):
+    template_name = 'research_summaries/advanced_summaries.html'
+    login_url = '/accounts/login/'
+
+    def get_context_data(self, **kwargs):
+        from django.utils import timezone
+        from datetime import timedelta
+        context = super().get_context_data(**kwargs)
+
+        # Get user's last read time for advanced summaries
+        user_profile = self.request.user.profile
+        if user_profile.last_read_time_advanced:
+            default_datetime = user_profile.last_read_time_advanced
+        else:
+            default_datetime = timezone.now() - timedelta(hours=24)
+
+        # Get query parameters for filtering and search
+        source_filter = self.request.GET.get('source', '')
+        search_query = self.request.GET.get('search', '')
+        datetime_filter = self.request.GET.get('datetime', '')
+
+        # Parse datetime filter or use default
+        if datetime_filter:
+            try:
+                from django.utils.dateparse import parse_datetime
+                filter_datetime = parse_datetime(datetime_filter)
+                if not filter_datetime:
+                    # Try parsing as date and convert to datetime
+                    from django.utils.dateparse import parse_date
+                    filter_date = parse_date(datetime_filter)
+                    if filter_date:
+                        filter_datetime = timezone.make_aware(
+                            timezone.datetime.combine(filter_date, timezone.datetime.min.time())
+                        )
+                    else:
+                        filter_datetime = default_datetime
+                else:
+                    filter_datetime = timezone.make_aware(filter_datetime) if timezone.is_naive(filter_datetime) else filter_datetime
+            except:
+                filter_datetime = default_datetime
+        else:
+            filter_datetime = default_datetime
+
+        # Build queryset - Filter for status 4 instead of 3
+        queryset = ResearchNote.objects.filter(status=4).order_by('-file_summary_time')
+
+        # Apply datetime filter - show reports updated after the filter datetime
+        queryset = queryset.filter(file_summary_time__gte=filter_datetime)
+
+        # Apply other filters
+        if source_filter:
+            queryset = queryset.filter(source__icontains=source_filter)
+
+        if search_query:
+            queryset = queryset.filter(
+                Q(raw_title__icontains=search_query) |
+                Q(raw_author__icontains=search_query) |
+                Q(raw_companies__icontains=search_query) |
+                Q(parsed_ticker__icontains=search_query)
+            )
+
+        # Get results with limit
+        limit = 50
+        all_results = list(queryset[:limit])
+
+        # Group by ticker and type
+        ticker_groups = {}
+        report_type_groups = {}
+
+        for note in all_results:
+            # Group by ticker
+            if note.parsed_ticker:
+                if note.parsed_ticker not in ticker_groups:
+                    ticker_groups[note.parsed_ticker] = []
+                ticker_groups[note.parsed_ticker].append(note)
+
+            # Group by report type
+            report_type = note.report_type or 'Other Reports'
+            if report_type not in report_type_groups:
+                report_type_groups[report_type] = []
+            report_type_groups[report_type].append(note)
+
+        # Sort groups
+        sorted_ticker_groups = dict(sorted(ticker_groups.items()))
+        sorted_report_type_groups = dict(sorted(report_type_groups.items()))
+
+        # Calculate total results
+        total_results = len(all_results)
+        total_available = queryset.count()
+
+        # Simple result info
+        results_info = {
+            'showing_count': total_results,
+            'total_available': total_available,
+            'limited': total_results < total_available
+        }
+
+        # Get status counts for dashboard
+        status_counts = {
+            'total': ResearchNote.objects.count(),
+            'not_downloaded': ResearchNote.objects.filter(status=0).count(),
+            'downloaded': ResearchNote.objects.filter(status=1).count(),
+            'preprocessed': ResearchNote.objects.filter(status=2).count(),
+            'summarized': ResearchNote.objects.filter(status=3).count(),
+            'advanced': ResearchNote.objects.filter(status=4).count(),
+            'filtered_count': total_results,
+        }
+
+        # Get unique sources for filter dropdown (from advanced notes only)
+        sources = ResearchNote.objects.filter(status=4).values_list('source', flat=True).exclude(
+            source__isnull=True).exclude(source='').distinct().order_by('source')
+
+        # Recent activity - show recent advanced summaries
+        recent_summaries = ResearchNote.objects.filter(status=4).order_by('-file_summary_time')[:5]
+
+        # Get latest report time from all results for "Mark as Read" functionality
+        latest_report_time = None
+        if all_results:
+            latest_report_time = max(
+                note.file_summary_time for note in all_results
+                if note.file_summary_time
+            )
+
+        # Format datetime for HTML input
+        formatted_datetime = filter_datetime.strftime('%Y-%m-%dT%H:%M') if filter_datetime else ''
+
+        context.update({
+            'ticker_groups': sorted_ticker_groups,
+            'report_type_groups': sorted_report_type_groups,
+            'results_info': results_info,
+            'status_counts': status_counts,
+            'sources': sorted(sources),
+            'recent_summaries': recent_summaries,
+            'current_filters': {
+                'source': source_filter,
+                'search': search_query,
+                'datetime': datetime_filter,
+            },
+            'filter_datetime': filter_datetime,
+            'formatted_datetime': formatted_datetime,
+            'latest_report_time': latest_report_time,
+            'user_last_read_time': user_profile.last_read_time_advanced,
+            'is_advanced': True,  # Flag to identify this is advanced view
+        })
+
+        return context
+
+
+@login_required
+def mark_as_read_advanced(request):
+    """AJAX endpoint to update user's last_read_time_advanced"""
+    if request.method == 'POST':
+        from django.utils import timezone
+        from datetime import timedelta
+        import json
+
+        try:
+            data = json.loads(request.body)
+            latest_report_time_str = data.get('latest_report_time')
+
+            if latest_report_time_str:
+                from django.utils.dateparse import parse_datetime
+                latest_report_time = parse_datetime(latest_report_time_str)
+                if latest_report_time:
+                    # Add 59 seconds to the latest report time
+                    new_last_read_time = latest_report_time + timedelta(seconds=59)
+
+                    # Update user's profile
+                    user_profile = request.user.profile
+                    user_profile.last_read_time_advanced = new_last_read_time
+                    user_profile.save()
+
+                    return JsonResponse({
+                        'success': True,
+                        'new_last_read_time': new_last_read_time.isoformat(),
+                        'message': f'Advanced summaries marked as read up to {new_last_read_time.strftime("%B %d, %Y at %I:%M %p")}'
+                    })
+
+            return JsonResponse({'success': False, 'message': 'Invalid datetime provided'})
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)})
+
+    return JsonResponse({'success': False, 'message': 'Invalid request method'})

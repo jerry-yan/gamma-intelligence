@@ -1,0 +1,411 @@
+{% extends 'base.html' %}
+
+{% block title %}Advanced Summaries - Gamma Intelligence{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<!-- Header Section -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <strong>Advanced Summaries</strong>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'research_summaries:research_summaries' %}">Standard Summaries</a></li>
+                            <li><a class="dropdown-item active" href="{% url 'research_summaries:advanced_summaries' %}">Advanced Summaries</a></li>
+                        </ul>
+                    </div>
+                    <h2 class="mb-0">Research Reports</h2>
+                </div>
+                <p class="text-muted">Advanced AI-enhanced financial research reports</p>
+            </div>
+            <div class="dropdown">
+                <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    Admin Tools
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'research_summaries:email_test' %}">📧 Email Test</a></li>
+                    <li><a class="dropdown-item" href="{% url 'research_summaries:download_test' %}">📥 Download Test</a></li>
+                    <li><a class="dropdown-item" href="{% url 'research_summaries:document_cleaner_page' %}">🧹 Document Cleaner</a></li>
+                    <li><a class="dropdown-item" href="{% url 'research_summaries:document_summarizer_page' %}">📝 Summarizer</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Dashboard -->
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-3">
+                <h4 class="text-success mb-0">{{ status_counts.filtered_count }}</h4>
+                <small class="text-muted">New Advanced</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-3">
+                <h4 class="text-primary mb-0">{{ status_counts.advanced }}</h4>
+                <small class="text-muted">Total Advanced</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-3">
+                <h4 class="text-secondary mb-0">{{ status_counts.not_downloaded }}</h4>
+                <small class="text-muted">Pending</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-3">
+                <h4 class="text-info mb-0">{{ status_counts.downloaded }}</h4>
+                <small class="text-muted">Downloaded</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-3">
+                <h4 class="text-warning mb-0">{{ status_counts.preprocessed }}</h4>
+                <small class="text-muted">Cleaned</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-3">
+                {% if user_last_read_time %}
+                    <h6 class="text-muted mb-0">{{ user_last_read_time|date:"M d, H:i" }}</h6>
+                    <small class="text-muted">Last Read</small>
+                {% else %}
+                    <h6 class="text-muted mb-0">Never</h6>
+                    <small class="text-muted">Last Read</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Filters Sidebar -->
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-header">
+                <h5>Filters & Search</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" action="">
+                    <!-- Search -->
+                    <div class="mb-3">
+                        <label class="form-label">Search</label>
+                        <input type="text" name="search" class="form-control" placeholder="Title, author, company..." value="{{ current_filters.search }}">
+                    </div>
+
+                    <!-- Datetime Filter -->
+                    <div class="mb-3">
+                        <label class="form-label">Show reports after</label>
+                        <input type="datetime-local" name="datetime" class="form-control" value="{{ formatted_datetime }}">
+                        <small class="text-muted">
+                            {% if user_last_read_time %}
+                                Default: your last read time
+                            {% else %}
+                                Default: last 24 hours
+                            {% endif %}
+                        </small>
+                    </div>
+
+                    <!-- Source Filter -->
+                    <div class="mb-3">
+                        <label class="form-label">Source</label>
+                        <select name="source" class="form-select">
+                            <option value="">All Sources</option>
+                            {% for source in sources %}
+                                <option value="{{ source }}" {% if current_filters.source == source %}selected{% endif %}>
+                                    {{ source }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 mb-2">Apply Filters</button>
+                    <a href="{% url 'research_summaries:advanced_summaries' %}" class="btn btn-outline-secondary w-100">Reset to Default</a>
+                </form>
+
+                <!-- Recent Activity -->
+                <hr class="mt-4">
+                <h6>Recent Advanced Summaries</h6>
+                <div style="max-height: 200px; overflow-y: auto;">
+                    {% for note in recent_summaries %}
+                        <div class="border-bottom pb-2 mb-2">
+                            <a href="{% url 'research_summaries:note_detail' note.id %}" class="text-decoration-none">
+                                <strong class="">{{ note.raw_title|default:"Untitled"|truncatechars:30 }}</strong>
+                            </a>
+                            <br>
+                            <small class="text-muted">
+                                {% if note.parsed_ticker %}{{ note.parsed_ticker }} | {% endif %}
+                                {{ note.file_summary_time|date:"M d" }}
+                            </small>
+                        </div>
+                    {% empty %}
+                        <p class="text-muted small">No recent advanced summaries</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-md-9">
+        <!-- Results Header -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h5>New Advanced Research Reports</h5>
+                <small class="text-muted">
+                    {% if results_info.showing_count %}
+                        Showing {{ results_info.showing_count }} reports
+                        {% if results_info.limited %}
+                            (of {{ results_info.total_available }} total)
+                        {% endif %}
+                        {% if filter_datetime %}
+                            since {{ filter_datetime|date:"M d, Y g:i A" }}
+                        {% endif %}
+                    {% else %}
+                        No new reports found
+                    {% endif %}
+                </small>
+            </div>
+            {% if results_info.showing_count and latest_report_time %}
+            <button id="markAsReadBtn" class="btn btn-success">
+                📖 Mark All as Read
+            </button>
+            {% endif %}
+        </div>
+
+        <!-- Research Notes List -->
+        {% if ticker_groups or report_type_groups %}
+
+            <!-- Ticker Groups (Companies) -->
+            {% for ticker, notes in ticker_groups.items %}
+            <div class="mb-4">
+                <div class="d-flex align-items-center mb-3">
+                    <h4 class="mb-0">
+                        <span class="badge bg-primary fs-6 me-2">{{ ticker }}</span>
+                        <span class="text-muted fs-6">({{ notes|length }} report{{ notes|length|pluralize }})</span>
+                    </h4>
+
+                    <!-- Aggregate Summary Button -->
+                    <button class="btn btn-info btn-sm ms-3 aggregate-summary-btn" 
+                            data-ticker="{{ ticker }}"
+                            data-bs-toggle="modal" 
+                            data-bs-target="#aggregateModal">
+                        📊 Generate Combined Analysis
+                    </button>
+                </div>
+
+                <!-- Individual Notes -->
+                {% for note in notes %}
+                <div class="card mb-3 research-card">
+                    <div class="card-body">
+                        <!-- Collapsed View -->
+                        <div class="collapsed-view cursor-pointer card-expand-trigger" data-note-id="{{ note.id }}">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h5 class="card-title mb-1">{{ note.raw_title|default:"Untitled Report" }}</h5>
+                                    <p class="text-muted mb-0">
+                                        <strong>Source:</strong> {{ note.source|default:"Unknown" }} |
+                                        <strong>Author:</strong> {{ note.raw_author|default:"Unknown" }}
+                                        {% if note.raw_companies %}
+                                            | <strong>Companies:</strong> {{ note.raw_companies|truncatechars:50 }}
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <small class="text-muted">{{ note.file_summary_time|date:"M d, Y g:i A" }}</small>
+                                    <br>
+                                    <span class="badge bg-success">Advanced AI Summary</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Expanded View (Hidden by default) -->
+                        <div class="expanded-view" id="expanded-{{ note.id }}" style="display: none;">
+                            <hr>
+                            
+                            <!-- Summary Content -->
+                            {% if note.report_summary %}
+                                <div class="summary-content mb-3">
+                                    <!-- Display summary sections here - similar to standard summaries -->
+                                    {% include 'research_summaries/components/summary_content.html' with summary=note.report_summary %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted">Summary content not available.</p>
+                            {% endif %}
+
+                            <!-- Action Buttons (No flag or O3 buttons) -->
+                            <div class="btn-group mt-3">
+                                <a href="{% url 'research_summaries:note_detail' note.id %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    View Full Details
+                                </a>
+                                {% if note.file_id %}
+                                    <button class="btn btn-sm btn-outline-secondary pdf-preview-btn" 
+                                            data-note-id="{{ note.id }}">
+                                        📄 View PDF
+                                    </button>
+                                {% endif %}
+                                <button class="btn btn-sm btn-outline-info download-summary-btn"
+                                        data-note-id="{{ note.id }}">
+                                    ⬇️ Download Summary
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+
+            <!-- Report Type Groups -->
+            {% if report_type_groups %}
+            <hr class="my-4">
+            <h4 class="mb-3">By Report Type</h4>
+            {% for report_type, notes in report_type_groups.items %}
+                <div class="mb-4">
+                    <h5 class="text-secondary">{{ report_type }} ({{ notes|length }})</h5>
+                    {% for note in notes %}
+                        <!-- Similar card structure as above -->
+                    {% endfor %}
+                </div>
+            {% endfor %}
+            {% endif %}
+
+        {% else %}
+        <!-- No Results -->
+        <div class="text-center py-5">
+            <h4 class="text-muted">No Advanced Reports Found</h4>
+            <p class="text-muted">
+                {% if current_filters.source or current_filters.search or current_filters.datetime %}
+                    Try adjusting your filters to see more results.
+                {% else %}
+                    No advanced reports found. Advanced reports are AI-enhanced summaries with status 4.
+                {% endif %}
+            </p>
+            <a href="{% url 'research_summaries:advanced_summaries' %}" class="btn btn-outline-primary">
+                Reset Filters
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Include modals and JavaScript -->
+<div class="modal fade" id="aggregateModal" tabindex="-1" aria-labelledby="aggregateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="aggregateModalLabel">Aggregate Summary</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="aggregateContent">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="openInNewTab" style="display: none;">
+                    🔗 Open in New Tab
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.research-card .collapsed-view:hover {
+    background-color: #f8f9fa;
+}
+
+.research-card .collapsed-view {
+    transition: background-color 0.2s ease;
+}
+
+.expanded-view .btn-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.text-justify {
+    text-align: justify;
+}
+
+.card-expand-trigger:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+    border-radius: 4px;
+    padding: 2px;
+}
+</style>
+
+<script>
+// Update the mark as read endpoint for advanced summaries
+document.addEventListener('DOMContentLoaded', function() {
+    const markAsReadBtn = document.getElementById('markAsReadBtn');
+    
+    if (markAsReadBtn) {
+        markAsReadBtn.addEventListener('click', function() {
+            const latestReportTime = '{{ latest_report_time|date:"c" }}';
+            
+            fetch("{% url 'research_summaries:mark_as_read_advanced' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({
+                    'latest_report_time': latestReportTime
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            });
+        });
+    }
+
+    // Card expand/collapse functionality
+    document.querySelectorAll('.card-expand-trigger').forEach(trigger => {
+        trigger.addEventListener('click', function() {
+            const noteId = this.dataset.noteId;
+            const expandedView = document.getElementById(`expanded-${noteId}`);
+            
+            if (expandedView.style.display === 'none') {
+                expandedView.style.display = 'block';
+            } else {
+                expandedView.style.display = 'none';
+            }
+        });
+    });
+
+    // Add other JavaScript functionality as needed
+});
+</script>
+
+{% endblock %}
