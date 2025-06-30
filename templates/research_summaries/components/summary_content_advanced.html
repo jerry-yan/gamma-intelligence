@@ -172,8 +172,8 @@
     {% if summary.valuation_analysis %}
         <div class="mb-3">
             <strong class="">Valuation:</strong>
-            {% with first=summary.valuation_analysis.0 %}
-                {% if first|stringformat:"s" != first %}
+            {% with val_length=summary.valuation_analysis|length %}
+                {% if val_length > 1 and summary.valuation_analysis.0 %}
                     <!-- It's a list/array -->
                     <ul class="">
                         {% for analysis in summary.valuation_analysis %}
@@ -181,7 +181,7 @@
                         {% endfor %}
                     </ul>
                 {% else %}
-                    <!-- It's a string -->
+                    <!-- It's a string or single-item list -->
                     <p class="">{{ summary.valuation_analysis }}</p>
                 {% endif %}
             {% endwith %}
