@@ -97,7 +97,7 @@
         <div class="row mb-3">
             {% if summary.bull_points %}
                 <div class="col-md-6">
-                    <strong>Bull Points:</strong>
+                    <strong class="text-success">Bull Points:</strong>
                     <ul>
                         {% for point in summary.bull_points %}
                             <li>{{ point }}</li>
@@ -107,7 +107,7 @@
             {% endif %}
             {% if summary.bear_points %}
                 <div class="col-md-6">
-                    <strong>Bear Points:</strong>
+                    <strong class="text-danger">Bear Points:</strong>
                     <ul>
                         {% for point in summary.bear_points %}
                             <li>{{ point }}</li>
@@ -123,7 +123,7 @@
         <div class="row mb-3">
             {% if summary.risk_points %}
                 <div class="col-md-6">
-                    <strong>🚨 Risk Points:</strong>
+                    <strong class="text-danger">Risk Points:</strong>
                     <ul>
                         {% for risk in summary.risk_points %}
                             <li>{{ risk }}</li>
@@ -133,7 +133,7 @@
             {% endif %}
             {% if summary.opportunity_points %}
                 <div class="col-md-6">
-                    <strong>💡 Opportunity Points:</strong>
+                    <strong class="text-success">Opportunity Points:</strong>
                     <ul>
                         {% for opportunity in summary.opportunity_points %}
                             <li>{{ opportunity }}</li>
@@ -172,17 +172,17 @@
     {% if summary.valuation_analysis %}
         <div class="mb-3">
             <strong class="">Valuation:</strong>
-            {% with first=note.report_summary.valuation_analysis.0 %}
+            {% with first=summary.valuation_analysis.0 %}
                 {% if first|stringformat:"s" != first %}
                     <!-- It's a list/array -->
                     <ul class="">
-                        {% for analysis in note.report_summary.valuation_analysis %}
+                        {% for analysis in summary.valuation_analysis %}
                             <li class="">{{ analysis }}</li>
                         {% endfor %}
                     </ul>
                 {% else %}
                     <!-- It's a string -->
-                    <p class="">{{ note.report_summary.valuation_analysis }}</p>
+                    <p class="">{{ summary.valuation_analysis }}</p>
                 {% endif %}
             {% endwith %}
         </div>
