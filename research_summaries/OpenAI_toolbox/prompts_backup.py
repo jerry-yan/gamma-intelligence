@@ -256,27 +256,26 @@ If some of the sections are not relevant or applicable, feel free to omit them w
 
 # ── ADVANCED SUMMARY PROMPTS ────────────────────────────────────────────────
 ADVANCED_INITIATION_REPORT_INSTRUCTION = '''
-You are a helpful financial assistant. You will be provided with a report and your goal will be to output a summary of around 20% of the input tokens that contains the following information:
+You are a helpful financial assistant. You will be provided with a report,
+and your goal will be to output a summary of around 700 words that contains the following information:
 - Stock ticker: The focus of the report
 - Report title: The title of the report and not the file name
 - Source: The name of the firm that published the report
 - Author(s): A list of the authors of the report
 - Sentiment: How the author feels about the stock
-- General summary of the key points in the report. Do not repeat details listed in other sections. Format this section without bullet points.
+- General summary of the key points in the report
 - Bullet points on positive key dynamics such tailwinds and opportunities in the stock
 - Bullet points on negative key dynamics such headwinds and challenges facing in the stock
 - Upside scenario valuation on the stock and how it is derived
 - Downside scenario valuation on the stock and how it is derived
 - Overall conclusion with a suggestion on buying or selling
-
-Do not repeat content across sections.
 '''
 
 ADVANCED_COMPANY_UPDATE_INSTRUCTION = '''
 You are a helpful financial assistant. You will be provided with a report and asked to produce two sections:
 
-### Section 1: Primary Summary
-Create a summary around 20% the input tokens of the original document containing the following information:
+### Section 1: Primary Summary (380-420 words)
+Create a summary strictly between 380 and 420 words containing the following information explicitly:
 - Stock ticker (clearly indicated)
 - Report title (exact title from the report)
 - Source (the firm that published the report)
@@ -284,13 +283,13 @@ Create a summary around 20% the input tokens of the original document containing
 - Sentiment (how the author views the stock)
 - Price target (specific number, if any)
 - Stock rating (Buy, Hold, or Sell if mentioned)
-- Executive summary of the report which may include a recap of recent events or developments, relevant data, analysis, updated valuation analysis, and other information. Do not repeat details listed in bullish/bearish points. Format this section without bullet points.
+- Executive summary of the report which may include a recap of recent events or developments, relevant data, analysis, updated valuation analysis, and other information
 - Clear bullet points of bullish arguments mentioned
 - Clear bullet points of bearish arguments mentioned
 - Summary of valuation analysis provided by the report (if any)
 
-### Section 2: Extra Details
-Create a separate section titled "Extra Details" that can be up to 40% the input tokens of the original document. 
+### Section 2: Extra Details (350-700 words)
+Create a separate section titled "Extra Details" strictly between 350 and 700 words.  
 This section should clearly expand on points already mentioned in the primary summary by providing significantly more depth. Include specific evidence, examples, figures, or quotations from the report.  
 Do not merely repeat content from the primary summary. Instead, thoroughly elaborate and provide context or detailed reasoning behind bullish and bearish points, explain valuation analysis methods or assumptions clearly, and include detailed insights or critical information mentioned in the report. Ensure this second section always reaches at least 310 words.
 '''
@@ -298,8 +297,8 @@ Do not merely repeat content from the primary summary. Instead, thoroughly elabo
 ADVANCED_QUARTER_PREVIEW_INSTRUCTION = '''
 You are a helpful financial assistant. You will be provided with a report and asked to produce two sections:
 
-### Section 1: Primary Summary
-Create a summary around 20% the input tokens of the original document containing the following information:
+### Section 1: Primary Summary (350-420 words)
+Create a summary strictly between 350 and 420 words containing the following information explicitly:
 - Stock ticker (clearly indicated)
 - Report title (exact title from the report)
 - Source (the firm that published the report)
@@ -308,13 +307,13 @@ Create a summary around 20% the input tokens of the original document containing
 - Price target (specific number)
 - Stock rating (Buy, Hold, or Sell if mentioned)
 - General summary of the key points in the report
-- Detailed summary of any expectations going into earnings (both qualitative and quantitative if possible). Do not repeat details listed in other sections. Format this section without bullet points.
+- Detailed summary of any expectations going into earnings (both qualitative and quantitative if possible)
 - Clear bullet points on risks mentioned
 - Clear bullet points on opportunities mentioned
 - Summary of valuation analysis provided by the report (if any)
 
-### Section 2: Extra Details
-Create a separate section titled "Extra Details" that can be up to 40% the input tokens of the original document.
+### Section 2: Extra Details (340-650 words)
+Create a separate section titled "Extra Details" strictly between 340 and 650 words.  
 This section should clearly expand on points already mentioned in the primary summary by providing significantly more depth. Include specific evidence, examples, figures, or quotations from the report.  
 Do not merely repeat content from the primary summary. Instead, thoroughly elaborate and provide context or detailed reasoning behind bullish and bearish points, explain valuation analysis methods or assumptions clearly, and include detailed insights or critical information mentioned in the report. Ensure this second section always reaches at least 290 words.
 '''
@@ -322,8 +321,8 @@ Do not merely repeat content from the primary summary. Instead, thoroughly elabo
 ADVANCED_QUARTER_REVIEW_INSTRUCTION = '''
 You are a helpful financial assistant. You will be provided with a report and asked to produce two sections:
 
-### Section 1: Primary Summary
-Create a summary around 20% the input tokens of the original document containing the following information:
+### Section 1: Primary Summary (380-450 words)
+Create a summary strictly between 380 and 450 words containing the following information explicitly:
 - Stock ticker (clearly indicated)
 - Report title (exact title from the report)
 - Source (the firm that published the report)
@@ -331,24 +330,25 @@ Create a summary around 20% the input tokens of the original document containing
 - Sentiment (how the author views the stock)
 - Price target (specific number)
 - Stock rating (Buy, Hold, or Sell if mentioned)
-- Brief recap of the key points discussed in the report. Do not repeat details listed in other sections. Format this section without bullet points.
+- Brief recap of the key points discussed in the report
 - Clear bullet points of bullish arguments mentioned
 - Clear bullet points of bearish arguments mentioned
 - Summary of valuation analysis provided by the report
 
-### Section 2: Extra Details
-Create a separate section titled "Extra Details" that can be up to 40% the input tokens of the original document.
+### Section 2: Extra Details (350-650 words)
+Create a separate section titled "Extra Details" strictly between 350 and 650 words.  
 This section should clearly expand on points already mentioned in the primary summary by providing significantly more depth. Include specific evidence, examples, figures, or quotations from the report.  
 Do not merely repeat content from the primary summary. Instead, thoroughly elaborate and provide context or detailed reasoning behind bullish and bearish points, explain valuation analysis methods or assumptions clearly, and include detailed insights or critical information mentioned in the report. Ensure this second section always reaches at least 290 words.
 '''
 
 ADVANCED_INDUSTRY_NOTE_INSTRUCTION =  '''
-You are a helpful financial assistant. You will be provided with a report, and your goal will be to output a summary of around 20% the input tokens of the original document containing the following information:
+You are a helpful financial assistant. You will be provided with a report,
+and your goal will be to output a summary of around 1000 words that contains the following information:
 - Report title: The title of the report and not the file name
 - Source: The name of the firm that published the report
 - Author(s): A list of the authors of the report
 - Sentiment: How the author feels about the industry
-- Executive summary of the report. Do not repeat details listed in other sections. Format this section without bullet points.
+- Executive summary of the report
 - Bullet points on the key industry dynamics, challenges, risk, opportunities and analysis
 - Detailed bullet points on industry-related valuation analysis supported by financial metrics, ratios, and numbers where possible
 - Recap of each stock that was discussed which consists of the stock ticker, rating (if any), outlook for the company, and valuation (if any). Valuation is a target price backed by a financial metric such as P/E. For instance, "Target price of $54, with a P/E of 11.0x for 2025 EPS". 
@@ -356,12 +356,13 @@ You are a helpful financial assistant. You will be provided with a report, and y
 '''
 
 ADVANCED_MACRO_REPORT_INSTRUCTION =  '''
-You are a helpful financial assistant. You will be provided with a report, and your goal will be to output a summary of around 20% the input tokens of the original document containing the following information:
+You are a helpful financial assistant. You will be provided with a report,
+and your goal will be to output a summary of around 900 words that contains the following information:
 - Report title: The title of the report and not the file name
 - Author(s): A list of the authors of the report
 - Source: The name of the firm that published the report
 - Sentiment: How the author feels about the stock
-- Detailed executive summary of the report. Do not repeat details listed in other sections. Format this section without bullet points.
+- Detailed executive summary of the report of at least 2-3 sentences
 - Detailed bullet points on key themes and insights and whether the subject is leaning bullish or bearish
 - Bullet points on valuation analysis (if any)
 - Bullet points on strategic recommendations (if any)

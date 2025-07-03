@@ -401,10 +401,7 @@ ADVANCED_INITIATION_REPORT_SCHEMA = {
                     "type": "string",
                     "enum": ["Positive", "Neutral", "Negative"]
                 },
-                "summary": {
-                    "type": "string",
-                    "description": "Summary of the report. Do not use bullet points.",
-                },
+                "summary": {"type": "string"},
                 "positive_dynamics": {
                     "type": "array",
                     "items": {"type": "string"},
@@ -464,7 +461,7 @@ ADVANCED_COMPANY_UPDATE_SCHEMA = {
                 },
                 "executive_summary": {
                     "type": "string",
-                    "description": "Concise executive summary including recent events, key developments, relevant analysis, updated valuation insights, and important points from the report. Do not use bullet points."
+                    "description": "Concise executive summary including recent events, key developments, relevant analysis, updated valuation insights, and important points from the report (approximately 190-300 words)."
                 },
                 "bull_points": {
                     "type": "array",
@@ -478,11 +475,11 @@ ADVANCED_COMPANY_UPDATE_SCHEMA = {
                 },
                 "valuation_analysis": {
                     "type": ["string", "null"],
-                    "description": "Brief summary of valuation methods, assumptions, or key insights from the report. Null if no valuation analysis provided."
+                    "description": "Brief summary (approximately 80-130 words) of valuation methods, assumptions, or key insights from the report. Null if no valuation analysis provided."
                 },
                 "extra_details": {
                     "type": "string",
-                    "description": "Detailed elaboration significantly expanding upon executive summary, bullish and bearish arguments, and valuation analysis. Provide specific evidence, data points, quotations from the analyst or report, clearly explained valuation assumptions or methods, and deeper analytical insights explicitly from the report. Avoid verbatim repetition of content from the primary summary."
+                    "description": "Detailed elaboration significantly expanding upon executive summary, bullish and bearish arguments, and valuation analysis. Provide specific evidence, data points, quotations from the analyst or report, clearly explained valuation assumptions or methods, and deeper analytical insights explicitly from the report. Must strictly contain between 600 and 700 words and avoid verbatim repetition of content from the primary summary."
                 },
             },
             "required": [
@@ -536,11 +533,11 @@ ADVANCED_QUARTER_PREVIEW_SCHEMA = {
                 },
                 "summary": {
                     "type": "string",
-                    "description": "Concise general summary of key points from the report, including important events, developments, and main findings. Do not use bullet points."
+                    "description": "Concise general summary of key points from the report, including important events, developments, and main findings (approximately 160-200 words)."
                 },
                 "expectations": {
                     "type": "string",
-                    "description": "Detailed summary of expectations heading into earnings, clearly including qualitative factors (such as strategic developments, management guidance) and quantitative factors (such as expected EPS, revenue figures)."
+                    "description": "Detailed summary of expectations heading into earnings, clearly including qualitative factors (such as strategic developments, management guidance) and quantitative factors (such as expected EPS, revenue figures). Approximately 100-180 words."
                 },
                 "risk_points": {
                     "type": "array",
@@ -554,11 +551,11 @@ ADVANCED_QUARTER_PREVIEW_SCHEMA = {
                 },
                 "valuation_analysis": {
                     "type": ["string", "null"],
-                    "description": "Brief but clear summary of any valuation analysis methods, assumptions, or insights from the report. Null if not provided."
+                    "description": "Brief but clear summary of any valuation analysis methods, assumptions, or insights from the report (around 80-130 words). Null if not provided."
                 },
                 "extra_details": {
                     "type": "string",
-                    "description": "Detailed elaboration significantly expanding upon summary, expectations, risks, opportunities, and valuation analysis. Provide specific evidence, examples, numerical data, analyst quotations, valuation methodology details, and deeper analytical insights explicitly sourced from the report. Avoid repeating verbatim the primary summary."
+                    "description": "Detailed elaboration significantly expanding upon summary, expectations, risks, opportunities, and valuation analysis. Provide specific evidence, examples, numerical data, analyst quotations, valuation methodology details, and deeper analytical insights explicitly sourced from the report. Must strictly contain between 500 and 700 words without repeating verbatim the primary summary."
                 },
             },
             "required": [
@@ -612,7 +609,7 @@ ADVANCED_QUARTER_REVIEW_SCHEMA = {
                 },
                 "recap": {
                     "type": "string",
-                    "description": "A concise, clearly written recap of the key points of the report, including recent developments, key financial or market updates, and relevant analysis. Do not use bullet points."
+                    "description": "A concise, clearly written recap of the key points of the report, including recent developments, key financial or market updates, and relevant analysis. Approximately 190-300 words."
                 },
                 "bull_points": {
                     "type": "array",
@@ -630,7 +627,7 @@ ADVANCED_QUARTER_REVIEW_SCHEMA = {
                 },
                 "extra_details": {
                     "type": "string",
-                    "description": "Additional detailed elaboration expanding significantly on points mentioned previously (such as recap, bull and bear points, valuation). Provide specific evidence, quotes, data, numbers, or analytical insights from the report."
+                    "description": "Additional detailed elaboration expanding significantly on points mentioned previously (such as recap, bull and bear points, valuation). Provide specific evidence, quotes, data, numbers, or analytical insights from the report. Must be at least 500 words and no more than 700 words."
                 },
             },
             "required": [
@@ -675,9 +672,7 @@ ADVANCED_INDUSTRY_NOTE_SCHEMA = {
                     "type": "string",
                     "enum": ["Positive", "Neutral", "Negative"]
                 },
-                "executive_summary": {
-                    "type": "string",
-                    "description": "Summary of the report. Do not use bullet points."},
+                "executive_summary": {"type": "string"},
                 "key_dynamics": {
                     "type": "array",
                     "description": "Key industry dynamics, challenges, risk, opportunities and analysis",
