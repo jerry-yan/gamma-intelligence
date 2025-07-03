@@ -318,21 +318,20 @@
             <!-- Display all available fields in a generic way -->
             {% for key, value in summary_data.items %}
                 {% if key != "sentiment" and value %}
-                    <!-- FIXED: Removed the invalid 'replace' filter -->
                     <h6 class="mt-4">{{ key|title }}</h6>
-                    {% if value|length == 1 and value.0|add:0 != value.0 %}
-                        <!-- Single string value -->
-                        <p>{{ value }}</p>
-                    {% elif value|first %}
-                        <!-- List of items -->
-                        <ul>
-                            {% for item in value %}
-                                <li>{{ item }}</li>
-                            {% endfor %}
-                        </ul>
-                    {% else %}
-                        <p>{{ value }}</p>
-                    {% endif %}
+                    {% with first_item=value|first %}
+                        {% if first_item and first_item|length > 1 %}
+                            <!-- It's a list (first item is a full string, not a single character) -->
+                            <ul>
+                                {% for item in value %}
+                                    <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <!-- It's a string -->
+                            <p>{{ value }}</p>
+                        {% endif %}
+                    {% endwith %}
                 {% endif %}
             {% endfor %}
         {% endif %}
