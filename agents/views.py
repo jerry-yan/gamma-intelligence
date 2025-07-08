@@ -127,7 +127,8 @@ def api_chat_stream(request):
                 # Build parameters for Responses API
                 stream_params = {
                     # "model": "gpt-4o-mini",
-                    "model": "gpt-4.1-mini-2025-04-14",
+                    # "model": "gpt-4.1-mini-2025-04-14",
+                    "model": "o3-mini-2025-01-31",
                     "input": message,
                     "stream": True,
                     # "temperature": 0.7,

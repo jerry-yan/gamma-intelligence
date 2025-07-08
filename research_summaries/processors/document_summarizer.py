@@ -24,6 +24,8 @@ from research_summaries.OpenAI_toolbox.structured_outputs import SCHEMAS
 MODEL = 'gpt-4.1-mini-2025-04-14'
 
 TICKER_OVERRIDES = {
+    "2330": "TSMC",
+    "2330 TT": "TSMC",
     "2330.TW": "TSMC",
     "ABI": "BUD", # A‑B InBev ADR code often appears as ABBI
 }
