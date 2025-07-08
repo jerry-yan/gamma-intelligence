@@ -89,3 +89,25 @@ class ChatMessage(models.Model):
     def __str__(self):
         content_preview = self.content[:50] + ('...' if len(self.content) > 50 else '')
         return f"{self.role}: {content_preview}"
+
+
+class StockTicker(models.Model):
+    """Model to store stock ticker information"""
+    main_ticker = models.CharField(max_length=10)
+    full_ticker = models.CharField(max_length=50)
+    company_name = models.CharField(max_length=255)
+    industry = models.CharField(max_length=255)
+    sub_industry = models.CharField(max_length=255)
+    vector_id = models.IntegerField()  # Corresponds to vector_group_id in knowledge base
+
+    class Meta:
+        db_table = 'stock_tickers'
+        ordering = ['main_ticker']
+        unique_together = [['main_ticker', 'vector_id']]
+        indexes = [
+            models.Index(fields=['main_ticker']),
+            models.Index(fields=['vector_id']),
+        ]
+
+    def __str__(self):
+        return f"{self.main_ticker} - {self.company_name}"

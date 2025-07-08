@@ -11,6 +11,15 @@ from django.views.generic import TemplateView
 from django.utils import timezone
 from .models import KnowledgeBase, ChatSession, ChatMessage
 from research_summaries.openai_utils import get_openai_client
+import pandas as pd
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import FormView
+from django.urls import reverse_lazy
+from django.db import transaction
+from .models import StockTicker
+from .forms import ExcelUploadForm
 
 logger = logging.getLogger(__name__)
 
@@ -403,3 +412,62 @@ def api_delete_session(request, session_id):
     except Exception as e:
         logger.error(f"Error deleting session: {e}")
         return JsonResponse({'success': False, 'error': 'Failed to delete session'}, status=500)
+
+
+class StockTickerUploadView(LoginRequiredMixin, FormView):
+    template_name = 'agents/upload_stocks.html'
+    form_class = ExcelUploadForm
+    success_url = reverse_lazy('agents:stock_ticker_list')  # Update this to your list view
+
+    def form_valid(self, form):
+        excel_file = form.cleaned_data['excel_file']
+
+        try:
+            # Read the Excel file
+            df = pd.read_excel(excel_file, engine='openpyxl')
+
+            # Validate required columns
+            required_columns = ['Main Ticker', 'Full Ticker', 'Company Name',
+                                'Industry', 'Subindustry', 'Vector ID']
+
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
+                messages.error(self.request, f"Missing columns: {', '.join(missing_columns)}")
+                return self.form_invalid(form)
+
+            # Clean the data
+            df = df.dropna(subset=required_columns)
+
+            # Import data in bulk
+            stock_tickers = []
+            with transaction.atomic():
+                # Optional: Clear existing data
+                if form.cleaned_data.get('clear_existing', False):
+                    StockTicker.objects.all().delete()
+
+                for _, row in df.iterrows():
+                    stock_ticker = StockTicker(
+                        main_ticker=str(row['Main Ticker']).strip(),
+                        full_ticker=str(row['Full Ticker']).strip(),
+                        company_name=str(row['Company Name']).strip(),
+                        industry=str(row['Industry']).strip(),
+                        sub_industry=str(row['Subindustry']).strip(),
+                        vector_id=int(row['Vector ID'])
+                    )
+                    stock_tickers.append(stock_ticker)
+
+                # Bulk create for better performance
+                # Update existing records instead of skipping
+                StockTicker.objects.bulk_create(
+                    stock_tickers,
+                    update_conflicts=True,
+                    update_fields=['full_ticker', 'company_name', 'industry', 'sub_industry'],
+                    unique_fields=['main_ticker', 'vector_id']
+                )
+
+            messages.success(self.request, f"Successfully imported {len(stock_tickers)} stock tickers!")
+            return super().form_valid(form)
+
+        except Exception as e:
+            messages.error(self.request, f"Error processing file: {str(e)}")
+            return self.form_invalid(form)

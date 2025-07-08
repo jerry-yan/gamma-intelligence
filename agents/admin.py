@@ -1,6 +1,6 @@
 # chatbot/admin.py
 from django.contrib import admin
-from .models import KnowledgeBase, ChatSession, ChatMessage
+from .models import KnowledgeBase, ChatSession, ChatMessage, StockTicker
 
 
 @admin.register(KnowledgeBase)
@@ -32,3 +32,11 @@ class ChatMessageAdmin(admin.ModelAdmin):
         return obj.content[:100] + '...' if len(obj.content) > 100 else obj.content
 
     content_preview.short_description = 'Content'
+
+
+@admin.register(StockTicker)
+class StockTickerAdmin(admin.ModelAdmin):
+    list_display = ['main_ticker', 'full_ticker', 'company_name', 'industry', 'vector_id']
+    list_filter = ['industry', 'sub_industry']
+    search_fields = ['main_ticker', 'full_ticker', 'company_name']
+    ordering = ['main_ticker']

@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h2>Upload Stock Ticker Data</h2>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    {{ form.excel_file.label_tag }}
+                    {{ form.excel_file }}
+                    <div class="form-text">{{ form.excel_file.help_text }}</div>
+                    {% if form.excel_file.errors %}
+                        <div class="text-danger">{{ form.excel_file.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check">
+                        {{ form.clear_existing }}
+                        {{ form.clear_existing.label_tag }}
+                        <div class="form-text">{{ form.clear_existing.help_text }}</div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Upload File</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="mt-4">
+        <h4>Expected Excel Format:</h4>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Main Ticker</th>
+                    <th>Full Ticker</th>
+                    <th>Company Name</th>
+                    <th>Industry</th>
+                    <th>Subindustry</th>
+                    <th>Vector ID</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1316</td>
+                    <td>1316 HK Equity</td>
+                    <td>Nexteer Automotive Group Ltd</td>
+                    <td>Automobiles & Components</td>
+                    <td>Automobile Components</td>
+                    <td>107</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

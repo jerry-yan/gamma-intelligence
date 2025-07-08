@@ -23,6 +23,7 @@ from research_summaries.OpenAI_toolbox.prompts import AGGREGATE_SUMMARY_INSTRUCT
 from research_summaries.openai_utils import get_openai_client
 from research_summaries.processors.file_downloader_2 import download_documents_playwright
 
+
 logger = logging.getLogger(__name__)
 
 class ResearchSummariesView(LoginRequiredMixin, TemplateView):

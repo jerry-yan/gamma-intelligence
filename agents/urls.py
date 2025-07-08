@@ -17,4 +17,7 @@ urlpatterns = [
     path('api/sessions/<uuid:session_id>/clear/', views.api_clear_session, name='api_clear_session'),
     path('api/sessions/', views.api_user_sessions, name='api_user_sessions'),
     path('api/messages/<int:message_id>/delete/', views.api_delete_message, name='api_delete_message'),
+
+    # Other support functions
+    path('upload-stocks/', views.StockTickerUploadView.as_view(), name='stock_ticker_upload'),
 ]
