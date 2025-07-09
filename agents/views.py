@@ -438,6 +438,17 @@ class StockTickerUploadView(LoginRequiredMixin, FormView):
             # Clean the data
             df = df.dropna(subset=required_columns)
 
+            # Check for duplicates in the file
+            duplicates = df[df.duplicated(subset=['Main Ticker', 'Vector ID'], keep=False)]
+            if len(duplicates) > 0:
+                messages.warning(
+                    self.request,
+                    f"Found {len(duplicates)} rows with duplicate Main Ticker + Vector ID. "
+                    "Keeping only the first occurrence of each duplicate."
+                )
+                # Remove duplicates, keeping the first occurrence
+                df = df.drop_duplicates(subset=['Main Ticker', 'Vector ID'], keep='first')
+
             # Import data in bulk
             stock_tickers = []
             with transaction.atomic():
@@ -445,7 +456,20 @@ class StockTickerUploadView(LoginRequiredMixin, FormView):
                 if form.cleaned_data.get('clear_existing', False):
                     StockTicker.objects.all().delete()
 
+                # Create a dictionary to track duplicates within our list
+                seen = set()
+                skipped = 0
+
                 for _, row in df.iterrows():
+                    ticker_key = (str(row['Main Ticker']).strip(), int(row['Vector ID']))
+
+                    # Skip if we've already processed this combination
+                    if ticker_key in seen:
+                        skipped += 1
+                        continue
+
+                    seen.add(ticker_key)
+
                     stock_ticker = StockTicker(
                         main_ticker=str(row['Main Ticker']).strip(),
                         full_ticker=str(row['Full Ticker']).strip(),
@@ -457,15 +481,14 @@ class StockTickerUploadView(LoginRequiredMixin, FormView):
                     stock_tickers.append(stock_ticker)
 
                 # Bulk create for better performance
-                # Update existing records instead of skipping
-                StockTicker.objects.bulk_create(
-                    stock_tickers,
-                    update_conflicts=True,
-                    update_fields=['full_ticker', 'company_name', 'industry', 'sub_industry'],
-                    unique_fields=['main_ticker', 'vector_id']
-                )
+                # ignore_conflicts will skip duplicates already in the database
+                created = StockTicker.objects.bulk_create(stock_tickers, ignore_conflicts=True)
 
-            messages.success(self.request, f"Successfully imported {len(stock_tickers)} stock tickers!")
+            messages.success(
+                self.request,
+                f"Successfully processed {len(stock_tickers)} unique stock tickers! "
+                f"({len(created)} new records created)"
+            )
             return super().form_valid(form)
 
         except Exception as e:
