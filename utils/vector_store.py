@@ -116,7 +116,7 @@ def vector_store_has_files(
         return False
 
 
-# Convenience function for common use case
+# Convenience function for common use case - use this
 def file_exists_in_vector_store(
         vector_store_id: str,
         hash_id: str,
