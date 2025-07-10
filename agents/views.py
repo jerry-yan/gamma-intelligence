@@ -1,24 +1,19 @@
 # agents/views.py
 import json
 import logging
-from django.shortcuts import render
+import pandas as pd
 from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import TemplateView
+from django.views.generic import FormView, TemplateView
 from django.utils import timezone
-from .models import KnowledgeBase, ChatSession, ChatMessage
-from research_summaries.openai_utils import get_openai_client
-import pandas as pd
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import FormView
 from django.urls import reverse_lazy
 from django.db import transaction
-from .models import StockTicker
+from .models import KnowledgeBase, ChatSession, ChatMessage, StockTicker
+from research_summaries.openai_utils import get_openai_client
 from .forms import ExcelUploadForm
 
 logger = logging.getLogger(__name__)
