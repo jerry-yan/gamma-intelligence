@@ -15,6 +15,7 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path('research/', include('research_summaries.urls')),
     path('agents/', include('agents.urls')),
+    path('documents/', include('documents.urls')),
 ]
 
 # Serve media files during development

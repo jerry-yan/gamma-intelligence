@@ -1,0 +1,329 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Upload Document{% endblock %}
+
+{% block extra_css %}
+<style>
+    .upload-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .form-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .form-section h3 {
+        margin-top: 0;
+        color: #333;
+        font-size: 1.2rem;
+        margin-bottom: 15px;
+    }
+    
+    .metadata-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .metadata-row {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+        align-items: center;
+    }
+    
+    .metadata-key, .metadata-value {
+        flex: 1;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    
+    .btn-remove {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    
+    .btn-remove:hover {
+        background: #c82333;
+    }
+    
+    .btn-add {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-top: 10px;
+    }
+    
+    .btn-add:hover {
+        background: #218838;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 600;
+        color: #333;
+    }
+    
+    .help-text {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+    }
+    
+    .submit-section {
+        text-align: center;
+        margin-top: 30px;
+    }
+    
+    .btn-submit {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+    
+    .btn-submit:hover {
+        background: #0056b3;
+    }
+    
+    .alert {
+        padding: 12px 20px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+    }
+    
+    .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .alert-error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    #custom-report-type-group {
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="upload-container">
+    <h1>Upload Document</h1>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <form method="post" enctype="multipart/form-data" id="upload-form">
+        {% csrf_token %}
+        
+        <!-- File Selection -->
+        <div class="form-section">
+            <h3>File Selection</h3>
+            <div class="form-group">
+                {{ form.file.label_tag }}
+                {{ form.file }}
+                {% if form.file.help_text %}
+                    <div class="help-text">{{ form.file.help_text }}</div>
+                {% endif %}
+                {% if form.file.errors %}
+                    <div class="error">{{ form.file.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Document Details -->
+        <div class="form-section">
+            <h3>Document Details</h3>
+            
+            <div class="form-group">
+                {{ form.file_directory.label_tag }}
+                {{ form.file_directory }}
+                {% if form.file_directory.errors %}
+                    <div class="error">{{ form.file_directory.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                {{ form.vector_group_id.label_tag }}
+                {{ form.vector_group_id }}
+                {% if form.vector_group_id.help_text %}
+                    <div class="help-text">{{ form.vector_group_id.help_text }}</div>
+                {% endif %}
+                {% if form.vector_group_id.errors %}
+                    <div class="error">{{ form.vector_group_id.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                {{ form.publication_date.label_tag }}
+                {{ form.publication_date }}
+                {% if form.publication_date.help_text %}
+                    <div class="help-text">{{ form.publication_date.help_text }}</div>
+                {% endif %}
+                {% if form.publication_date.errors %}
+                    <div class="error">{{ form.publication_date.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                {{ form.report_type_choice.label_tag }}
+                {{ form.report_type_choice }}
+                {% if form.report_type_choice.errors %}
+                    <div class="error">{{ form.report_type_choice.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group" id="custom-report-type-group">
+                {{ form.custom_report_type.label_tag }}
+                {{ form.custom_report_type }}
+                {% if form.custom_report_type.errors %}
+                    <div class="error">{{ form.custom_report_type.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Metadata Section -->
+        <div class="metadata-section">
+            <h3>Metadata</h3>
+            <div id="metadata-container">
+                <!-- Metadata rows will be added here dynamically -->
+            </div>
+            <button type="button" class="btn-add" id="add-metadata-btn">
+                [+] Add Metadata
+            </button>
+            <div class="help-text">Add up to 16 key-value pairs (optional)</div>
+        </div>
+        
+        {{ form.metadata_json }}
+        
+        <div class="submit-section">
+            <button type="submit" class="btn-submit">Upload Document</button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const reportTypeSelect = document.getElementById('report-type-select');
+    const customReportTypeGroup = document.getElementById('custom-report-type-group');
+    const customReportTypeInput = document.getElementById('custom-report-type');
+    const metadataContainer = document.getElementById('metadata-container');
+    const addMetadataBtn = document.getElementById('add-metadata-btn');
+    const metadataJsonInput = document.querySelector('input[name="metadata_json"]');
+    const uploadForm = document.getElementById('upload-form');
+    
+    let metadataCount = 0;
+    const maxMetadata = 16;
+    
+    // Handle report type selection
+    reportTypeSelect.addEventListener('change', function() {
+        if (this.value === 'custom') {
+            customReportTypeGroup.style.display = 'block';
+            customReportTypeInput.required = true;
+        } else {
+            customReportTypeGroup.style.display = 'none';
+            customReportTypeInput.required = false;
+            customReportTypeInput.value = '';
+        }
+    });
+    
+    // Add metadata row
+    function addMetadataRow(key = '', value = '') {
+        if (metadataCount >= maxMetadata) {
+            alert('Maximum 16 metadata pairs allowed');
+            return;
+        }
+        
+        const row = document.createElement('div');
+        row.className = 'metadata-row';
+        row.innerHTML = `
+            <input type="text" class="metadata-key" placeholder="Key" value="${key}">
+            <input type="text" class="metadata-value" placeholder="Value" value="${value}">
+            <button type="button" class="btn-remove" onclick="removeMetadataRow(this)">[-]</button>
+        `;
+        
+        metadataContainer.appendChild(row);
+        metadataCount++;
+        
+        if (metadataCount >= maxMetadata) {
+            addMetadataBtn.style.display = 'none';
+        }
+    }
+    
+    // Remove metadata row
+    window.removeMetadataRow = function(button) {
+        button.parentElement.remove();
+        metadataCount--;
+        
+        if (metadataCount < maxMetadata) {
+            addMetadataBtn.style.display = 'inline-block';
+        }
+    };
+    
+    // Add metadata button click
+    addMetadataBtn.addEventListener('click', function() {
+        addMetadataRow();
+    });
+    
+    // Form submission - collect metadata
+    uploadForm.addEventListener('submit', function(e) {
+        const metadata = {};
+        const rows = metadataContainer.querySelectorAll('.metadata-row');
+        
+        rows.forEach(row => {
+            const key = row.querySelector('.metadata-key').value.trim();
+            const value = row.querySelector('.metadata-value').value.trim();
+            
+            if (key && value) {
+                metadata[key] = value;
+            }
+        });
+        
+        metadataJsonInput.value = JSON.stringify(metadata);
+    });
+});
+</script>
+{% endblock %}
