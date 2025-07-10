@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'accounts',
     'research_summaries',
     'agents',
+    'documents',
 ]
 
 MIDDLEWARE = [
