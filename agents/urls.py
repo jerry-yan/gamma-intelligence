@@ -10,7 +10,7 @@ urlpatterns = [
     # Main chat interface
     path('', views.AgentView.as_view(), name='chat'),
 
-    # KnowledgeBase management pages test this
+    # KnowledgeBase management pages
     path('knowledge-bases/create/', knowledge_base_views.CreateKnowledgeBaseView.as_view(), name='create_knowledge_base'),
     path('knowledge-bases/manage/', knowledge_base_views.ManageKnowledgeBasesView.as_view(), name='manage_knowledge_bases'),
 
