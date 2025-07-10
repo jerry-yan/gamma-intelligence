@@ -76,7 +76,7 @@ class ResearchNoteAdmin(admin.ModelAdmin):
             'description': 'Advanced processing and vectorization status'
         }),
         ('File Management', {
-            'fields': ('file_directory', 'file_hash_id', 'file_download_time', 'file_update_time', 'file_summary_time')
+            'fields': ('file_directory', 'file_hash_id', 'openai_file_id', 'file_download_time', 'file_update_time', 'file_summary_time')
         }),
         ('Summary', {
             'fields': ('report_summary',),

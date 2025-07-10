@@ -6,12 +6,9 @@ Loop through ResearchNote objects with status == 2.
 • Save the JSON response in report_summary
 • On success: status = 3 and file_summary_time = now()
 """
-import os
-import boto3
-import tempfile
 import json
 from django.utils.timezone import now
-from django.conf import settings
+from utils.file_utils import get_or_upload_file_to_openai
 from research_summaries.openai_utils import get_openai_client
 from research_summaries.models import ResearchNote
 from research_summaries.OpenAI_toolbox.prompts import (
@@ -30,15 +27,6 @@ TICKER_OVERRIDES = {
     "ABI": "BUD", # A‑B InBev ADR code often appears as ABBI
 }
 
-# ── S3 Setup ─────────────────────────────────────────
-def get_s3_client():
-    """Initialize S3 client with credentials"""
-    return boto3.client(
-        's3',
-        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-        region_name=settings.AWS_S3_REGION_NAME
-    )
 
 # ── Utility Functions -------------------------------------------------------
 def clean_ticker(raw: str | None) -> str | None:
@@ -57,28 +45,6 @@ def clean_ticker(raw: str | None) -> str | None:
         if sep in ticker:
             ticker = ticker.split(sep, 1)[0]
     return ticker or None
-
-
-def download_pdf_from_s3(s3_key: str) -> str:
-    """Download PDF from S3 to temporary file and return path"""
-    s3_client = get_s3_client()
-    bucket_name = settings.AWS_STORAGE_BUCKET_NAME
-
-    # Create temporary file
-    temp_file = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
-    temp_path = temp_file.name
-    temp_file.close()
-
-    try:
-        s3_client.download_file(bucket_name, s3_key, temp_path)
-        return temp_path
-    except Exception as e:
-        # Clean up on error
-        try:
-            os.unlink(temp_path)
-        except:
-            pass
-        raise e
 
 
 def categorize_document(client, model: str, file_id: str, company_count: int, companies: str, title: str) -> str:
@@ -178,27 +144,18 @@ def summarize_documents():
     success_count = 0
 
     for note in notes:
-        temp_pdf_path = None
-        file_id = None
 
         try:
-            # Extract S3 key from file_directory
-            s3_key = note.file_directory
-            if s3_key.startswith('https://'):
-                s3_key = s3_key.split('amazonaws.com/')[-1]
-            elif s3_key.startswith('s3://'):
-                s3_key = s3_key.split('/', 3)[-1]
-
-            print(f"📥 Downloading {note.file_id} from S3...")
-            temp_pdf_path = download_pdf_from_s3(s3_key)
-
-            # Upload file to OpenAI
-            print(f"📤 Uploading {note.file_id} to OpenAI...")
-            file_response = client.files.create(
-                file=open(temp_pdf_path, 'rb'),
-                purpose="user_data"
+            # Get or upload file to OpenAI (reuse existing if possible)
+            file_id = get_or_upload_file_to_openai(
+                s3_key=note.file_directory,
+                existing_file_id=note.openai_file_id
             )
-            file_id = file_response.id
+
+            # Save the file_id if it's new
+            if not note.openai_file_id:
+                note.openai_file_id = file_id
+                note.save(update_fields=['openai_file_id'])
 
             # Categorize if needed
             if not note.report_type:
@@ -242,20 +199,20 @@ def summarize_documents():
         except Exception as e:
             print(f"❌ Error processing {note.file_id}: {e}")
 
-        finally:
-            # Clean up OpenAI file
-            if file_id:
-                try:
-                    client.files.delete(file_id=file_id)
-                except Exception as e:
-                    print(f"⚠️  Failed to delete OpenAI file {file_id}: {e}")
-
-            # Clean up temporary file
-            if temp_pdf_path and os.path.exists(temp_pdf_path):
-                try:
-                    os.unlink(temp_pdf_path)
-                except Exception as e:
-                    print(f"⚠️  Failed to delete temp file {temp_pdf_path}: {e}")
+        # finally:
+        #     # Clean up OpenAI file
+        #     if file_id:
+        #         try:
+        #             client.files.delete(file_id=file_id)
+        #         except Exception as e:
+        #             print(f"⚠️  Failed to delete OpenAI file {file_id}: {e}")
+        #
+        #     # Clean up temporary file
+        #     if temp_pdf_path and os.path.exists(temp_pdf_path):
+        #         try:
+        #             os.unlink(temp_pdf_path)
+        #         except Exception as e:
+        #             print(f"⚠️  Failed to delete temp file {temp_pdf_path}: {e}")
 
     print(f"🏁 Summarization task finished. {success_count}/{notes.count()} documents processed successfully.")
 
@@ -263,24 +220,19 @@ def summarize_documents():
 def process_single_document(note):
     """Process a single document for real-time streaming"""
     client = get_openai_client()
-    temp_pdf_path = None
     file_id = None
 
     try:
-        # Extract S3 key from file_directory
-        s3_key = note.file_directory
-        if s3_key.startswith('https://'):
-            s3_key = s3_key.split('amazonaws.com/')[-1]
-        elif s3_key.startswith('s3://'):
-            s3_key = s3_key.split('/', 3)[-1]
-
-        # Download and upload to OpenAI
-        temp_pdf_path = download_pdf_from_s3(s3_key)
-        file_response = client.files.create(
-            file=open(temp_pdf_path, 'rb'),
-            purpose="user_data"
+        # Get or upload file to OpenAI (reuse existing if possible)
+        file_id = get_or_upload_file_to_openai(
+            s3_key=note.file_directory,
+            existing_file_id=note.openai_file_id
         )
-        file_id = file_response.id
+
+        # Save the file_id if it's new
+        if not note.openai_file_id:
+            note.openai_file_id = file_id
+            note.save(update_fields=['openai_file_id'])
 
         # Categorize if needed
         if not note.report_type:
@@ -318,17 +270,3 @@ def process_single_document(note):
         note.status = 10  # Error status
         note.save(update_fields=["status"])
         return False
-
-    finally:
-        # Cleanup
-        if file_id:
-            try:
-                client.files.delete(file_id=file_id)
-            except:
-                pass
-
-        if temp_pdf_path and os.path.exists(temp_pdf_path):
-            try:
-                os.unlink(temp_pdf_path)
-            except:
-                pass

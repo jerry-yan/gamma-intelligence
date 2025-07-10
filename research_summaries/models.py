@@ -12,6 +12,7 @@ class ResearchNote(models.Model):
 
     file_directory = models.CharField(max_length=1000, null=True, blank=True)  # file path
     file_hash_id = models.CharField(max_length=64, null=True, blank=True)
+    openai_file_id = models.CharField(max_length=255, null=True, blank=True, help_text="OpenAI file ID for reuse")
 
     raw_companies = models.CharField(max_length=1000, null=True, blank=True)
     raw_company_count = models.PositiveIntegerField(null=True, blank=True)  # 0, 1, 2, etc.
