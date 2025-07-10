@@ -34,7 +34,6 @@ class DocumentAdmin(admin.ModelAdmin):
 
     readonly_fields = [
         'file_hash_id',
-        's3_key_display',
         'created_at',
         'updated_at',
         'upload_date',
@@ -48,7 +47,6 @@ class DocumentAdmin(admin.ModelAdmin):
                 'filename',
                 'file_directory',
                 'file_hash_id',
-                's3_key_display',
             )
         }),
         ('Document Details', {
@@ -120,14 +118,6 @@ class DocumentAdmin(admin.ModelAdmin):
 
     upload_date_formatted.short_description = 'Uploaded'
     upload_date_formatted.admin_order_field = 'upload_date'
-
-    def s3_key_display(self, obj):
-        return format_html(
-            '<code>{}</code>',
-            obj.s3_key
-        )
-
-    s3_key_display.short_description = 'S3 Key'
 
     def metadata_display(self, obj):
         if obj.metadata:

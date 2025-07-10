@@ -52,15 +52,6 @@ class DocumentUploadForm(forms.ModelForm):
             'publication_date',
         ]
         widgets = {
-            'file_directory': forms.Select(
-                choices=[
-                    ('UserDocuments', 'User Documents'),
-                    ('ResearchNotes', 'Research Notes'),
-                    ('TechnicalDocs', 'Technical Documentation'),
-                    ('LegalDocs', 'Legal Documents'),
-                ],
-                attrs={'class': 'form-control'}
-            ),
             'vector_group_id': forms.NumberInput(
                 attrs={
                     'class': 'form-control',
@@ -76,7 +67,6 @@ class DocumentUploadForm(forms.ModelForm):
             ),
         }
         labels = {
-            'file_directory': 'File Directory',
             'vector_group_id': 'Vector Group ID',
             'publication_date': 'Publication Date (Optional)',
         }
