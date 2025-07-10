@@ -1,0 +1,441 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>{{ page_title|default:"Create KnowledgeBase" }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #2d3748;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 1.1rem;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2d3748;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #ffffff;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+            font-family: inherit;
+        }
+
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: #a0aec0;
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .success-message,
+        .error-message {
+            padding: 16px;
+            border-radius: 12px;
+            margin-top: 20px;
+            font-weight: 500;
+            display: none;
+        }
+
+        .success-message {
+            background: #f0fff4;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .error-message {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+
+        .success-message.show,
+        .error-message.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .field-description {
+            font-size: 0.85rem;
+            color: #718096;
+            margin-top: 4px;
+        }
+
+        .required {
+            color: #e53e3e;
+        }
+
+        .nav-links {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .nav-links a {
+            color: #667eea;
+            text-decoration: none;
+            margin: 0 15px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #5a67d8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-links">
+            <a href="{% url 'agents:chat' %}">← Back to Chat</a>
+            <a href="{% url 'agents:manage_knowledge_bases' %}">Manage Knowledge Bases</a>
+        </div>
+
+        <div class="header">
+            <h1>Create KnowledgeBase</h1>
+            <p>Create a new knowledge base with OpenAI vector store</p>
+        </div>
+
+        <form id="knowledgeBaseForm">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="displayName">
+                    Display Name <span class="required">*</span>
+                </label>
+                <input
+                    type="text"
+                    id="displayName"
+                    name="displayName"
+                    required
+                    placeholder="Enter the display name for your knowledge base"
+                >
+                <div class="field-description">
+                    This will be used as both the display name and internal name
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="vectorGroupId">
+                    Vector Group ID <span class="required">*</span>
+                </label>
+                <input
+                    type="number"
+                    id="vectorGroupId"
+                    name="vectorGroupId"
+                    required
+                    min="1"
+                    placeholder="Enter the vector group identifier"
+                >
+                <div class="field-description">
+                    Unique positive integer for grouping related vectors
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="description">
+                    Description
+                </label>
+                <textarea
+                    id="description"
+                    name="description"
+                    placeholder="Describe the purpose and contents of this knowledge base..."
+                ></textarea>
+                <div class="field-description">
+                    Optional description to help identify and organize your knowledge base
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">
+                <span class="btn-text">Create KnowledgeBase</span>
+                <div class="loading" id="loadingSpinner">
+                    <div class="spinner"></div>
+                    <span>Creating...</span>
+                </div>
+            </button>
+        </form>
+
+        <div class="success-message" id="successMessage"></div>
+        <div class="error-message" id="errorMessage"></div>
+    </div>
+
+    <script>
+        document.getElementById('knowledgeBaseForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submitBtn');
+            const btnText = document.querySelector('.btn-text');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const successMessage = document.getElementById('successMessage');
+            const errorMessage = document.getElementById('errorMessage');
+
+            // Clear previous messages
+            successMessage.classList.remove('show');
+            errorMessage.classList.remove('show');
+
+            // Get form data
+            const formData = new FormData(this);
+            const data = {
+                displayName: formData.get('displayName').trim(),
+                vectorGroupId: formData.get('vectorGroupId'),
+                description: formData.get('description').trim()
+            };
+
+            // Validate required fields
+            if (!data.displayName || !data.vectorGroupId) {
+                showError('Please fill in all required fields.');
+                return;
+            }
+
+            // Validate vector_group_id is a positive integer
+            const vectorGroupIdNum = parseInt(data.vectorGroupId);
+            if (isNaN(vectorGroupIdNum) || vectorGroupIdNum <= 0) {
+                showError('Vector Group ID must be a positive integer.');
+                return;
+            }
+
+            // Show loading state
+            submitBtn.disabled = true;
+            btnText.style.display = 'none';
+            loadingSpinner.classList.add('active');
+
+            try {
+                // Validate required fields
+                if (!data.displayName || !data.vectorGroupId) {
+                    showError('Please fill in all required fields.');
+                    return;
+                }
+
+                // Create KnowledgeBase via API
+                const response = await createKnowledgeBase({
+                    display_name: data.displayName,
+                    vector_group_id: parseInt(data.vectorGroupId),
+                    description: data.description
+                });
+
+                if (response.success) {
+                    const kbData = response.data;
+                    showSuccess(`KnowledgeBase "${kbData.display_name}" created successfully! Vector Store ID: ${kbData.vector_store_id}`);
+
+                    // Reset form
+                    document.getElementById('knowledgeBaseForm').reset();
+                } else {
+                    showError(response.error || 'Failed to create knowledge base');
+                }
+
+            } catch (error) {
+                console.error('Error creating knowledge base:', error);
+                showError(`Failed to create knowledge base: ${error.message}`);
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                btnText.style.display = 'inline';
+                loadingSpinner.classList.remove('active');
+            }
+        });
+
+        async function createKnowledgeBase(data) {
+            // Get CSRF token from Django
+            const csrfToken = getCsrfToken();
+
+            const response = await fetch('/agents/api/knowledge-bases/create/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to create knowledge base');
+            }
+
+            return await response.json();
+        }
+
+        function getCsrfToken() {
+            // Get CSRF token from Django template or cookie
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'csrftoken') {
+                    return value;
+                }
+            }
+
+            // Fallback: look for CSRF token in meta tag or form
+            const metaToken = document.querySelector('meta[name="csrf-token"]');
+            if (metaToken) {
+                return metaToken.getAttribute('content');
+            }
+
+            // Get from hidden form field
+            const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+            if (csrfInput) {
+                return csrfInput.value;
+            }
+
+            console.warn('CSRF token not found');
+            return '';
+        }
+
+        function showSuccess(message) {
+            const successMessage = document.getElementById('successMessage');
+            successMessage.textContent = message;
+            successMessage.classList.add('show');
+        }
+
+        function showError(message) {
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorMessage.classList.add('show');
+        }
+
+        // Add real-time validation
+        document.getElementById('displayName').addEventListener('input', function() {
+            this.style.borderColor = this.value.trim() ? '#667eea' : '#e2e8f0';
+        });
+
+        document.getElementById('vectorGroupId').addEventListener('input', function() {
+            const value = parseInt(this.value);
+            this.style.borderColor = (!isNaN(value) && value > 0) ? '#667eea' : '#e2e8f0';
+        });
+    </script>
+</body>
+</html>
