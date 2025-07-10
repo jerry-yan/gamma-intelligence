@@ -47,7 +47,6 @@ class DocumentUploadForm(forms.ModelForm):
     class Meta:
         model = Document
         fields = [
-            'file_directory',
             'vector_group_id',
             'publication_date',
         ]
@@ -84,35 +83,40 @@ class DocumentUploadForm(forms.ModelForm):
         report_type_choice = cleaned_data.get('report_type_choice')
         custom_report_type = cleaned_data.get('custom_report_type')
 
-        # Determine final report type
-        if report_type_choice == 'custom':
-            if not custom_report_type:
-                raise ValidationError('Please enter a custom report type')
-            cleaned_data['report_type'] = custom_report_type
-        elif report_type_choice:
-            cleaned_data['report_type'] = report_type_choice
-        else:
-            cleaned_data['report_type'] = 'general'
+        # If 'custom' is selected, ensure custom_report_type is provided
+        if report_type_choice == 'custom' and not custom_report_type:
+            raise ValidationError({
+                'custom_report_type': 'Please enter a custom report type.'
+            })
 
         # Parse metadata JSON
         metadata_json = cleaned_data.get('metadata_json', '{}')
         try:
-            metadata = json.loads(metadata_json) if metadata_json else {}
-            # Validate metadata
-            if len(metadata) > 16:
-                raise ValidationError('Maximum 16 metadata key-value pairs allowed')
+            metadata = json.loads(metadata_json)
             cleaned_data['metadata'] = metadata
         except json.JSONDecodeError:
-            raise ValidationError('Invalid metadata format')
+            cleaned_data['metadata'] = {}
 
         return cleaned_data
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        # Set the report type from cleaned data
-        instance.report_type = self.cleaned_data.get('report_type', 'general')
+
+        # Set report_type based on selection
+        report_type_choice = self.cleaned_data.get('report_type_choice')
+        custom_report_type = self.cleaned_data.get('custom_report_type')
+
+        if report_type_choice == 'custom':
+            instance.report_type = custom_report_type
+        elif report_type_choice:
+            instance.report_type = report_type_choice
+        else:
+            instance.report_type = 'general'
+
         # Set metadata
         instance.metadata = self.cleaned_data.get('metadata', {})
+
         if commit:
             instance.save()
+
         return instance

@@ -97,29 +97,63 @@
     }
 
     /* Metadata Management */
-    .metadata-container {
+    .metadata-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
         max-height: 400px;
         overflow-y: auto;
         padding-right: 0.5rem;
     }
 
-    .metadata-row {
+    .metadata-item {
         display: flex;
-        gap: 0.75rem;
-        margin-bottom: 0.75rem;
-        align-items: center;
-        padding: 0.5rem;
+        flex-direction: column;
         background-color: #f8f9fa;
-        border-radius: 0.25rem;
-        transition: background-color 0.2s;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 0.75rem;
+        transition: all 0.2s;
+        position: relative;
     }
 
-    .metadata-row:hover {
+    .metadata-item:hover {
         background-color: #e9ecef;
+        border-color: #ced4da;
     }
 
-    .metadata-row input {
-        flex: 1;
+    .metadata-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .metadata-item-fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+    }
+
+    .metadata-item input {
+        font-size: 0.875rem;
+    }
+
+    .btn-remove-meta {
+        position: absolute;
+        top: 0.25rem;
+        right: 0.25rem;
+        background: transparent;
+        border: none;
+        color: #dc3545;
+        padding: 0.25rem;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .btn-remove-meta:hover {
+        color: #c82333;
     }
 
     .metadata-count {
@@ -156,19 +190,6 @@
         border-color: #1e7e34;
     }
 
-    .btn-remove {
-        background-color: #dc3545;
-        border-color: #dc3545;
-        color: white;
-        padding: 0.375rem 0.75rem;
-        font-size: 0.875rem;
-    }
-
-    .btn-remove:hover {
-        background-color: #c82333;
-        border-color: #bd2130;
-    }
-
     .btn-upload {
         background-color: #0d6efd;
         border-color: #0d6efd;
@@ -195,15 +216,40 @@
         margin-top: 1rem;
     }
 
+    /* All form inputs */
+    .form-control, .form-select {
+        display: block;
+        width: 100%;
+        padding: 0.375rem 0.75rem;
+        font-size: 1rem;
+        font-weight: 400;
+        line-height: 1.5;
+        color: #212529;
+        background-color: #fff;
+        background-clip: padding-box;
+        border: 1px solid #ced4da;
+        appearance: none;
+        border-radius: 0.25rem;
+        transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+    }
+
+    .form-control:focus, .form-select:focus {
+        color: #212529;
+        background-color: #fff;
+        border-color: #86b7fe;
+        outline: 0;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, .25);
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
-        .metadata-row {
-            flex-direction: column;
-            gap: 0.5rem;
+        .metadata-grid {
+            grid-template-columns: 1fr;
         }
 
-        .metadata-row input {
-            width: 100%;
+        .metadata-item-fields {
+            grid-template-columns: 1fr;
+            gap: 0.25rem;
         }
 
         .file-upload-zone {
@@ -253,43 +299,33 @@
 
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label for="{{ form.file_directory.id_for_label }}" class="form-label">
-                        {{ form.file_directory.label }}
+                    <label for="{{ form.vector_group_id.id_for_label }}" class="form-label">
+                        {{ form.vector_group_id.label }} <span class="text-danger">*</span>
                     </label>
-                    {{ form.file_directory|add_class:"form-control" }}
-                    {% if form.file_directory.errors %}
-                        <div class="invalid-feedback d-block">{{ form.file_directory.errors.0 }}</div>
+                    {{ form.vector_group_id }}
+                    <small class="form-text text-muted">Required for document categorization</small>
+                    {% if form.vector_group_id.errors %}
+                        <div class="invalid-feedback d-block">{{ form.vector_group_id.errors.0 }}</div>
                     {% endif %}
                 </div>
 
                 <div class="col-md-6 mb-3">
-                    <label for="{{ form.vector_group_id.id_for_label }}" class="form-label">
-                        {{ form.vector_group_id.label }} <span class="text-danger">*</span>
+                    <label for="{{ form.publication_date.id_for_label }}" class="form-label">
+                        {{ form.publication_date.label }}
                     </label>
-                    {{ form.vector_group_id|add_class:"form-control" }}
-                    <small class="form-text text-muted">Required for document categorization</small>
-                    {% if form.vector_group_id.errors %}
-                        <div class="invalid-feedback d-block">{{ form.vector_group_id.errors.0 }}</div>
+                    {{ form.publication_date }}
+                    {% if form.publication_date.errors %}
+                        <div class="invalid-feedback d-block">{{ form.publication_date.errors.0 }}</div>
                     {% endif %}
                 </div>
             </div>
 
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label for="{{ form.publication_date.id_for_label }}" class="form-label">
-                        {{ form.publication_date.label }}
-                    </label>
-                    {{ form.publication_date|add_class:"form-control" }}
-                    {% if form.publication_date.errors %}
-                        <div class="invalid-feedback d-block">{{ form.publication_date.errors.0 }}</div>
-                    {% endif %}
-                </div>
-
-                <div class="col-md-6 mb-3">
                     <label for="{{ form.report_type_choice.id_for_label }}" class="form-label">
                         {{ form.report_type_choice.label }}
                     </label>
-                    {{ form.report_type_choice|add_class:"form-select" }}
+                    {{ form.report_type_choice }}
                     {% if form.report_type_choice.errors %}
                         <div class="invalid-feedback d-block">{{ form.report_type_choice.errors.0 }}</div>
                     {% endif %}
@@ -298,7 +334,7 @@
                         <label for="{{ form.custom_report_type.id_for_label }}" class="form-label">
                             <i class="bi bi-pencil"></i> {{ form.custom_report_type.label }}
                         </label>
-                        {{ form.custom_report_type|add_class:"form-control" }}
+                        {{ form.custom_report_type }}
                         {% if form.custom_report_type.errors %}
                             <div class="invalid-feedback d-block">{{ form.custom_report_type.errors.0 }}</div>
                         {% endif %}
@@ -312,8 +348,8 @@
             <h4><i class="bi bi-tags"></i> Custom Metadata</h4>
             <p class="text-muted mb-3">Add custom key-value pairs to enhance document searchability</p>
 
-            <div class="metadata-container" id="metadata-container">
-                <!-- Metadata rows will be added here dynamically -->
+            <div class="metadata-grid" id="metadata-container">
+                <!-- Metadata items will be added here dynamically -->
             </div>
 
             <div class="d-flex justify-content-between align-items-center mt-3">
@@ -354,15 +390,30 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Apply Bootstrap classes to form elements
+    const formInputs = document.querySelectorAll('#upload-form input[type="text"], #upload-form input[type="number"], #upload-form input[type="date"]');
+    formInputs.forEach(input => {
+        if (!input.classList.contains('form-control')) {
+            input.classList.add('form-control');
+        }
+    });
+
+    const formSelects = document.querySelectorAll('#upload-form select');
+    formSelects.forEach(select => {
+        if (!select.classList.contains('form-select')) {
+            select.classList.add('form-select');
+        }
+    });
+
     // Elements
     const fileInput = document.querySelector('input[type="file"]');
     const fileUploadZone = document.getElementById('file-upload-zone');
     const fileSelected = document.getElementById('file-selected');
     const fileName = fileSelected.querySelector('.file-name');
     const fileSize = fileSelected.querySelector('.file-size');
-    const reportTypeSelect = document.getElementById('id_report_type_choice');
+    const reportTypeSelect = document.querySelector('select[name="report_type_choice"]');
     const customReportTypeGroup = document.getElementById('custom-report-type-group');
-    const customReportTypeInput = document.getElementById('id_custom_report_type');
+    const customReportTypeInput = document.querySelector('input[name="custom_report_type"]');
     const metadataContainer = document.getElementById('metadata-container');
     const addMetadataBtn = document.getElementById('add-metadata-btn');
     const metadataJsonInput = document.querySelector('input[name="metadata_json"]');
@@ -426,17 +477,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Report Type Selection
-    reportTypeSelect.addEventListener('change', function() {
-        if (this.value === 'custom') {
-            customReportTypeGroup.classList.add('show');
-            customReportTypeInput.required = true;
-            customReportTypeInput.focus();
-        } else {
-            customReportTypeGroup.classList.remove('show');
-            customReportTypeInput.required = false;
-            customReportTypeInput.value = '';
-        }
-    });
+    if (reportTypeSelect) {
+        reportTypeSelect.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customReportTypeGroup.classList.add('show');
+                if (customReportTypeInput) {
+                    customReportTypeInput.required = true;
+                    customReportTypeInput.focus();
+                }
+            } else {
+                customReportTypeGroup.classList.remove('show');
+                if (customReportTypeInput) {
+                    customReportTypeInput.required = false;
+                    customReportTypeInput.value = '';
+                }
+            }
+        });
+    }
 
     // Metadata Management
     function addMetadataRow(key = '', value = '') {
@@ -445,30 +502,32 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        const row = document.createElement('div');
-        row.className = 'metadata-row';
-        row.innerHTML = `
-            <input type="text" class="form-control form-control-sm metadata-key"
-                   placeholder="Key (e.g., ticker, sector)" value="${key}">
-            <input type="text" class="form-control form-control-sm metadata-value"
-                   placeholder="Value" value="${value}">
-            <button type="button" class="btn btn-remove btn-sm" onclick="removeMetadataRow(this)">
-                <i class="bi bi-trash"></i>
+        const item = document.createElement('div');
+        item.className = 'metadata-item';
+        item.innerHTML = `
+            <button type="button" class="btn-remove-meta" onclick="removeMetadataItem(this)" title="Remove">
+                <i class="bi bi-x-lg"></i>
             </button>
+            <div class="metadata-item-fields">
+                <input type="text" class="form-control form-control-sm metadata-key"
+                       placeholder="Key (e.g., ticker)" value="${key}">
+                <input type="text" class="form-control form-control-sm metadata-value"
+                       placeholder="Value" value="${value}">
+            </div>
         `;
 
-        metadataContainer.appendChild(row);
+        metadataContainer.appendChild(item);
         metadataCount++;
         updateMetadataCount();
 
-        // Focus on the key input if it's a new row
+        // Focus on the key input if it's a new item
         if (!key) {
-            row.querySelector('.metadata-key').focus();
+            item.querySelector('.metadata-key').focus();
         }
     }
 
-    window.removeMetadataRow = function(button) {
-        button.closest('.metadata-row').remove();
+    window.removeMetadataItem = function(button) {
+        button.closest('.metadata-item').remove();
         metadataCount--;
         updateMetadataCount();
     };
@@ -499,11 +558,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Collect metadata
         const metadata = {};
-        const rows = metadataContainer.querySelectorAll('.metadata-row');
+        const items = metadataContainer.querySelectorAll('.metadata-item');
 
-        rows.forEach(row => {
-            const key = row.querySelector('.metadata-key').value.trim();
-            const value = row.querySelector('.metadata-value').value.trim();
+        items.forEach(item => {
+            const key = item.querySelector('.metadata-key').value.trim();
+            const value = item.querySelector('.metadata-value').value.trim();
 
             if (key && value) {
                 metadata[key] = value;
@@ -532,18 +591,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }, 200);
     });
-
-    // Add template filter fallback
-    if (!window.add_class) {
-        const inputs = document.querySelectorAll('input[type="text"], input[type="number"], select');
-        inputs.forEach(input => {
-            if (input.tagName === 'SELECT') {
-                input.classList.add('form-select');
-            } else {
-                input.classList.add('form-control');
-            }
-        });
-    }
 });
 </script>
 {% endblock %}
