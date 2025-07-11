@@ -105,6 +105,75 @@ def categorize_document(client, model: str, file_id: str, company_count: int, co
     return json.loads(response.output_text).get('report_type')
 
 
+def categorize_document_v2(client, model: str, file_id: str, company_count: int, companies: str, title: str) -> tuple:
+    """
+    Categorize a document and assign vector group ID based on its content.
+    Returns a tuple of (report_type, vector_group_id)
+    """
+    # Determine which categorization instructions to use
+    if company_count <= 0:
+        cat_key = "no-company"
+        report_options = ["Initiation Report", "Company Update", "Quarter Preview", "Quarter Review", "Industry Note",
+                          "Macro/Strategy Report", "Invalid"]
+        prompt = f"There seems to be no company mentioned in the report but the title is '{title}'"
+
+    elif company_count == 1:
+        cat_key = "single-company"
+        report_options = ["Initiation Report", "Company Update", "Quarter Preview", "Quarter Review", "Industry Note",
+                          "Macro/Strategy Report", "Invalid"]
+        prompt = f"The report should be about {companies} and the title is '{title}'"
+
+    else:
+        cat_key = "multi-company"
+        report_options = ["Initiation Report", "Company Update", "Quarter Preview", "Quarter Review", "Industry Note",
+                          "Macro/Strategy Report", "Invalid"]
+        prompt = f"There are multiple companies in the report which include {companies} and the title is '{title}'"
+
+    cat_instruction = CATEGORIZATION_INSTRUCTIONS[cat_key]
+
+    enum_options = [101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116]
+
+    response = client.responses.create(
+        model=model,
+        instructions=cat_instruction,
+        input=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_file",
+                        "file_id": file_id,
+                    },
+                    {
+                        "type": "input_text",
+                        "text": prompt,
+                    },
+                ]
+            }
+        ],
+        text={
+            "format": {
+                "type": "json_schema",
+                "name": "report_categorization",
+                "strict": True,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "report_type": {"type": "string", "enum": report_options},
+                        "vector_group_id": {"type": "number", "enum": enum_options}
+                    },
+                    "required": ["report_type", "vector_group_id"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+        temperature=0.001,
+    )
+
+    result = json.loads(response.output_text)
+    return result.get('report_type'), result.get('vector_group_id')
+
+
 def summarize_document(client, model: str, file_id: str, instructions: str, schema) -> dict:
     response = client.responses.create(
         model=model,
@@ -158,14 +227,26 @@ def summarize_documents():
                 note.save(update_fields=['openai_file_id'])
 
             # Categorize if needed
+            # if not note.report_type:
+            #     print(f"🔖 Categorizing {note.file_id}...")
+            #     note.report_type = categorize_document(
+            #         client, MODEL, file_id, note.raw_company_count or 0,
+            #                                 note.raw_companies or "", note.raw_title or ""
+            #     )
+            #     note.save(update_fields=["report_type"])
+            #     print(f"🔖 Categorized {note.file_id} → {note.report_type}")
+
+            # Categorize if needed - using the new v2 function
             if not note.report_type:
                 print(f"🔖 Categorizing {note.file_id}...")
-                note.report_type = categorize_document(
+                report_type, vector_group_id = categorize_document_v2(
                     client, MODEL, file_id, note.raw_company_count or 0,
                                             note.raw_companies or "", note.raw_title or ""
                 )
-                note.save(update_fields=["report_type"])
-                print(f"🔖 Categorized {note.file_id} → {note.report_type}")
+                note.report_type = report_type
+                note.vector_group_id = vector_group_id
+                note.save(update_fields=["report_type", "vector_group_id"])
+                print(f"🔖 Categorized {note.file_id} → {note.report_type} (Vector Group: {note.vector_group_id})")
 
             if note.report_type == "Invalid":
                 print(f"⚠️  Skipping invalid report: {note.file_id}")
@@ -235,12 +316,22 @@ def process_single_document(note):
             note.save(update_fields=['openai_file_id'])
 
         # Categorize if needed
+        # if not note.report_type:
+        #     note.report_type = categorize_document(
+        #         client, MODEL, file_id, note.raw_company_count or 0,
+        #                                 note.raw_companies or "", note.raw_title or ""
+        #     )
+        #     note.save(update_fields=["report_type"])
+
+        # Categorize if needed - using the new v2 function
         if not note.report_type:
-            note.report_type = categorize_document(
+            report_type, vector_group_id = categorize_document_v2(
                 client, MODEL, file_id, note.raw_company_count or 0,
                                         note.raw_companies or "", note.raw_title or ""
             )
-            note.save(update_fields=["report_type"])
+            note.report_type = report_type
+            note.vector_group_id = vector_group_id
+            note.save(update_fields=["report_type", "vector_group_id"])
 
         if note.report_type == "Invalid":
             return False

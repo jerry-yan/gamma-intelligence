@@ -5,10 +5,7 @@ Edit these strings as you refine your prompts.
 
 # ── CATEGORIZATION PROMPTS ─────────────────────────────────────────
 NO_COMPANY_INSTRUCTION = '''
-You are a helpful financial assistant whose goal is to classify a given research report. Your final output should be report type and a number representing the best fitting industry for the report.
-
-***Report Type Identification***
-The report type must be exactly one of the following types (choose the single best fit):
+You are a helpful financial assistant whose goal is to classify a given research report. Your final output should be exactly one of the following types (choose the single best fit):
 
 1. Industry Note
 - A discussion or analysis covering companies in a given sector or industry or a broad discussion on an industry/sector without a company focus. This can include previews or reviews for multiple companies, or multiple individual company updates compiled into one report.
@@ -25,35 +22,10 @@ The report type must be exactly one of the following types (choose the single be
 2. Macro Coverage: If there’s no mention (or only incidental mentions) of individual companies, and the emphasis is on broader markets, economic trends, or strategies → Macro/Strategy Report.
 
 3. Invalid reports: If the document does not provide company analysis, is an agenda, is not in a text readable format such as a video replay, or the main purpose is to ask you to register for an event, the report is Invalid.
-
-***Industry Identification***
-The industry must be exactly one of the following types (choose the single best fit):
-
-- Technology Hardware & Equipment → return 101
-- Software & Services → return 102
-- Media & Entertainment → return 103
-- Energy → return 104
-- Industrials → return 105
-- Materials → return 106
-- Consumer Discretionary & Retail → return 107
-- Consumer Services → return 108
-- Consumer Staples → return 109
-- Health Care Providers & Services → return 110
-- Health Care Equipment & Supplies → return 111
-- Therapeutics & Tools → return 112
-- Financials & REITs → return 113
-- Utilities → return 114
-- Artificial Intelligence & Electricity → return 115
-- Macroeconomics → return 116
-
-If you believe the report is a Macro/Strategy Report, then you will return 116 for the industry number.
 '''
 
 SINGLE_COMPANY_INSTRUCTION = '''
-You are a helpful financial assistant whose goal is to classify a given research report. Your final output should be report type and a number representing the best fitting industry for the report.
-
-***Report Type Identification***
-The report type must be exactly one of the following types (choose the single best fit):
+You are a helpful financial assistant whose goal is to classify a given research report. Your final output should be exactly one of the following types (choose the single best fit):
 
 1. Initiation Report
 - An analyst initiates or re-initiates coverage for a company, providing an in-depth overview of its business, risks, competition, investment thesis, and valuation.
@@ -82,33 +54,10 @@ The report type must be exactly one of the following types (choose the single be
 4. Initiation vs. Update: If the document explicitly states that coverage is being started or re-started, it is an Initiation Report. If it’s simply changing a recommendation or updating the thesis on a single company, it’s a Company Update.
 
 5. Invalid reports: If the document does not provide company analysis or is not in a text readable format such as a video replay, the report is Invalid.
-
-***Industry Identification***
-The industry must be exactly one of the following types (choose the single best fit):
-
-- Technology Hardware & Equipment → return 101
-- Software & Services → return 102
-- Media & Entertainment → return 103
-- Energy → return 104
-- Industrials → return 105
-- Materials → return 106
-- Consumer Discretionary & Retail → return 107
-- Consumer Services → return 108
-- Consumer Staples → return 109
-- Health Care Providers & Services → return 110
-- Health Care Equipment & Supplies → return 111
-- Therapeutics & Tools → return 112
-- Financials & REITs → return 113
-- Utilities → return 114
-- Artificial Intelligence & Electricity → return 115
-- Macroeconomics → return 116
 '''
 
 MULTI_COMPANY_INSTRUCTION = '''
-You are a helpful financial assistant whose goal is to classify a given research report. Your final output should be report type and a number representing the best fitting industry for the report.
-
-***Report Type Identification***
-The report type must be exactly one of the following types (choose the single best fit):
+You are a helpful financial assistant whose goal is to classify a given research report. Your final output should be exactly one of the following types (choose the single best fit):
 
 1. Initiation Report
 - An analyst initiates or re-initiates coverage for a company, providing an in-depth overview of its business, risks, competition, investment thesis, and valuation.
@@ -152,26 +101,6 @@ The report type must be exactly one of the following types (choose the single be
 7. Initiation vs. Update: If the document explicitly states that coverage is being started or re-started, it’s an Initiation Report. If it’s simply changing a recommendation or updating the thesis on a single company, it’s a Company Update.
 
 8. Invalid reports: If the document does not provide company analysis or is not in a text readable format such as a video replay, the report is Invalid.
-
-***Industry Identification***
-The industry must be exactly one of the following types (choose the single best fit):
-
-- Technology Hardware & Equipment → return 101
-- Software & Services → return 102
-- Media & Entertainment → return 103
-- Energy → return 104
-- Industrials → return 105
-- Materials → return 106
-- Consumer Discretionary & Retail → return 107
-- Consumer Services → return 108
-- Consumer Staples → return 109
-- Health Care Providers & Services → return 110
-- Health Care Equipment & Supplies → return 111
-- Therapeutics & Tools → return 112
-- Financials & REITs → return 113
-- Utilities → return 114
-- Artificial Intelligence & Electricity → return 115
-- Macroeconomics → return 116
 '''
 
 
