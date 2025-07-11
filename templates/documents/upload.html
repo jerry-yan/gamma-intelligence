@@ -290,13 +290,13 @@
 
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label for="{{ form.vector_group_id.id_for_label }}" class="form-label">
-                        {{ form.vector_group_id.label }} <span class="text-danger">*</span>
+                    <label for="{{ form.knowledge_base.id_for_label }}" class="form-label">
+                        {{ form.knowledge_base.label }} <span class="text-danger">*</span>
                     </label>
-                    {{ form.vector_group_id }}
-                    <small class="form-text text-muted">Required for document categorization</small>
-                    {% if form.vector_group_id.errors %}
-                        <div class="invalid-feedback d-block">{{ form.vector_group_id.errors.0 }}</div>
+                    {{ form.knowledge_base }}
+                    <small class="form-text text-muted">{{ form.knowledge_base.help_text }}</small>
+                    {% if form.knowledge_base.errors %}
+                        <div class="invalid-feedback d-block">{{ form.knowledge_base.errors.0 }}</div>
                     {% endif %}
                 </div>
 
@@ -367,7 +367,7 @@
         <!-- Submit Section -->
         <div class="text-center mt-4">
             <button type="submit" class="btn btn-primary btn-upload" id="submit-btn">
-                ⬆ Upload Document
+                Upload
             </button>
         </div>
     </form>

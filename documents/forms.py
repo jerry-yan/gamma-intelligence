@@ -2,6 +2,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from .models import Document
+from agents.models import KnowledgeBase
 import json
 
 
@@ -10,6 +11,16 @@ class DocumentUploadForm(forms.ModelForm):
         label='Select File',
         help_text='Upload a PDF or other document file',
         widget=forms.FileInput(attrs={'accept': '.pdf,.doc,.docx,.txt,.xlsx,.xls'})
+    )
+
+    # Knowledge Base selection dropdown
+    knowledge_base = forms.ModelChoiceField(
+        queryset=KnowledgeBase.objects.filter(is_active=True),
+        label='Knowledge Base',
+        required=True,
+        empty_label='-- Select Knowledge Base --',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        help_text='Select the knowledge base for this document'
     )
 
     # Custom report type field that allows dropdown or custom input
@@ -47,17 +58,9 @@ class DocumentUploadForm(forms.ModelForm):
     class Meta:
         model = Document
         fields = [
-            'vector_group_id',
             'publication_date',
         ]
         widgets = {
-            'vector_group_id': forms.NumberInput(
-                attrs={
-                    'class': 'form-control',
-                    'min': '1',
-                    'placeholder': 'Enter vector group ID (required)'
-                }
-            ),
             'publication_date': forms.DateInput(
                 attrs={
                     'class': 'form-control',
@@ -66,17 +69,13 @@ class DocumentUploadForm(forms.ModelForm):
             ),
         }
         labels = {
-            'vector_group_id': 'Vector Group ID',
             'publication_date': 'Publication Date (Optional)',
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Make vector_group_id required
-        self.fields['vector_group_id'].required = True
-        self.fields['vector_group_id'].error_messages = {
-            'required': 'Vector Group ID is required'
-        }
+        # Customize the display of knowledge bases in the dropdown
+        self.fields['knowledge_base'].label_from_instance = lambda obj: obj.display_name
 
     def clean(self):
         cleaned_data = super().clean()
@@ -101,6 +100,11 @@ class DocumentUploadForm(forms.ModelForm):
 
     def save(self, commit=True):
         instance = super().save(commit=False)
+
+        # Set vector_group_id from the selected knowledge base
+        knowledge_base = self.cleaned_data.get('knowledge_base')
+        if knowledge_base:
+            instance.vector_group_id = knowledge_base.vector_group_id
 
         # Set report_type based on selection
         report_type_choice = self.cleaned_data.get('report_type_choice')
