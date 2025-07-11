@@ -17,10 +17,10 @@ class DocumentUploadForm(forms.ModelForm):
     knowledge_base = forms.ModelChoiceField(
         queryset=KnowledgeBase.objects.filter(is_active=True),
         label='Knowledge Base',
-        required=True,
-        empty_label='-- Select Knowledge Base --',
+        required=False,  # Made optional
+        empty_label='-- None (No Knowledge Base) --',
         widget=forms.Select(attrs={'class': 'form-select'}),
-        help_text='Select the knowledge base for this document'
+        help_text='Select the knowledge base for this document (optional)'
     )
 
     # Custom report type field that allows dropdown or custom input

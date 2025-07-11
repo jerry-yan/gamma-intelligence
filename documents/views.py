@@ -139,7 +139,7 @@ def upload_to_s3(local_file_path, s3_key):
 
 @login_required
 def upload_document(request):
-    """Handle document upload"""
+    """Handle document upload with duplicate check"""
     if request.method == 'POST':
         form = DocumentUploadForm(request.POST, request.FILES)
         if form.is_valid():
@@ -157,20 +157,42 @@ def upload_document(request):
                 # Get file hash
                 file_hash = get_file_hash(temp_path, file_extension)
 
-                # Check if file already exists
-                existing_doc = Document.objects.filter(file_hash_id=file_hash).first()
+                # Get the vector_group_id from the selected knowledge base
+                knowledge_base = form.cleaned_data.get('knowledge_base')
+                vector_group_id = knowledge_base.vector_group_id if knowledge_base else None
+
+                # Check if document already exists with same file_hash AND vector_group_id
+                existing_doc = Document.objects.filter(
+                    file_hash_id=file_hash,
+                    vector_group_id=vector_group_id
+                ).first()
 
                 if existing_doc:
-                    # Reuse existing file's S3 location
+                    # Document already exists with same hash and vector_group_id
+                    kb_name = knowledge_base.display_name if knowledge_base else "No Knowledge Base"
+                    messages.error(
+                        request,
+                        f'This document already exists in "{kb_name}". '
+                        f'The same file cannot be uploaded twice to the same knowledge base.'
+                    )
+                    return redirect('documents:upload')
+
+                # Check if file exists in S3 (with any vector_group_id)
+                existing_file_in_s3 = Document.objects.filter(file_hash_id=file_hash).first()
+
+                if existing_file_in_s3:
+                    # Reuse existing file's S3 location, but create new document record
                     document = form.save(commit=False)
                     document.filename = uploaded_file.name
                     document.file_hash_id = file_hash
-                    document.file_directory = existing_doc.file_directory
+                    document.file_directory = existing_file_in_s3.file_directory
                     document.save()
 
+                    kb_name = knowledge_base.display_name if knowledge_base else "No Knowledge Base"
                     messages.success(
                         request,
-                        f'Document "{uploaded_file.name}" linked to existing file (hash: {file_hash[:8]}...)'
+                        f'Document "{uploaded_file.name}" added to "{kb_name}" '
+                        f'(reusing existing file with hash: {file_hash[:8]}...)'
                     )
                 else:
                     # Upload new file to S3
@@ -184,9 +206,11 @@ def upload_document(request):
                     document.file_directory = s3_url
                     document.save()
 
+                    kb_name = knowledge_base.display_name if knowledge_base else "No Knowledge Base"
                     messages.success(
                         request,
-                        f'Document "{uploaded_file.name}" uploaded successfully with hash {file_hash[:8]}...'
+                        f'Document "{uploaded_file.name}" uploaded successfully to "{kb_name}" '
+                        f'with hash {file_hash[:8]}...'
                     )
 
                 return redirect('documents:upload')

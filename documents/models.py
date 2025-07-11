@@ -85,6 +85,9 @@ class Document(models.Model):
         ]
         verbose_name = 'Document'
         verbose_name_plural = 'Documents'
+        unique_together = [
+            ['file_hash_id', 'vector_group_id']
+        ]
 
     def __str__(self):
         return f"{self.filename} ({self.report_type})"
