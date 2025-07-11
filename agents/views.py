@@ -144,7 +144,7 @@ def api_chat_stream(request):
                     stream_params["tools"] = [{
                         "type": "file_search",
                         "vector_store_ids": [knowledge_base.vector_store_id],
-                        "max_num_results": 5,
+                        "max_num_results": 6,
                     }]
                     yield f"data: {json.dumps({'type': 'info', 'message': f'Using knowledge base: {knowledge_base.display_name}'})}\n\n"
 
@@ -185,6 +185,57 @@ def api_chat_stream(request):
                                 'quote': chunk.citation.quote
                             })
 
+                        # === REASONING EVENTS (keep connection alive) ===
+                        elif chunk.type == 'response.reasoning_summary_part.added':
+                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_part_added'})}\n\n"
+
+                        elif chunk.type == 'response.reasoning_summary_part.done':
+                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_part_done'})}\n\n"
+
+                        elif chunk.type == 'response.reasoning_summary_text.delta':
+                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_text_delta'})}\n\n"
+
+                        elif chunk.type == 'response.reasoning_summary_text.done':
+                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_text_done'})}\n\n"
+
+                        elif chunk.type == 'response.reasoning.delta':
+                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_delta'})}\n\n"
+
+                        elif chunk.type == 'response.reasoning.done':
+                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_done'})}\n\n"
+
+                        elif chunk.type == 'response.reasoning_summary.delta':
+                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_summary_delta'})}\n\n"
+
+                        elif chunk.type == 'response.reasoning_summary.done':
+                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_summary_done'})}\n\n"
+
+                        # === OUTPUT ITEM EVENTS ===
+                        elif chunk.type == 'response.output_item.added':
+                            yield f"data: {json.dumps({'type': 'output', 'status': 'item_added'})}\n\n"
+
+                        elif chunk.type == 'response.output_item.done':
+                            yield f"data: {json.dumps({'type': 'output', 'status': 'item_done'})}\n\n"
+
+                        # === CONTENT PART EVENTS ===
+                        elif chunk.type == 'response.content_part.added':
+                            yield f"data: {json.dumps({'type': 'content_part', 'status': 'added'})}\n\n"
+
+                        elif chunk.type == 'response.content_part.done':
+                            yield f"data: {json.dumps({'type': 'content_part', 'status': 'done'})}\n\n"
+
+                        # === TOOL CALL DELTA EVENTS (updated) ===
+                        elif chunk.type == 'response.output_tool_calls.delta':
+                            if hasattr(chunk, 'delta') and hasattr(chunk.delta, 'tool_calls'):
+                                for tool_call in chunk.delta.tool_calls:
+                                    if tool_call.type == 'file_search':
+                                        tool_uses.append('file_search')
+                                        yield f"data: {json.dumps({'type': 'tool_use', 'tool': 'file_search', 'status': 'searching'})}\n\n"
+
+                        # Log unhandled events for debugging
+                        else:
+                            logger.debug(f"Unhandled chunk type: {chunk.type}")
+
                 # Update session with response ID
                 if response_id and response_id != session.response_id:
                     session.response_id = response_id
@@ -215,12 +266,13 @@ def api_chat_stream(request):
                 logger.error(f"Streaming error in session {session.session_id}: {str(e)}", exc_info=True)
                 yield f"data: {json.dumps({'type': 'error', 'error': 'An error occurred while generating the response.'})}\n\n"
 
-        # Return streaming response
+        # Return streaming response with keep-alive headers
         response = StreamingHttpResponse(
             event_stream(),
             content_type='text/event-stream'
         )
         response['Cache-Control'] = 'no-cache'
+        response['Connection'] = 'keep-alive'  # Critical for Heroku
         response['X-Accel-Buffering'] = 'no'
         return response
 
