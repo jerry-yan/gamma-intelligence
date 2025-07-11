@@ -234,17 +234,6 @@
         box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, .25);
     }
 
-    /* Icon replacements for when Bootstrap Icons don't load */
-    .icon-cloud-upload::before { content: "☁ "; }
-    .icon-file-upload::before { content: "📄 "; }
-    .icon-check::before { content: "✓ "; }
-    .icon-info::before { content: "ℹ "; }
-    .icon-tags::before { content: "🏷 "; }
-    .icon-plus::before { content: "+ "; }
-    .icon-upload::before { content: "⬆ "; }
-    .icon-back::before { content: "← "; }
-    .icon-close::before { content: "✕"; }
-
     /* Responsive */
     @media (max-width: 768px) {
         .metadata-item-fields {
@@ -273,11 +262,11 @@
 
         <!-- File Upload Section -->
         <div class="form-section">
-            <h4><span class="icon-cloud-upload"></span>Select File</h4>
+            <h4>☁ Select File</h4>
             <div class="file-upload-zone" id="file-upload-zone">
                 <div class="upload-content">
                     <div class="upload-icon">
-                        <span class="icon-file-upload" style="font-size: 3rem;">📄</span>
+                        📄
                     </div>
                     <h5>Drop file here or click to browse</h5>
                     <p class="text-muted mb-0">Supported formats: PDF, DOC, DOCX, TXT, XLS, XLSX</p>
@@ -285,7 +274,7 @@
                 </div>
                 {{ form.file }}
                 <div id="file-selected" class="file-selected" style="display: none;">
-                    <span class="icon-check"></span>
+                    ✓
                     <span class="file-name"></span>
                     <small class="file-size text-muted ms-2"></small>
                 </div>
@@ -297,7 +286,7 @@
 
         <!-- Document Details Section -->
         <div class="form-section">
-            <h4><span class="icon-info"></span>Document Details</h4>
+            <h4>ℹ Document Details</h4>
 
             <div class="row">
                 <div class="col-md-6 mb-3">
@@ -334,7 +323,7 @@
 
                     <div class="custom-report-group" id="custom-report-type-group">
                         <label for="{{ form.custom_report_type.id_for_label }}" class="form-label">
-                            <span class="icon-pencil">✏</span> {{ form.custom_report_type.label }}
+                            ✏ {{ form.custom_report_type.label }}
                         </label>
                         {{ form.custom_report_type }}
                         {% if form.custom_report_type.errors %}
@@ -347,7 +336,7 @@
 
         <!-- Metadata Section -->
         <div class="form-section">
-            <h4><span class="icon-tags"></span>Custom Metadata</h4>
+            <h4>🏷 Custom Metadata</h4>
             <p class="text-muted mb-3">Add custom key-value pairs to enhance document searchability</p>
 
             <div class="metadata-grid" id="metadata-container">
@@ -356,7 +345,7 @@
 
             <div class="d-flex justify-content-between align-items-center mt-3">
                 <button type="button" class="btn btn-add-metadata btn-sm" id="add-metadata-btn">
-                    <span class="icon-plus"></span>Add Metadata
+                    Add Metadata
                 </button>
                 <div class="metadata-count">
                     <span id="metadata-count">0</span> / 16 metadata fields
@@ -377,11 +366,8 @@
 
         <!-- Submit Section -->
         <div class="text-center mt-4">
-            <button type="button" class="btn btn-secondary me-2" onclick="window.history.back()">
-                <span class="icon-back"></span>Cancel
-            </button>
             <button type="submit" class="btn btn-primary btn-upload" id="submit-btn">
-                <span class="icon-upload"></span>Upload Document
+                ⬆ Upload Document
             </button>
         </div>
     </form>
@@ -505,7 +491,7 @@ document.addEventListener('DOMContentLoaded', function() {
         item.className = 'metadata-item';
         item.innerHTML = `
             <button type="button" class="btn-remove-meta" onclick="removeMetadataItem(this)" title="Remove">
-                <span class="icon-close">✕</span>
+                ✕
             </button>
             <div class="metadata-item-fields">
                 <input type="text" class="form-control form-control-sm metadata-key"
@@ -536,9 +522,9 @@ document.addEventListener('DOMContentLoaded', function() {
         addMetadataBtn.disabled = metadataCount >= maxMetadata;
 
         if (metadataCount >= maxMetadata) {
-            addMetadataBtn.innerHTML = '<span class="icon-close">✕</span> Maximum Reached';
+            addMetadataBtn.innerHTML = 'Maximum Reached';
         } else {
-            addMetadataBtn.innerHTML = '<span class="icon-plus">+</span> Add Metadata';
+            addMetadataBtn.innerHTML = 'Add Metadata';
         }
     }
 
