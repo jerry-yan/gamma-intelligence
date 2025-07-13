@@ -6,11 +6,15 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from botocore.exceptions import ClientError
-import logging
 from .forms import DocumentUploadForm
 from .models import Document
 from utils.file_utils import get_s3_client
 import fitz  # PyMuPDF
+import logging
+from datetime import datetime
+from utils.file_utils import get_or_upload_file_to_openai
+from research_summaries.openai_utils import get_openai_client
+from research_summaries.processors.document_vectorizer import upload_to_vector_store
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +143,16 @@ def upload_to_s3(local_file_path, s3_key):
 
 @login_required
 def upload_document(request):
-    """Handle document upload with duplicate check"""
+    """
+    Handle document upload with duplicate check and automatic vectorization.
+
+    Improvements:
+    - Copies openai_file_id when reusing existing files from S3
+    - Automatically uploads documents to OpenAI if not already uploaded
+    - Adds documents to vector stores with metadata attributes
+    - Sets is_vectorized flag when successfully added to vector store
+    - Provides user feedback about vectorization status
+    """
     if request.method == 'POST':
         form = DocumentUploadForm(request.POST, request.FILES)
         if form.is_valid():
@@ -186,6 +199,7 @@ def upload_document(request):
                     document.filename = uploaded_file.name
                     document.file_hash_id = file_hash
                     document.file_directory = existing_file_in_s3.file_directory
+                    document.openai_file_id = existing_file_in_s3.openai_file_id  # Copy OpenAI file ID
                     document.save()
 
                     kb_name = knowledge_base.display_name if knowledge_base else "No Knowledge Base"
@@ -212,6 +226,86 @@ def upload_document(request):
                         f'Document "{uploaded_file.name}" uploaded successfully to "{kb_name}" '
                         f'with hash {file_hash[:8]}...'
                     )
+
+                # Vectorization process (only if vector_group_id is set)
+                # Documents without vector_group_id or failed vectorizations can be processed
+                # later using a batch vectorization process similar to research notes
+                if vector_group_id and knowledge_base:
+                    try:
+                        logger.info(f"🔮 Starting vectorization for document {document.id}")
+
+                        # Get OpenAI client
+                        client = get_openai_client()
+
+                        # Check if we need to upload to OpenAI
+                        if not document.openai_file_id:
+                            logger.info(f"📤 Uploading document {document.id} to OpenAI...")
+                            openai_file_id = get_or_upload_file_to_openai(
+                                document.file_directory,
+                                existing_file_id=None
+                            )
+                            document.openai_file_id = openai_file_id
+                            document.save(update_fields=['openai_file_id'])
+                            logger.info(f"💾 OpenAI file ID saved: {openai_file_id}")
+                        else:
+                            logger.info(f"♻️  Using existing OpenAI file ID: {document.openai_file_id}")
+
+                        # Prepare attributes for vector store
+                        attributes = document.metadata.copy() if document.metadata else {}
+
+                        # Add standard fields
+                        attributes.update({
+                            "hash_id": document.file_hash_id,
+                            "report_type": document.report_type,
+                            "filename": document.filename,
+                        })
+
+                        # Add publication date if available
+                        if document.publication_date:
+                            attributes["date"] = document.publication_date.isoformat()
+                            attributes["timestamp"] = int(datetime.combine(
+                                document.publication_date,
+                                datetime.min.time()
+                            ).timestamp())
+
+                        # Remove any None values
+                        attributes = {k: v for k, v in attributes.items() if v is not None}
+                        logger.info(f"📋 Prepared {len(attributes)} metadata attributes")
+
+                        # Upload to vector store
+                        vector_store_id = knowledge_base.vector_store_id
+                        logger.info(f"📊 Uploading to vector store {vector_store_id}")
+
+                        success = upload_to_vector_store(
+                            client,
+                            vector_store_id,
+                            document.openai_file_id,
+                            attributes
+                        )
+
+                        if success:
+                            document.is_vectorized = True
+                            document.save(update_fields=['is_vectorized'])
+                            logger.info(f"✅ Document {document.id} successfully vectorized")
+                            messages.info(
+                                request,
+                                f'Document successfully added to vector store for "{kb_name}"'
+                            )
+                        else:
+                            logger.warning(f"⚠️  Failed to vectorize document {document.id}")
+                            messages.warning(
+                                request,
+                                f'Document uploaded but could not be added to vector store. '
+                                f'It will be processed later.'
+                            )
+
+                    except Exception as e:
+                        logger.error(f"❌ Error during vectorization of document {document.id}: {e}")
+                        messages.warning(
+                            request,
+                            f'Document uploaded successfully but vectorization failed: {str(e)}. '
+                            f'It will be processed later.'
+                        )
 
                 return redirect('documents:upload')
 
