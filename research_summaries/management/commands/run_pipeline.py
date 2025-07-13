@@ -25,14 +25,21 @@ class Command(BaseCommand):
                 # Status 0: Not Downloaded, 1: Downloaded, 2: Preprocessed
                 pending_notes = ResearchNote.objects.filter(status__in=[0, 1, 2])
                 advanced_ready_notes = ResearchNote.objects.filter(status=3, is_advanced_summary=True)
+                vectorization_ready_notes = ResearchNote.objects.filter(status__in=[3, 4], is_vectorized=False)
 
                 pending_count = pending_notes.count()
                 advanced_count = advanced_ready_notes.count()
+                vectorization_count = vectorization_ready_notes.count()
 
                 # Run advanced summarization if there are notes marked for it
                 if advanced_count > 0:
                     self.stdout.write(f'🧠 Advanced summarizing {advanced_count} documents with GPT o3-mini...')
                     call_command('summarize_documents_advanced')
+
+                # Run vectorization if there are summarized notes not yet vectorized
+                if vectorization_count > 0:
+                    self.stdout.write(f'🔮 Vectorizing {vectorization_count} documents...')
+                    call_command('vectorize_documents')
 
                 if pending_count == 0:
                     elapsed = timezone.now() - start_time
@@ -40,9 +47,9 @@ class Command(BaseCommand):
                         self.style.SUCCESS(f'✅ Email processing completed in {elapsed.total_seconds():.1f}s')
                     )
                     self.stdout.write(
-                        self.style.WARNING('📭 No pending work found - sleeping for 30 minutes...')
+                        self.style.WARNING('📭 No pending work found - sleeping for 20 minutes...')
                     )
-                    time.sleep(30 * 60)  # 30 minutes
+                    time.sleep(20 * 60)  # 20 minutes
                     continue
 
                 self.stdout.write('📝 Summarizing documents...')
