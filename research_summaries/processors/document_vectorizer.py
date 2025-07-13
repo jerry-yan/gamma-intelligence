@@ -11,6 +11,7 @@ Process ResearchNotes that have been summarized but not yet vectorized:
 import logging
 import time
 from typing import Set, Optional
+from datetime import datetime
 
 from research_summaries.models import ResearchNote
 from agents.models import StockTicker, KnowledgeBase
@@ -163,7 +164,8 @@ def vectorize_research_note(note: ResearchNote, client=None) -> bool:
                 "source": note.source if note.source else None,
                 "author": note.raw_author if note.raw_author else None,
                 "date": note.publication_date.isoformat() if note.publication_date else None,
-                "timestamp": int(note.publication_date.timestamp()) if note.publication_date else None,
+                "timestamp": int(datetime.combine(note.publication_date, datetime.min.time()).timestamp())
+                                if note.publication_date else None,
                 "title": note.raw_title if note.raw_title else None,
             }
 
