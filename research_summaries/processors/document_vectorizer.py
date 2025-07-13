@@ -202,7 +202,8 @@ def vectorize_documents():
     # Find all notes that are summarized but not vectorized
     eligible_notes = ResearchNote.objects.filter(
         status__in=[3, 4],  # Summarized or Advanced Summarized
-        is_vectorized=False
+        is_vectorized=False,
+        vector_group_id__isnull=False  # Ensure vector_group_id is not None
     ).order_by('-file_summary_time')
 
     count = eligible_notes.count()

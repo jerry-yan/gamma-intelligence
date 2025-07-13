@@ -25,7 +25,11 @@ class Command(BaseCommand):
                 # Status 0: Not Downloaded, 1: Downloaded, 2: Preprocessed
                 pending_notes = ResearchNote.objects.filter(status__in=[0, 1, 2])
                 advanced_ready_notes = ResearchNote.objects.filter(status=3, is_advanced_summary=True)
-                vectorization_ready_notes = ResearchNote.objects.filter(status__in=[3, 4], is_vectorized=False)
+                vectorization_ready_notes = ResearchNote.objects.filter(
+                    status__in=[3, 4],
+                    is_vectorized=False,
+                    vector_group_id__isnull=False  # Ensure vector_group_id is not None
+                )
 
                 pending_count = pending_notes.count()
                 advanced_count = advanced_ready_notes.count()
