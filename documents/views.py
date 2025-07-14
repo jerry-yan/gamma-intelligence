@@ -257,7 +257,6 @@ def upload_document(request):
                         attributes.update({
                             "hash_id": document.file_hash_id,
                             "report_type": document.report_type,
-                            "filename": document.filename,
                         })
 
                         # Add publication date if available

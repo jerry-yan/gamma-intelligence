@@ -168,6 +168,50 @@
         </div>
     {% endif %}
 
+    <!-- Positive and Negative Dynamics Side by Side -->
+    {% if summary.positive_dynamics or summary.negative_dynamics %}
+        <div class="row mb-3">
+            {% if summary.positive_dynamics %}
+                <div class="col-md-6">
+                    <strong class="text-success">Positive Dynamics:</strong>
+                    <ul class="">
+                        {% for dynamic in summary.positive_dynamics %}
+                            <li class="">{{ dynamic }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+            {% if summary.negative_dynamics %}
+                <div class="col-md-6">
+                    <strong class="text-danger">Negative Dynamics:</strong>
+                    <ul class="">
+                        {% for dynamic in summary.negative_dynamics %}
+                            <li class="">{{ dynamic }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- Upside and Downside Valuation Side by Side -->
+    {% if summary.upside_valuation or summary.downside_valuation %}
+        <div class="row mb-3">
+            {% if summary.upside_valuation %}
+                <div class="col-md-6">
+                    <strong class="text-success">Upside Valuation:</strong>
+                    <p class="">{{ summary.upside_valuation }}</p>
+                </div>
+            {% endif %}
+            {% if summary.downside_valuation %}
+                <div class="col-md-6">
+                    <strong class="text-danger">Downside Valuation:</strong>
+                    <p class="">{{ summary.downside_valuation }}</p>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+
     <!-- Valuation Analysis -->
     {% if summary.valuation_analysis %}
         <div class="mb-3">
