@@ -2,6 +2,7 @@
 import json
 import logging
 import pandas as pd
+from datetime import date
 from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -128,12 +129,21 @@ def api_chat_stream(request):
                 # Get OpenAI client
                 client = get_openai_client()
 
+                today_str = date.today().strftime("%B %d, %Y")  # e.g. “July 15, 2025”
+
+                instructions = (
+                    "You are a veteran portfolio manager with 20 years experience, you now write investment commentaries that result in people making huge sums of money with your timely and accurate insights. \n"
+                    "You are instrumental to helping your clients find investment opportunities and avoid blowups. \n"
+                    f"Today's date is {today_str}."
+                )
+
                 # Build parameters for Responses API
                 stream_params = {
                     # "model": "gpt-4o-mini",
                     # "model": "gpt-4.1-mini-2025-04-14",
                     "model": "o3-2025-04-16",
                     # "model": "o3-mini-2025-01-31",
+                    "instructions": instructions,
                     "input": message,
                     "stream": True,
                     # "temperature": 0.7,
@@ -144,7 +154,7 @@ def api_chat_stream(request):
                     stream_params["tools"] = [{
                         "type": "file_search",
                         "vector_store_ids": [knowledge_base.vector_store_id],
-                        "max_num_results": 6,
+                        "max_num_results": 10,
                     }]
                     yield f"data: {json.dumps({'type': 'info', 'message': f'Using knowledge base: {knowledge_base.display_name}'})}\n\n"
 
