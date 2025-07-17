@@ -360,24 +360,21 @@
                 </div>
 
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">{{ form.expiration_rule.label }}</label>
-                    <div class="evergreen-options">
-                        {% for radio in form.expiration_rule %}
-                            <div class="form-check">
-                                {{ radio.tag }}
-                                <label class="form-check-label" for="{{ radio.id_for_label }}">
-                                    {% if radio.choice_value == 'evergreen' %}
-                                        🌿 Evergreen (Document remains relevant indefinitely)
-                                    {% else %}
-                                        📅 Standard (Time-sensitive document)
-                                    {% endif %}
+                    <label class="form-label">Expiration Rules <span class="text-danger">*</span></label>
+                    <div class="radio-group">
+                        {% for choice_value, choice_label in form.expiration_rule.field.choices %}
+                            <div class="radio-option">
+                                <input type="radio"
+                                       name="{{ form.expiration_rule.name }}"
+                                       value="{{ choice_value }}"
+                                       id="id_{{ form.expiration_rule.name }}_{{ forloop.counter0 }}"
+                                       class="form-check-input">
+                                <label for="id_{{ form.expiration_rule.name }}_{{ forloop.counter0 }}">
+                                    {{ choice_label }}
                                 </label>
                             </div>
                         {% endfor %}
                     </div>
-                    {% if form.expiration_rule.help_text %}
-                        <small class="form-text text-muted">{{ form.expiration_rule.help_text }}</small>
-                    {% endif %}
                     {% if form.expiration_rule.errors %}
                         <div class="invalid-feedback d-block">{{ form.expiration_rule.errors.0 }}</div>
                     {% endif %}

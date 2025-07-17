@@ -60,7 +60,7 @@ class DocumentUploadForm(forms.ModelForm):
             'class': 'form-check-input',
             'id': 'expiration-rule'
         }),
-        help_text='Select whether this document should be persistent (Evergreen) or temporary (Standard)'
+        # help_text='Select whether this document should be persistent (Evergreen) or temporary (Standard)'
     )
 
     # Metadata fields (will be handled by JavaScript)
