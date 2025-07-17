@@ -157,6 +157,14 @@ def upload_document(request):
     if request.method == 'POST':
         form = DocumentUploadForm(request.POST, request.FILES)
         if form.is_valid():
+            if not form.cleaned_data.get('publication_date'):
+                messages.error(request, 'Publication date is required.')
+                return render(request, 'documents/upload.html', {'form': form})
+
+            if not form.cleaned_data.get('expiration_rule'):
+                messages.error(request, 'Please select an expiration rule (Evergreen or Standard).')
+                return render(request, 'documents/upload.html', {'form': form})
+
             uploaded_file = request.FILES['file']
 
             # Create temporary file

@@ -30,6 +30,11 @@ class ResearchNote(models.Model):
     vector_group_id = models.PositiveIntegerField(null=True, blank=True, help_text="Vector database group assignment")
     is_vectorized = models.BooleanField(default=False, help_text="Whether this note has been added to a vector store")
 
+    is_persistent_document = models.BooleanField(
+        default=False,
+        help_text="Whether this is an evergreen/persistent document (True) or standard/temporary (False)"
+    )
+
     # --- Timestamps
     file_download_time = models.DateTimeField(null=True, blank=True)
     file_update_time = models.DateTimeField(null=True, blank=True)
@@ -60,6 +65,7 @@ class ResearchNote(models.Model):
             models.Index(fields=['parsed_ticker', '-publication_date']),
             models.Index(fields=['vector_group_id']),
             models.Index(fields=['is_vectorized']),
+            models.Index(fields=['is_persistent_document']),
             models.Index(fields=['status', '-file_download_time']),
         ]
 

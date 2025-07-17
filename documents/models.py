@@ -56,6 +56,11 @@ class Document(models.Model):
         help_text="Whether this document has been added to a vector store"
     )
 
+    is_persistent_document = models.BooleanField(
+        default=False,
+        help_text="Whether this is an evergreen/persistent document (True) or standard/temporary (False)"
+    )
+
     # Document classification - free text field
     report_type = models.CharField(
         max_length=100,
@@ -80,6 +85,7 @@ class Document(models.Model):
             models.Index(fields=['file_hash_id']),
             models.Index(fields=['vector_group_id']),
             models.Index(fields=['is_vectorized']),
+            models.Index(fields=['is_persistent_document']),
             models.Index(fields=['report_type']),
             models.Index(fields=['-upload_date']),
         ]
