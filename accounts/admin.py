@@ -1,7 +1,7 @@
 # accounts/admin.py
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
-from django.contrib.auth.models import User
+from django.contrib.auth.admin import UserAdmin, GroupAdmin
+from django.contrib.auth.models import User, Group
 from .models import UserProfile
 
 
@@ -14,12 +14,12 @@ class UserProfileInline(admin.StackedInline):
 
 class CustomUserAdmin(UserAdmin):
     inlines = (UserProfileInline,)
-    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'date_joined', 'get_last_read_time')
-    list_filter = ('is_staff', 'is_superuser', 'is_active', 'date_joined')
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff',
+                    'date_joined', 'get_last_read_time', 'get_groups')
+    list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups', 'date_joined')
     search_fields = ('username', 'email', 'first_name', 'last_name')
-    fieldsets = UserAdmin.fieldsets + (
-        ('Permissions', {'fields': ('groups',)}),
-    )
+
+    # No need to modify fieldsets - UserAdmin already includes groups in the Permissions section
 
     def get_last_read_time(self, obj):
         if hasattr(obj, 'profile') and obj.profile.last_read_time:
@@ -31,11 +31,33 @@ class CustomUserAdmin(UserAdmin):
 
     get_last_read_time.short_description = 'Last Read Time'
     get_last_read_time.admin_order_field = 'profile__last_read_time'
+    get_groups.short_description = 'Groups'
+
+
+# Custom Group Admin to show permissions
+class CustomGroupAdmin(GroupAdmin):
+    list_display = ('name', 'get_permissions_count', 'get_permissions_list')
+
+    def get_permissions_count(self, obj):
+        return obj.permissions.count()
+
+    def get_permissions_list(self, obj):
+        perms = obj.permissions.filter(codename__in=[
+            'can_view_uploads',
+            'can_view_research_summaries',
+            'can_view_agents'
+        ])
+        return ', '.join([p.name for p in perms]) or 'None'
+
+    get_permissions_count.short_description = 'Permission Count'
+    get_permissions_list.short_description = 'App Permissions'
 
 
 # Re-register UserAdmin
 admin.site.unregister(User)
+admin.site.unregister(Group)
 admin.site.register(User, CustomUserAdmin)
+admin.site.register(Group, CustomGroupAdmin)
 
 
 @admin.register(UserProfile)
