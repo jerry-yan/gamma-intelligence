@@ -7,8 +7,8 @@ from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.views.generic import FormView, TemplateView
 from django.utils import timezone
 from django.urls import reverse_lazy
@@ -20,10 +20,11 @@ from .forms import ExcelUploadForm
 logger = logging.getLogger(__name__)
 
 
-class AgentView(LoginRequiredMixin, TemplateView):
+class AgentView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
     """Main chatbot interface view"""
     template_name = 'agents/chat.html'
     login_url = '/accounts/login/'
+    permission_required = 'accounts.can_view_agents'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -33,6 +34,7 @@ class AgentView(LoginRequiredMixin, TemplateView):
 
 
 @login_required
+@permission_required('accounts.can_view_agents', raise_exception=True)
 @require_http_methods(["GET"])
 def api_knowledge_bases(request):
     """API endpoint to get available knowledge bases"""

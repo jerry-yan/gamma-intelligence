@@ -4,7 +4,7 @@ import tempfile
 import hashlib
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from botocore.exceptions import ClientError
 from .forms import DocumentUploadForm
 from .models import Document
@@ -142,6 +142,7 @@ def upload_to_s3(local_file_path, s3_key):
 
 
 @login_required
+@permission_required('accounts.can_view_uploads', raise_exception=True)
 def upload_document(request):
     """
     Handle document upload with duplicate check and automatic vectorization.
@@ -323,6 +324,7 @@ def upload_document(request):
 
 
 @login_required
+@permission_required('accounts.can_view_uploads', raise_exception=True)
 def document_list(request):
     """List all documents"""
     documents = Document.objects.all().order_by('-upload_date')

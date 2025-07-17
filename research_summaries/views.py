@@ -2,7 +2,7 @@
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, StreamingHttpResponse
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
@@ -26,9 +26,10 @@ from research_summaries.processors.file_downloader_2 import download_documents_p
 
 logger = logging.getLogger(__name__)
 
-class ResearchSummariesView(LoginRequiredMixin, TemplateView):
+class ResearchSummariesView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
     template_name = 'research_summaries/research_summaries.html'
     login_url = '/accounts/login/'
+    permission_required = 'accounts.can_view_research_summaries'
 
     def get_context_data(self, **kwargs):
         from django.utils import timezone

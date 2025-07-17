@@ -18,6 +18,11 @@ class UserProfile(models.Model):
     class Meta:
         verbose_name = "User Profile"
         verbose_name_plural = "User Profiles"
+        permissions = [
+            ("can_view_uploads", "Can view uploads"),
+            ("can_view_research_summaries", "Can view research summaries"),
+            ("can_view_agents", "Can view agents"),
+        ]
 
 
 # Signal to automatically create UserProfile when User is created

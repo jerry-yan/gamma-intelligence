@@ -17,11 +17,17 @@ class CustomUserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'date_joined', 'get_last_read_time')
     list_filter = ('is_staff', 'is_superuser', 'is_active', 'date_joined')
     search_fields = ('username', 'email', 'first_name', 'last_name')
+    fieldsets = UserAdmin.fieldsets + (
+        ('Permissions', {'fields': ('groups',)}),
+    )
 
     def get_last_read_time(self, obj):
         if hasattr(obj, 'profile') and obj.profile.last_read_time:
             return obj.profile.last_read_time.strftime('%Y-%m-%d %H:%M')
         return 'Never'
+
+    def get_groups(self, obj):
+        return ', '.join([g.name for g in obj.groups.all()]) or 'None'
 
     get_last_read_time.short_description = 'Last Read Time'
     get_last_read_time.admin_order_field = 'profile__last_read_time'
