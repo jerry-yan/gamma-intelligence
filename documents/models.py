@@ -16,7 +16,6 @@ class Document(models.Model):
     )
     file_hash_id = models.CharField(
         max_length=64,
-        unique=True,
         help_text="SHA-256 hash of file content for deduplication"
     )
     openai_file_id = models.CharField(
