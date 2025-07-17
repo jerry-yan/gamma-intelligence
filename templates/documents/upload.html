@@ -1,53 +1,191 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load static %}
 
-{% block title %}Upload Document - Gamma Intelligence{% endblock %}
+{% block title %}Upload Document - Research Hub{% endblock %}
 
 {% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <h2 class="mb-4">📤 Upload Document</h2>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data" id="upload-form">
+                {% csrf_token %}
+
+                <!-- File Upload Section -->
+                <div class="form-section">
+                    <h4>📁 Select File</h4>
+                    <div class="file-upload-zone" id="file-upload-zone">
+                        <div class="upload-content">
+                            <i class="bi bi-cloud-upload fs-1"></i>
+                            <p>Drag & drop a file here or click to browse</p>
+                            <p class="text-muted small">Supported formats: PDF, DOC, DOCX, TXT, XLS, XLSX</p>
+                        </div>
+                        {{ form.file }}
+                    </div>
+                    <div class="file-selected" id="file-selected" style="display: none;">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span class="file-name"></span>
+                        <span class="file-size text-muted"></span>
+                    </div>
+                </div>
+
+                <!-- Document Details Section -->
+                <div class="form-section">
+                    <h4>ℹ Document Details</h4>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.knowledge_base.id_for_label }}" class="form-label">
+                                {{ form.knowledge_base.label }}
+                            </label>
+                            {{ form.knowledge_base }}
+                            <small class="form-text text-muted">{{ form.knowledge_base.help_text }}</small>
+                            {% if form.knowledge_base.errors %}
+                                <div class="invalid-feedback d-block">{{ form.knowledge_base.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.publication_date.id_for_label }}" class="form-label">
+                                {{ form.publication_date.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.publication_date }}
+                            {% if form.publication_date.errors %}
+                                <div class="invalid-feedback d-block">{{ form.publication_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.report_type_choice.id_for_label }}" class="form-label">
+                                {{ form.report_type_choice.label }}
+                            </label>
+                            {{ form.report_type_choice }}
+                            {% if form.report_type_choice.errors %}
+                                <div class="invalid-feedback d-block">{{ form.report_type_choice.errors.0 }}</div>
+                            {% endif %}
+
+                            <div class="custom-report-group" id="custom-report-type-group">
+                                <label for="{{ form.custom_report_type.id_for_label }}" class="form-label">
+                                    ✏ {{ form.custom_report_type.label }}
+                                </label>
+                                {{ form.custom_report_type }}
+                                {% if form.custom_report_type.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.custom_report_type.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- NEW: Expiration Rules Section -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                {{ form.expiration_rules.label }} <span class="text-danger">*</span>
+                            </label>
+                            <small class="form-text text-muted d-block mb-2">{{ form.expiration_rules.help_text }}</small>
+                            <div class="expiration-rules-options">
+                                {% for radio in form.expiration_rules %}
+                                    <div class="form-check">
+                                        {{ radio.tag }}
+                                        <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                            {{ radio.choice_label }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if form.expiration_rules.errors %}
+                                <div class="invalid-feedback d-block">{{ form.expiration_rules.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Metadata Section -->
+                <div class="form-section">
+                    <h4>🏷 Custom Metadata</h4>
+                    <p class="text-muted mb-3">Add custom key-value pairs to enhance document searchability</p>
+
+                    <div class="metadata-grid" id="metadata-container">
+                        <!-- Metadata items will be added here dynamically -->
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <button type="button" class="btn btn-add-metadata btn-sm" id="add-metadata-btn">
+                            Add Metadata
+                        </button>
+                        <div class="metadata-count">
+                            <span id="metadata-count">0</span> / 16 metadata fields
+                        </div>
+                    </div>
+                </div>
+
+                {{ form.metadata_json }}
+
+                <!-- Upload Progress -->
+                <div class="upload-progress" id="upload-progress">
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated"
+                             role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <p class="text-center mt-2 mb-0">Uploading document...</p>
+                </div>
+
+                <!-- Submit Section -->
+                <div class="text-center mt-4">
+                    <button type="submit" class="btn btn-primary btn-upload" id="submit-btn">
+                        Upload
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <style>
-    .upload-container {
-        max-width: 900px;
-        margin: 0 auto;
+    /* Form Sections */
+    .form-section {
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
     }
 
-    .upload-header {
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-
-    .upload-header h2 {
-        color: #2c3e50;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-    }
-
-    .upload-header p {
-        color: #6c757d;
-        font-size: 1.1rem;
+    .form-section h4 {
+        margin-bottom: 1rem;
+        color: #333;
     }
 
     /* File Upload Zone */
     .file-upload-zone {
-        border: 2px dashed #dee2e6 !important;
+        border: 2px dashed #ced4da;
         border-radius: 0.5rem;
         padding: 3rem;
         text-align: center;
-        background-color: #f8f9fa;
-        transition: all 0.3s ease;
-        cursor: pointer;
         position: relative;
-        margin-bottom: 1rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        background-color: #fff;
     }
 
     .file-upload-zone:hover {
-        border-color: #0d6efd !important;
-        background-color: #e7f1ff;
+        border-color: #6c757d;
+        background-color: #f8f9fa;
     }
 
     .file-upload-zone.dragover {
-        border-color: #0d6efd !important;
+        border-color: #0d6efd;
         background-color: #e7f1ff;
-        transform: scale(1.02);
     }
 
     .file-upload-zone input[type="file"] {
@@ -60,52 +198,39 @@
         cursor: pointer;
     }
 
-    .upload-icon {
-        font-size: 3rem;
-        color: #6c757d;
-        margin-bottom: 1rem;
+    .upload-content {
+        pointer-events: none;
     }
 
     .file-selected {
-        background-color: #d1ecf1;
-        border-color: #0c5460;
-        padding: 1rem;
-        border-radius: 0.25rem;
         margin-top: 1rem;
+        padding: 1rem;
+        background-color: #e7f1ff;
+        border-radius: 0.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .file-selected i {
+        font-size: 1.5rem;
+        color: #0d6efd;
     }
 
     .file-selected .file-name {
-        font-weight: 600;
-        color: #0c5460;
+        font-weight: 500;
+        flex: 1;
     }
 
-    /* Form Sections */
-    .form-section {
-        background: white;
-        border: 1px solid #dee2e6;
-        border-radius: 0.5rem;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
-    }
-
-    .form-section h4 {
-        color: #495057;
-        font-size: 1.25rem;
-        margin-bottom: 1.25rem;
-        padding-bottom: 0.75rem;
-        border-bottom: 2px solid #e9ecef;
-    }
-
-    /* Metadata Management - Side by Side Layout */
+    /* Metadata Grid */
     .metadata-grid {
-        max-height: 400px;
+        max-height: 300px;
         overflow-y: auto;
         padding-right: 0.5rem;
     }
 
     .metadata-item {
-        background-color: #f8f9fa;
+        background-color: #fff;
         border: 1px solid #dee2e6;
         border-radius: 0.375rem;
         padding: 0.75rem;
@@ -159,13 +284,30 @@
     .custom-report-group {
         margin-top: 1rem;
         padding: 1rem;
-        background-color: #f8f9fa;
+        background-color: #fff;
         border-radius: 0.25rem;
         display: none;
     }
 
     .custom-report-group.show {
         display: block;
+    }
+
+    /* Expiration Rules */
+    .expiration-rules-options {
+        background-color: #fff;
+        padding: 1rem;
+        border-radius: 0.25rem;
+        border: 1px solid #dee2e6;
+    }
+
+    .expiration-rules-options .form-check {
+        padding-left: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .expiration-rules-options .form-check:last-child {
+        margin-bottom: 0;
     }
 
     /* Buttons */
@@ -213,165 +355,13 @@
     .form-control, .form-select {
         display: block;
         width: 100%;
-        padding: 0.375rem 0.75rem;
-        font-size: 1rem;
-        font-weight: 400;
-        line-height: 1.5;
-        color: #212529;
-        background-color: #fff;
-        background-clip: padding-box;
-        border: 1px solid #ced4da;
-        appearance: none;
-        border-radius: 0.25rem;
-        transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
     }
 
-    .form-control:focus, .form-select:focus {
-        color: #212529;
-        background-color: #fff;
-        border-color: #86b7fe;
-        outline: 0;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, .25);
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-        .metadata-item-fields {
-            flex-direction: column !important;
-            gap: 0.25rem;
-        }
-
-        .metadata-item-fields input {
-            width: 100%;
-        }
-
-        .file-upload-zone {
-            padding: 2rem;
-        }
+    /* Required field indicator */
+    .text-danger {
+        font-weight: normal;
     }
 </style>
-
-<div class="upload-container">
-    <div class="upload-header">
-        <h2>Upload Document</h2>
-        <p>Add new documents to your knowledge base</p>
-    </div>
-
-    <form method="post" enctype="multipart/form-data" id="upload-form">
-        {% csrf_token %}
-
-        <!-- File Upload Section -->
-        <div class="form-section">
-            <h4>☁ Select File</h4>
-            <div class="file-upload-zone" id="file-upload-zone">
-                <div class="upload-content">
-                    <div class="upload-icon">
-                        📄
-                    </div>
-                    <h5>Drop file here or click to browse</h5>
-                    <p class="text-muted mb-0">Supported formats: PDF, DOC, DOCX, TXT, XLS, XLSX</p>
-                    <p class="text-muted">Maximum file size: 100MB</p>
-                </div>
-                {{ form.file }}
-                <div id="file-selected" class="file-selected" style="display: none;">
-                    ✓
-                    <span class="file-name"></span>
-                    <small class="file-size text-muted ms-2"></small>
-                </div>
-            </div>
-            {% if form.file.errors %}
-                <div class="invalid-feedback d-block">{{ form.file.errors.0 }}</div>
-            {% endif %}
-        </div>
-
-        <!-- Document Details Section -->
-        <div class="form-section">
-            <h4>ℹ Document Details</h4>
-
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="{{ form.knowledge_base.id_for_label }}" class="form-label">
-                        {{ form.knowledge_base.label }}
-                    </label>
-                    {{ form.knowledge_base }}
-                    <small class="form-text text-muted">{{ form.knowledge_base.help_text }}</small>
-                    {% if form.knowledge_base.errors %}
-                        <div class="invalid-feedback d-block">{{ form.knowledge_base.errors.0 }}</div>
-                    {% endif %}
-                </div>
-
-                <div class="col-md-6 mb-3">
-                    <label for="{{ form.publication_date.id_for_label }}" class="form-label">
-                        {{ form.publication_date.label }}
-                    </label>
-                    {{ form.publication_date }}
-                    {% if form.publication_date.errors %}
-                        <div class="invalid-feedback d-block">{{ form.publication_date.errors.0 }}</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="{{ form.report_type_choice.id_for_label }}" class="form-label">
-                        {{ form.report_type_choice.label }}
-                    </label>
-                    {{ form.report_type_choice }}
-                    {% if form.report_type_choice.errors %}
-                        <div class="invalid-feedback d-block">{{ form.report_type_choice.errors.0 }}</div>
-                    {% endif %}
-
-                    <div class="custom-report-group" id="custom-report-type-group">
-                        <label for="{{ form.custom_report_type.id_for_label }}" class="form-label">
-                            ✏ {{ form.custom_report_type.label }}
-                        </label>
-                        {{ form.custom_report_type }}
-                        {% if form.custom_report_type.errors %}
-                            <div class="invalid-feedback d-block">{{ form.custom_report_type.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Metadata Section -->
-        <div class="form-section">
-            <h4>🏷 Custom Metadata</h4>
-            <p class="text-muted mb-3">Add custom key-value pairs to enhance document searchability</p>
-
-            <div class="metadata-grid" id="metadata-container">
-                <!-- Metadata items will be added here dynamically -->
-            </div>
-
-            <div class="d-flex justify-content-between align-items-center mt-3">
-                <button type="button" class="btn btn-add-metadata btn-sm" id="add-metadata-btn">
-                    Add Metadata
-                </button>
-                <div class="metadata-count">
-                    <span id="metadata-count">0</span> / 16 metadata fields
-                </div>
-            </div>
-        </div>
-
-        {{ form.metadata_json }}
-
-        <!-- Upload Progress -->
-        <div class="upload-progress" id="upload-progress">
-            <div class="progress">
-                <div class="progress-bar progress-bar-striped progress-bar-animated"
-                     role="progressbar" style="width: 0%"></div>
-            </div>
-            <p class="text-center mt-2 mb-0">Uploading document...</p>
-        </div>
-
-        <!-- Submit Section -->
-        <div class="text-center mt-4">
-            <button type="submit" class="btn btn-primary btn-upload" id="submit-btn">
-                Upload
-            </button>
-        </div>
-    </form>
-</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -511,70 +501,60 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    window.removeMetadataItem = function(button) {
-        button.closest('.metadata-item').remove();
+    // Make removeMetadataItem globally accessible
+    window.removeMetadataItem = function(btn) {
+        btn.closest('.metadata-item').remove();
         metadataCount--;
         updateMetadataCount();
     };
 
     function updateMetadataCount() {
         metadataCountSpan.textContent = metadataCount;
-        addMetadataBtn.disabled = metadataCount >= maxMetadata;
-
-        if (metadataCount >= maxMetadata) {
-            addMetadataBtn.innerHTML = 'Maximum Reached';
-        } else {
-            addMetadataBtn.innerHTML = 'Add Metadata';
-        }
     }
 
+    // Collect metadata for submission
+    function collectMetadata() {
+        const metadata = {};
+        document.querySelectorAll('.metadata-item').forEach(item => {
+            const key = item.querySelector('.metadata-key').value.trim();
+            const value = item.querySelector('.metadata-value').value.trim();
+            if (key && value) {
+                metadata[key] = value;
+            }
+        });
+        return metadata;
+    }
+
+    // Add metadata button click
     addMetadataBtn.addEventListener('click', () => addMetadataRow());
 
-    // Form Validation and Submission
+    // Form submission
     uploadForm.addEventListener('submit', function(e) {
         e.preventDefault();
 
         // Validate file selection
         if (!fileInput.files.length) {
             alert('Please select a file to upload');
-            fileUploadZone.scrollIntoView({ behavior: 'smooth' });
             return;
         }
 
-        // Collect metadata
-        const metadata = {};
-        const items = metadataContainer.querySelectorAll('.metadata-item');
+        // Validate expiration rules selection
+        const expirationSelected = document.querySelector('input[name="expiration_rules"]:checked');
+        if (!expirationSelected) {
+            alert('Please select an expiration rule (Evergreen or Standard)');
+            return;
+        }
 
-        items.forEach(item => {
-            const key = item.querySelector('.metadata-key').value.trim();
-            const value = item.querySelector('.metadata-value').value.trim();
-
-            if (key && value) {
-                metadata[key] = value;
-            }
-        });
-
+        // Collect and set metadata
+        const metadata = collectMetadata();
         metadataJsonInput.value = JSON.stringify(metadata);
 
         // Show progress
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading...';
         uploadProgress.style.display = 'block';
 
-        // Simulate progress (in real implementation, track actual upload progress)
-        let progress = 0;
-        const progressBar = uploadProgress.querySelector('.progress-bar');
-
-        const progressInterval = setInterval(() => {
-            progress += 10;
-            progressBar.style.width = progress + '%';
-
-            if (progress >= 90) {
-                clearInterval(progressInterval);
-                // Submit the form
-                this.submit();
-            }
-        }, 200);
+        // Submit form
+        this.submit();
     });
 });
 </script>

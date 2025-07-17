@@ -49,6 +49,18 @@ class DocumentUploadForm(forms.ModelForm):
         })
     )
 
+    expiration_rules = forms.ChoiceField(
+        label='Expiration Rules',
+        required=True,
+        choices=[
+            ('evergreen', 'Evergreen'),
+            ('standard', 'Standard'),
+        ],
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        initial='standard',
+        # help_text='Evergreen documents persist indefinitely, standard documents follow normal expiration'
+    )
+
     # Metadata fields (will be handled by JavaScript)
     metadata_json = forms.CharField(
         widget=forms.HiddenInput(),
@@ -64,18 +76,20 @@ class DocumentUploadForm(forms.ModelForm):
             'publication_date': forms.DateInput(
                 attrs={
                     'class': 'form-control',
-                    'type': 'date'
+                    'type': 'date',
+                    'required': True  # Make required in HTML
                 }
             ),
         }
         labels = {
-            'publication_date': 'Publication Date (Optional)',
+            'publication_date': 'Publication Date',
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Customize the display of knowledge bases in the dropdown
         self.fields['knowledge_base'].label_from_instance = lambda obj: obj.display_name
+        self.fields['publication_date'].required = True
 
     def clean(self):
         cleaned_data = super().clean()
@@ -116,6 +130,9 @@ class DocumentUploadForm(forms.ModelForm):
             instance.report_type = report_type_choice
         else:
             instance.report_type = 'general'
+
+        expiration_rules = self.cleaned_data.get('expiration_rules')
+        instance.is_persistent_document = (expiration_rules == 'evergreen')
 
         # Set metadata
         instance.metadata = self.cleaned_data.get('metadata', {})
