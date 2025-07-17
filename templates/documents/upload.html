@@ -283,7 +283,7 @@
         <p>Add new documents to your knowledge base</p>
     </div>
 
-    <form method="post" enctype="multipart/form-data" id="upload-form" action="{% url 'document:upload' %}">
+    <form method="post" enctype="multipart/form-data" id="upload-form" action="{% url 'documents:upload' %}">
         {% csrf_token %}
 
         <!-- File Upload Section -->
@@ -418,7 +418,7 @@
         <!-- Submit Section -->
         <div class="text-center mt-4">
             <button type="submit" class="btn btn-primary btn-upload" id="submit-btn">
-                ⬆️ Upload Document
+                Upload Document
             </button>
         </div>
     </form>
