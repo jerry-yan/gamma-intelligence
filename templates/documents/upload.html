@@ -97,6 +97,27 @@
         border-bottom: 2px solid #e9ecef;
     }
 
+    /* Evergreen Radio Buttons */
+    .evergreen-options {
+        display: flex;
+        gap: 1.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .form-check {
+        display: flex;
+        align-items: center;
+    }
+
+    .form-check-input {
+        margin-right: 0.5rem;
+    }
+
+    .form-check-label {
+        margin-bottom: 0;
+        cursor: pointer;
+    }
+
     /* Metadata Management - Side by Side Layout */
     .metadata-grid {
         max-height: 400px;
@@ -166,28 +187,6 @@
 
     .custom-report-group.show {
         display: block;
-    }
-
-    /* NEW: Expiration Rules styling */
-    .radio-group {
-        display: flex;
-        gap: 1rem;
-        margin-top: 0.5rem;
-    }
-
-    .radio-option {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .radio-option input[type="radio"] {
-        margin: 0;
-    }
-
-    .radio-option label {
-        margin: 0;
-        cursor: pointer;
     }
 
     /* Buttons */
@@ -270,6 +269,11 @@
         .file-upload-zone {
             padding: 2rem;
         }
+
+        .evergreen-options {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
     }
 </style>
 
@@ -279,12 +283,12 @@
         <p>Add new documents to your knowledge base</p>
     </div>
 
-    <form method="post" enctype="multipart/form-data" id="upload-form">
+    <form method="post" enctype="multipart/form-data" id="upload-form" action="{% url 'document:upload' %}">
         {% csrf_token %}
 
         <!-- File Upload Section -->
         <div class="form-section">
-            <h4>☁ Select File</h4>
+            <h4>📁 Select File</h4>
             <div class="file-upload-zone" id="file-upload-zone">
                 <div class="upload-content">
                     <div class="upload-icon">
@@ -296,8 +300,7 @@
                 </div>
                 {{ form.file }}
                 <div id="file-selected" class="file-selected" style="display: none;">
-                    ✓
-                    <span class="file-name"></span>
+                    ✓ <span class="file-name"></span>
                     <small class="file-size text-muted ms-2"></small>
                 </div>
             </div>
@@ -308,7 +311,7 @@
 
         <!-- Document Details Section -->
         <div class="form-section">
-            <h4>ℹ Document Details</h4>
+            <h4>📋 Document Details</h4>
 
             <div class="row">
                 <div class="col-md-6 mb-3">
@@ -316,7 +319,9 @@
                         {{ form.knowledge_base.label }}
                     </label>
                     {{ form.knowledge_base }}
-                    <small class="form-text text-muted">{{ form.knowledge_base.help_text }}</small>
+                    {% if form.knowledge_base.help_text %}
+                        <small class="form-text text-muted">{{ form.knowledge_base.help_text }}</small>
+                    {% endif %}
                     {% if form.knowledge_base.errors %}
                         <div class="invalid-feedback d-block">{{ form.knowledge_base.errors.0 }}</div>
                     {% endif %}
@@ -324,7 +329,7 @@
 
                 <div class="col-md-6 mb-3">
                     <label for="{{ form.publication_date.id_for_label }}" class="form-label">
-                        {{ form.publication_date.label }} <span class="text-danger">*</span>
+                        {{ form.publication_date.label }}
                     </label>
                     {{ form.publication_date }}
                     {% if form.publication_date.errors %}
@@ -345,7 +350,7 @@
 
                     <div class="custom-report-group" id="custom-report-type-group">
                         <label for="{{ form.custom_report_type.id_for_label }}" class="form-label">
-                            ✏ {{ form.custom_report_type.label }}
+                            ✏️ {{ form.custom_report_type.label }}
                         </label>
                         {{ form.custom_report_type }}
                         {% if form.custom_report_type.errors %}
@@ -354,23 +359,25 @@
                     </div>
                 </div>
 
-                <!-- NEW: Expiration Rules Column -->
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">Expiration Rules <span class="text-danger">*</span></label>
-                    <div class="radio-group">
-                        {% for choice_value, choice_label in form.expiration_rule.field.choices %}
-                            <div class="radio-option">
-                                <input type="radio"
-                                       name="{{ form.expiration_rule.name }}"
-                                       value="{{ choice_value }}"
-                                       id="id_{{ form.expiration_rule.name }}_{{ forloop.counter0 }}"
-                                       class="form-check-input">
-                                <label for="id_{{ form.expiration_rule.name }}_{{ forloop.counter0 }}">
-                                    {{ choice_label }}
+                    <label class="form-label">{{ form.expiration_rule.label }}</label>
+                    <div class="evergreen-options">
+                        {% for radio in form.expiration_rule %}
+                            <div class="form-check">
+                                {{ radio.tag }}
+                                <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                    {% if radio.choice_value == 'evergreen' %}
+                                        🌿 Evergreen (Document remains relevant indefinitely)
+                                    {% else %}
+                                        📅 Standard (Time-sensitive document)
+                                    {% endif %}
                                 </label>
                             </div>
                         {% endfor %}
                     </div>
+                    {% if form.expiration_rule.help_text %}
+                        <small class="form-text text-muted">{{ form.expiration_rule.help_text }}</small>
+                    {% endif %}
                     {% if form.expiration_rule.errors %}
                         <div class="invalid-feedback d-block">{{ form.expiration_rule.errors.0 }}</div>
                     {% endif %}
@@ -380,7 +387,7 @@
 
         <!-- Metadata Section -->
         <div class="form-section">
-            <h4>🏷 Custom Metadata</h4>
+            <h4>🏷️ Custom Metadata</h4>
             <p class="text-muted mb-3">Add custom key-value pairs to enhance document searchability</p>
 
             <div class="metadata-grid" id="metadata-container">
@@ -389,7 +396,7 @@
 
             <div class="d-flex justify-content-between align-items-center mt-3">
                 <button type="button" class="btn btn-add-metadata btn-sm" id="add-metadata-btn">
-                    Add Metadata
+                    ➕ Add Metadata
                 </button>
                 <div class="metadata-count">
                     <span id="metadata-count">0</span> / 16 metadata fields
@@ -411,7 +418,7 @@
         <!-- Submit Section -->
         <div class="text-center mt-4">
             <button type="submit" class="btn btn-primary btn-upload" id="submit-btn">
-                Upload
+                ⬆️ Upload Document
             </button>
         </div>
     </form>
@@ -431,6 +438,14 @@ document.addEventListener('DOMContentLoaded', function() {
     formSelects.forEach(select => {
         if (!select.classList.contains('form-select')) {
             select.classList.add('form-select');
+        }
+    });
+
+    // Apply styles to radio buttons if they're rendered by Django
+    const radioButtons = document.querySelectorAll('#upload-form input[type="radio"]');
+    radioButtons.forEach(radio => {
+        if (!radio.classList.contains('form-check-input')) {
+            radio.classList.add('form-check-input');
         }
     });
 
@@ -522,9 +537,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
+
+        // Trigger change event on load to handle initial state
+        reportTypeSelect.dispatchEvent(new Event('change'));
     }
 
-    // Metadata Management - Side by Side Layout
+    // Metadata Management
     function addMetadataRow(key = '', value = '') {
         if (metadataCount >= maxMetadata) {
             alert('Maximum 16 metadata pairs allowed');
@@ -534,7 +552,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const item = document.createElement('div');
         item.className = 'metadata-item';
         item.innerHTML = `
-            <button type="button" class="btn-remove-meta" onclick="removeMetadataItem(this)" title="Remove">
+            <button type="button" class="btn-remove-meta" title="Remove">
                 ✕
             </button>
             <div class="metadata-item-fields">
@@ -544,6 +562,13 @@ document.addEventListener('DOMContentLoaded', function() {
                        placeholder="Value" value="${value}">
             </div>
         `;
+
+        // Add remove event listener
+        item.querySelector('.btn-remove-meta').addEventListener('click', function() {
+            item.remove();
+            metadataCount--;
+            updateMetadataCount();
+        });
 
         metadataContainer.appendChild(item);
         metadataCount++;
@@ -555,48 +580,47 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    window.removeMetadataItem = function(button) {
-        button.closest('.metadata-item').remove();
-        metadataCount--;
-        updateMetadataCount();
-    };
-
     function updateMetadataCount() {
         metadataCountSpan.textContent = metadataCount;
         addMetadataBtn.disabled = metadataCount >= maxMetadata;
 
         if (metadataCount >= maxMetadata) {
-            addMetadataBtn.innerHTML = 'Maximum Reached';
+            addMetadataBtn.innerHTML = '⚠️ Maximum Reached';
         } else {
-            addMetadataBtn.innerHTML = 'Add Metadata';
+            addMetadataBtn.innerHTML = '➕ Add Metadata';
         }
     }
 
     addMetadataBtn.addEventListener('click', () => addMetadataRow());
 
-    // Form Validation and Submission
+    // Form Submission
     uploadForm.addEventListener('submit', function(e) {
         e.preventDefault();
-
-        // NEW: Validate required fields (publication_date and expiration_rule)
-        const publicationDate = document.querySelector('input[name="publication_date"]');
-        const expirationRule = document.querySelector('input[name="expiration_rule"]:checked');
-
-        if (!publicationDate.value) {
-            alert('Publication date is required.');
-            publicationDate.focus();
-            return;
-        }
-
-        if (!expirationRule) {
-            alert('Please select an expiration rule (Evergreen or Standard).');
-            return;
-        }
 
         // Validate file selection
         if (!fileInput.files.length) {
             alert('Please select a file to upload');
-            fileUploadZone.scrollIntoView({ behavior: 'smooth' });
+            fileUploadZone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
+        // Validate custom report type if selected
+        if (reportTypeSelect && reportTypeSelect.value === 'custom') {
+            if (!customReportTypeInput.value.trim()) {
+                alert('Please enter a custom report type');
+                customReportTypeInput.focus();
+                return;
+            }
+        }
+
+        // Validate expiration rule (required field)
+        const expirationRuleChecked = document.querySelector('input[name="expiration_rule"]:checked');
+        if (!expirationRuleChecked) {
+            alert('Please select an expiration rule (Evergreen or Standard)');
+            const expirationSection = document.querySelector('.evergreen-options');
+            if (expirationSection) {
+                expirationSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
             return;
         }
 
@@ -615,26 +639,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
         metadataJsonInput.value = JSON.stringify(metadata);
 
-        // Show progress
+        // Disable submit button and show progress
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading...';
         uploadProgress.style.display = 'block';
 
-        // Simulate progress (in real implementation, track actual upload progress)
-        let progress = 0;
-        const progressBar = uploadProgress.querySelector('.progress-bar');
-
-        const progressInterval = setInterval(() => {
-            progress += 10;
-            progressBar.style.width = progress + '%';
-
-            if (progress >= 90) {
-                clearInterval(progressInterval);
-                // Submit the form
-                this.submit();
-            }
-        }, 200);
+        // Actually submit the form
+        // Using HTMLFormElement.submit() bypasses the submit event listener
+        HTMLFormElement.prototype.submit.call(this);
     });
+
+    // Initialize with some example metadata if needed
+    // Uncomment the line below to start with an example metadata field
+    // addMetadataRow('', '');
 });
 </script>
 {% endblock %}
