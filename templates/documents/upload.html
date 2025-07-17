@@ -1,14 +1,13 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Upload Document{% endblock %}
+{% block title %}Upload Document - Gamma Intelligence{% endblock %}
 
 {% block content %}
 <style>
     .upload-container {
-        max-width: 800px;
-        margin: 2rem auto;
-        padding: 0 1rem;
+        max-width: 900px;
+        margin: 0 auto;
     }
 
     .upload-header {
@@ -17,47 +16,38 @@
     }
 
     .upload-header h2 {
-        color: #333;
+        color: #2c3e50;
+        font-weight: 600;
         margin-bottom: 0.5rem;
     }
 
     .upload-header p {
-        color: #666;
-        margin: 0;
-    }
-
-    .form-section {
-        background-color: #ffffff;
-        border: 1px solid #e0e0e0;
-        border-radius: 0.5rem;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .form-section h4 {
-        margin-bottom: 1rem;
-        color: #333;
-        font-weight: 600;
-        border-bottom: 2px solid #f8f9fa;
-        padding-bottom: 0.5rem;
+        color: #6c757d;
+        font-size: 1.1rem;
     }
 
     /* File Upload Zone */
     .file-upload-zone {
-        border: 2px dashed #ccc;
+        border: 2px dashed #dee2e6 !important;
         border-radius: 0.5rem;
         padding: 3rem;
         text-align: center;
-        cursor: pointer;
+        background-color: #f8f9fa;
         transition: all 0.3s ease;
-        background-color: #fafbfc;
+        cursor: pointer;
         position: relative;
+        margin-bottom: 1rem;
     }
 
-    .file-upload-zone:hover, .file-upload-zone.dragover {
-        border-color: #0d6efd;
-        background-color: #f0f8ff;
+    .file-upload-zone:hover {
+        border-color: #0d6efd !important;
+        background-color: #e7f1ff;
+    }
+
+    .file-upload-zone.dragover {
+        border-color: #0d6efd !important;
+        background-color: #e7f1ff;
+        transform: scale(1.02);
     }
 
     .file-upload-zone input[type="file"] {
@@ -72,44 +62,46 @@
 
     .upload-icon {
         font-size: 3rem;
+        color: #6c757d;
         margin-bottom: 1rem;
     }
 
     .file-selected {
-        margin-top: 1rem;
-        padding: 0.75rem;
-        background-color: #d4edda;
-        border: 1px solid #c3e6cb;
+        background-color: #d1ecf1;
+        border-color: #0c5460;
+        padding: 1rem;
         border-radius: 0.25rem;
-        color: #155724;
-        font-weight: 500;
+        margin-top: 1rem;
     }
 
-    /* Expiration Rules styling */
-    .radio-group {
-        display: flex;
-        gap: 1rem;
-        margin-top: 0.5rem;
+    .file-selected .file-name {
+        font-weight: 600;
+        color: #0c5460;
     }
 
-    .radio-option {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+    /* Form Sections */
+    .form-section {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
     }
 
-    .radio-option input[type="radio"] {
-        margin: 0;
+    .form-section h4 {
+        color: #495057;
+        font-size: 1.25rem;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e9ecef;
     }
 
-    .radio-option label {
-        margin: 0;
-        cursor: pointer;
-    }
-
-    /* Metadata Section */
+    /* Metadata Management - Side by Side Layout */
     .metadata-grid {
-        margin-bottom: 0.5rem;
+        max-height: 400px;
+        overflow-y: auto;
+        padding-right: 0.5rem;
     }
 
     .metadata-item {
@@ -174,6 +166,28 @@
 
     .custom-report-group.show {
         display: block;
+    }
+
+    /* NEW: Expiration Rules styling */
+    .radio-group {
+        display: flex;
+        gap: 1rem;
+        margin-top: 0.5rem;
+    }
+
+    .radio-option {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .radio-option input[type="radio"] {
+        margin: 0;
+    }
+
+    .radio-option label {
+        margin: 0;
+        cursor: pointer;
     }
 
     /* Buttons */
@@ -340,6 +354,7 @@
                     </div>
                 </div>
 
+                <!-- NEW: Expiration Rules Column -->
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Expiration Rules <span class="text-danger">*</span></label>
                     <div class="radio-group">
@@ -481,115 +496,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Report Type Handling
-    if (reportTypeSelect) {
-        reportTypeSelect.addEventListener('change', function() {
-            if (this.value === 'custom') {
-                customReportTypeGroup.classList.add('show');
-                customReportTypeInput.focus();
-            } else {
-                customReportTypeGroup.classList.remove('show');
-            }
-        });
-    }
-
-    // Metadata Management
-    addMetadataBtn.addEventListener('click', function() {
-        if (metadataCount < maxMetadata) {
-            addMetadataItem();
-        }
-    });
-
-    function addMetadataItem() {
-        metadataCount++;
-        const metadataId = `metadata-${metadataCount}`;
-
-        const metadataItem = document.createElement('div');
-        metadataItem.className = 'metadata-item';
-        metadataItem.innerHTML = `
-            <button type="button" class="btn-remove-meta" onclick="removeMetadataItem(this)">×</button>
-            <div class="metadata-item-fields">
-                <input type="text" placeholder="Key (e.g., 'Author')" class="form-control metadata-key" />
-                <input type="text" placeholder="Value (e.g., 'John Smith')" class="form-control metadata-value" />
-            </div>
-        `;
-
-        metadataContainer.appendChild(metadataItem);
-        updateMetadataCount();
-        updateAddButtonState();
-
-        // Focus on the key input
-        metadataItem.querySelector('.metadata-key').focus();
-    }
-
-    window.removeMetadataItem = function(button) {
-        button.parentElement.remove();
-        updateMetadataCount();
-        updateAddButtonState();
-        updateMetadataJson();
-    };
-
-    function updateMetadataCount() {
-        const items = metadataContainer.querySelectorAll('.metadata-item');
-        metadataCount = items.length;
-        metadataCountSpan.textContent = metadataCount;
-    }
-
-    function updateAddButtonState() {
-        addMetadataBtn.disabled = metadataCount >= maxMetadata;
-        if (metadataCount >= maxMetadata) {
-            addMetadataBtn.textContent = 'Maximum reached (16/16)';
-        } else {
-            addMetadataBtn.textContent = 'Add Metadata';
-        }
-    }
-
-    function updateMetadataJson() {
-        const metadata = {};
-        const metadataItems = metadataContainer.querySelectorAll('.metadata-item');
-
-        metadataItems.forEach(item => {
-            const key = item.querySelector('.metadata-key').value.trim();
-            const value = item.querySelector('.metadata-value').value.trim();
-            if (key && value) {
-                metadata[key] = value;
-            }
-        });
-
-        metadataJsonInput.value = JSON.stringify(metadata);
-    }
-
-    // Update metadata JSON when inputs change
-    metadataContainer.addEventListener('input', updateMetadataJson);
-
-    // Form submission validation
-    uploadForm.addEventListener('submit', function(e) {
-        // Validate required fields
-        const publicationDate = document.querySelector('input[name="publication_date"]');
-        const expirationRule = document.querySelector('input[name="expiration_rule"]:checked');
-
-        if (!publicationDate.value) {
-            e.preventDefault();
-            alert('Publication date is required.');
-            publicationDate.focus();
-            return;
-        }
-
-        if (!expirationRule) {
-            e.preventDefault();
-            alert('Please select an expiration rule (Evergreen or Standard).');
-            return;
-        }
-
-        // Update metadata before submission
-        updateMetadataJson();
-
-        // Show progress
-        submitBtn.disabled = true;
-        uploadProgress.style.display = 'block';
-    });
-
-    // Utility functions
+    // Format file size
     function formatFileSize(bytes) {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
@@ -597,7 +504,137 @@ document.addEventListener('DOMContentLoaded', function() {
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
+
+    // Report Type Selection
+    if (reportTypeSelect) {
+        reportTypeSelect.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customReportTypeGroup.classList.add('show');
+                if (customReportTypeInput) {
+                    customReportTypeInput.required = true;
+                    customReportTypeInput.focus();
+                }
+            } else {
+                customReportTypeGroup.classList.remove('show');
+                if (customReportTypeInput) {
+                    customReportTypeInput.required = false;
+                    customReportTypeInput.value = '';
+                }
+            }
+        });
+    }
+
+    // Metadata Management - Side by Side Layout
+    function addMetadataRow(key = '', value = '') {
+        if (metadataCount >= maxMetadata) {
+            alert('Maximum 16 metadata pairs allowed');
+            return;
+        }
+
+        const item = document.createElement('div');
+        item.className = 'metadata-item';
+        item.innerHTML = `
+            <button type="button" class="btn-remove-meta" onclick="removeMetadataItem(this)" title="Remove">
+                ✕
+            </button>
+            <div class="metadata-item-fields">
+                <input type="text" class="form-control form-control-sm metadata-key"
+                       placeholder="Key (e.g., ticker)" value="${key}">
+                <input type="text" class="form-control form-control-sm metadata-value"
+                       placeholder="Value" value="${value}">
+            </div>
+        `;
+
+        metadataContainer.appendChild(item);
+        metadataCount++;
+        updateMetadataCount();
+
+        // Focus on the key input if it's a new item
+        if (!key) {
+            item.querySelector('.metadata-key').focus();
+        }
+    }
+
+    window.removeMetadataItem = function(button) {
+        button.closest('.metadata-item').remove();
+        metadataCount--;
+        updateMetadataCount();
+    };
+
+    function updateMetadataCount() {
+        metadataCountSpan.textContent = metadataCount;
+        addMetadataBtn.disabled = metadataCount >= maxMetadata;
+
+        if (metadataCount >= maxMetadata) {
+            addMetadataBtn.innerHTML = 'Maximum Reached';
+        } else {
+            addMetadataBtn.innerHTML = 'Add Metadata';
+        }
+    }
+
+    addMetadataBtn.addEventListener('click', () => addMetadataRow());
+
+    // Form Validation and Submission
+    uploadForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // NEW: Validate required fields (publication_date and expiration_rule)
+        const publicationDate = document.querySelector('input[name="publication_date"]');
+        const expirationRule = document.querySelector('input[name="expiration_rule"]:checked');
+
+        if (!publicationDate.value) {
+            alert('Publication date is required.');
+            publicationDate.focus();
+            return;
+        }
+
+        if (!expirationRule) {
+            alert('Please select an expiration rule (Evergreen or Standard).');
+            return;
+        }
+
+        // Validate file selection
+        if (!fileInput.files.length) {
+            alert('Please select a file to upload');
+            fileUploadZone.scrollIntoView({ behavior: 'smooth' });
+            return;
+        }
+
+        // Collect metadata
+        const metadata = {};
+        const items = metadataContainer.querySelectorAll('.metadata-item');
+
+        items.forEach(item => {
+            const key = item.querySelector('.metadata-key').value.trim();
+            const value = item.querySelector('.metadata-value').value.trim();
+
+            if (key && value) {
+                metadata[key] = value;
+            }
+        });
+
+        metadataJsonInput.value = JSON.stringify(metadata);
+
+        // Show progress
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading...';
+        uploadProgress.style.display = 'block';
+
+        // Simulate progress (in real implementation, track actual upload progress)
+        let progress = 0;
+        const progressBar = uploadProgress.querySelector('.progress-bar');
+
+        const progressInterval = setInterval(() => {
+            progress += 10;
+            progressBar.style.width = progress + '%';
+
+            if (progress >= 90) {
+                clearInterval(progressInterval);
+                // Submit the form
+                this.submit();
+            }
+        }, 200);
+    });
 });
 </script>
-
 {% endblock %}
