@@ -1,5 +1,9 @@
+{% extends 'base.html' %}
 {% load static %}
 
+{% block title %}Upload Document{% endblock %}
+
+{% block content %}
 <style>
     .upload-container {
         max-width: 800px;
@@ -79,70 +83,30 @@
         font-weight: 500;
     }
 
-    /* Expiration Rules Section */
+    /* Expiration Rules styling */
     .expiration-rules {
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 0.375rem;
+        margin-top: 1rem;
         padding: 1rem;
-        margin-bottom: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 0.25rem;
+        border: 1px solid #dee2e6;
     }
 
-    .expiration-rules h5 {
-        margin-bottom: 0.75rem;
-        color: #495057;
+    .expiration-rules label {
         font-weight: 600;
+        margin-bottom: 0.5rem;
+        display: block;
     }
 
     .radio-group {
         display: flex;
-        gap: 1.5rem;
-        flex-wrap: wrap;
+        gap: 1rem;
     }
 
     .radio-option {
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        padding: 0.75rem 1rem;
-        border: 2px solid #dee2e6;
-        border-radius: 0.375rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        background-color: white;
-        min-width: 120px;
-    }
-
-    .radio-option:hover {
-        border-color: #0d6efd;
-        background-color: #f0f8ff;
-    }
-
-    .radio-option input[type="radio"] {
-        margin: 0;
-        accent-color: #0d6efd;
-    }
-
-    .radio-option input[type="radio"]:checked + label {
-        font-weight: 600;
-        color: #0d6efd;
-    }
-
-    .radio-option:has(input:checked) {
-        border-color: #0d6efd;
-        background-color: #e7f3ff;
-    }
-
-    .radio-option label {
-        cursor: pointer;
-        margin: 0;
-        font-weight: 500;
-    }
-
-    .expiration-help {
-        margin-top: 0.5rem;
-        font-size: 0.875rem;
-        color: #6c757d;
     }
 
     /* Metadata Section */
@@ -294,11 +258,6 @@
         .file-upload-zone {
             padding: 2rem;
         }
-
-        .radio-group {
-            flex-direction: column;
-            gap: 0.75rem;
-        }
     }
 </style>
 
@@ -356,7 +315,6 @@
                         {{ form.publication_date.label }} <span class="text-danger">*</span>
                     </label>
                     {{ form.publication_date }}
-                    <small class="form-text text-muted">{{ form.publication_date.help_text }}</small>
                     {% if form.publication_date.errors %}
                         <div class="invalid-feedback d-block">{{ form.publication_date.errors.0 }}</div>
                     {% endif %}
@@ -384,10 +342,9 @@
                     </div>
                 </div>
 
-                <!-- NEW: Expiration Rules Section -->
                 <div class="col-md-6 mb-3">
                     <div class="expiration-rules">
-                        <h5>⏰ Expiration Rules <span class="text-danger">*</span></h5>
+                        <label class="form-label">Expiration Rules <span class="text-danger">*</span></label>
                         <div class="radio-group">
                             {% for choice_value, choice_label in form.expiration_rule.field.choices %}
                                 <div class="radio-option">
@@ -402,10 +359,9 @@
                                 </div>
                             {% endfor %}
                         </div>
-                        <div class="expiration-help">
-                            <strong>Evergreen:</strong> Persistent documents for long-term reference<br>
-                            <strong>Standard:</strong> Temporary documents with limited lifecycle
-                        </div>
+                        <small class="form-text text-muted">
+                            Evergreen: Persistent documents | Standard: Temporary documents
+                        </small>
                         {% if form.expiration_rule.errors %}
                             <div class="invalid-feedback d-block">{{ form.expiration_rule.errors.0 }}</div>
                         {% endif %}
@@ -616,7 +572,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Update metadata JSON when inputs change
     metadataContainer.addEventListener('input', updateMetadataJson);
 
-    // Form submission validation and progress
+    // Form submission validation
     uploadForm.addEventListener('submit', function(e) {
         // Validate required fields
         const publicationDate = document.querySelector('input[name="publication_date"]');
@@ -641,18 +597,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show progress
         submitBtn.disabled = true;
         uploadProgress.style.display = 'block';
-
-        // Simulate progress (you can remove this if you have real progress tracking)
-        let progress = 0;
-        const progressBar = uploadProgress.querySelector('.progress-bar');
-        const interval = setInterval(() => {
-            progress += Math.random() * 15;
-            if (progress > 90) progress = 90;
-            progressBar.style.width = progress + '%';
-        }, 200);
-
-        // Clean up interval after 30 seconds (fallback)
-        setTimeout(() => clearInterval(interval), 30000);
     });
 
     // Utility functions
@@ -665,3 +609,5 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+{% endblock %}

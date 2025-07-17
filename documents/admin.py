@@ -12,6 +12,7 @@ class DocumentAdmin(admin.ModelAdmin):
         'report_type',
         'vector_group_display',
         'publication_date',
+        'is_persistent_display',
         'upload_date_formatted',
         'is_vectorized_display',
         'file_hash_truncated',
@@ -20,6 +21,7 @@ class DocumentAdmin(admin.ModelAdmin):
     list_filter = [
         'report_type',
         'is_vectorized',
+        'is_persistent_document',
         'upload_date',
         'publication_date',
         'vector_group_id',
@@ -53,6 +55,7 @@ class DocumentAdmin(admin.ModelAdmin):
             'fields': (
                 'report_type',
                 'publication_date',
+                'is_persistent_document',
                 'upload_date',
             )
         }),
@@ -112,6 +115,15 @@ class DocumentAdmin(admin.ModelAdmin):
 
     is_vectorized_display.short_description = 'Vectorized'
     is_vectorized_display.admin_order_field = 'is_vectorized'
+
+    # NEW: Display method for persistence status
+    def is_persistent_display(self, obj):
+        if obj.is_persistent_document:
+            return format_html('<span style="color: blue; font-weight: bold;">Evergreen</span>')
+        return format_html('<span style="color: orange;">Standard</span>')
+
+    is_persistent_display.short_description = 'Expiration Rule'
+    is_persistent_display.admin_order_field = 'is_persistent_document'
 
     def upload_date_formatted(self, obj):
         return obj.upload_date.strftime('%Y-%m-%d %H:%M')
