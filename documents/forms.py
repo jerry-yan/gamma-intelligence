@@ -29,9 +29,11 @@ class DocumentUploadForm(forms.ModelForm):
         choices=[
             ('', '-- Select or enter custom --'),
             ('Company Update', 'Company Update'),
+            ('Company Filing', 'Company Filing'),
+            ('Quarter Review', 'Quarter Review'),
             ('Quarter Preview', 'Quarter Preview'),
             ('Initiation Report', 'Initiation Report'),
-            ('general', 'General Document'),
+            ('Industry Note', 'Industry Note'),
             ('custom', 'Custom (enter below)'),
         ],
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'report-type-select'})
