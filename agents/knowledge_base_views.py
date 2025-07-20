@@ -60,7 +60,7 @@ class KnowledgeBaseMetricsView(LoginRequiredMixin, TemplateView):
 
             kb_data['documents'] = list(documents)
 
-            # Get ResearchNotes
+            # Get ResearchNotes - this is more complex
             # First, get notes that directly have this vector_group_id
             direct_notes = ResearchNote.objects.filter(
                 is_vectorized=True,
