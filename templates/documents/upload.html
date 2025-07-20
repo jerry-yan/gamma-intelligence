@@ -254,17 +254,6 @@
         position: relative;
     }
 
-    .metadata-item-fields {
-        display: flex !important;
-        gap: 0.5rem;
-        align-items: center;
-    }
-
-    .metadata-item-fields input {
-        flex: 1;
-        min-width: 0;
-    }
-
     .btn-remove-meta {
         position: absolute;
         top: 0.5rem;
@@ -523,7 +512,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Metadata Management - Side by Side Layout
+    // Metadata Management - Vertically Stacked Layout
     function addMetadataRow(key = '', value = '') {
         if (metadataCount >= maxMetadata) {
             alert('Maximum 16 metadata pairs allowed');
@@ -536,16 +525,14 @@ document.addEventListener('DOMContentLoaded', function() {
             <button type="button" class="btn-remove-meta" onclick="removeMetadataItem(this)" title="Remove">
                 ✕
             </button>
-            <div class="metadata-item-fields">
-                <input type="text"
-                       class="form-control form-control-sm metadata-key"
-                       placeholder="Key"
-                       value="${key}">
-                <input type="text"
-                       class="form-control form-control-sm metadata-value"
-                       placeholder="Value"
-                       value="${value}">
-            </div>
+            <input type="text"
+                   class="form-control metadata-key mb-2"
+                   placeholder="Key"
+                   value="${key}">
+            <input type="text"
+                   class="form-control metadata-value"
+                   placeholder="Value"
+                   value="${value}">
         `;
 
         metadataContainer.appendChild(item);
