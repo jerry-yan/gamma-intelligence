@@ -13,6 +13,7 @@ urlpatterns = [
     # KnowledgeBase management pages
     path('knowledge-bases/create/', knowledge_base_views.CreateKnowledgeBaseView.as_view(), name='create_knowledge_base'),
     path('knowledge-bases/manage/', knowledge_base_views.ManageKnowledgeBasesView.as_view(), name='manage_knowledge_bases'),
+    path('knowledge-bases/metrics/', knowledge_base_views.KnowledgeBaseMetricsView.as_view(), name='knowledge_base_metrics'),
 
     # API endpoints
     path('api/knowledge-bases/', views.api_knowledge_bases, name='api_knowledge_bases'),
