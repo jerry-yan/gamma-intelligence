@@ -1,0 +1,58 @@
+<!-- templates/agents/components/chat_sidebar.html -->
+<aside class="chat-sidebar" id="chatSidebar">
+    <div class="sidebar-header">
+        <button class="new-chat-btn" id="newChatBtn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 4v8m4-4H4"/>
+            </svg>
+            New Chat
+        </button>
+    </div>
+
+    <div class="sessions-list" id="sessionsList">
+        <!-- Sessions will be dynamically loaded here -->
+        <div class="loading-sessions">
+            <div class="text-center p-3">
+                <small class="text-secondary">Loading chats...</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ user.username|first|upper }}</div>
+            <span class="user-name">{{ user.username }}</span>
+        </div>
+    </div>
+</aside>
+
+<style>
+.sidebar-footer {
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    background: var(--primary);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.user-name {
+    font-size: 0.875rem;
+    color: var(--text-primary);
+}
+</style>

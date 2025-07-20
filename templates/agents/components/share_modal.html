@@ -1,0 +1,216 @@
+<!-- templates/agents/components/share_modal.html -->
+<div class="modal" id="shareModal" style="display: none;">
+    <div class="modal-backdrop" onclick="closeShareModal()"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Share Chat</h2>
+            <button class="modal-close" onclick="closeShareModal()">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <p class="share-description">
+                Share this chat with others. They'll be able to view the conversation but won't be able to continue it.
+            </p>
+
+            <div class="share-options">
+                <div class="share-option">
+                    <input type="checkbox" id="shareAnonymously" class="share-checkbox">
+                    <label for="shareAnonymously" class="share-label">
+                        <span class="share-label-title">Share anonymously</span>
+                        <span class="share-label-desc">Your name will be hidden</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="share-link-container">
+                <input type="text" class="share-link-input" id="shareLink" readonly value="Generating link...">
+                <button class="copy-link-btn" onclick="copyShareLink()">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor">
+                        <rect x="5.5" y="5.5" width="7" height="7" rx="1" stroke-width="1.5"/>
+                        <path d="M3.5 10.5v-7a1 1 0 011-1h7" stroke-width="1.5"/>
+                    </svg>
+                    Copy
+                </button>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="modal-btn modal-btn-secondary" onclick="closeShareModal()">Cancel</button>
+            <button class="modal-btn modal-btn-primary" onclick="generateShareLink()">Create Link</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    position: relative;
+    background: var(--bg-main);
+    border-radius: 0.75rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    max-width: 32rem;
+    width: 100%;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+}
+
+.modal-close:hover {
+    background: var(--bg-message);
+    color: var(--text-primary);
+}
+
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+}
+
+.share-description {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+}
+
+.share-options {
+    margin-bottom: 1.5rem;
+}
+
+.share-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.share-checkbox {
+    margin-top: 0.125rem;
+}
+
+.share-label {
+    cursor: pointer;
+}
+
+.share-label-title {
+    display: block;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.share-label-desc {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.share-link-container {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.share-link-input {
+    flex: 1;
+    padding: 0.75rem;
+    background: var(--bg-message);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+}
+
+.copy-link-btn {
+    padding: 0.75rem 1rem;
+    background: var(--bg-message);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+}
+
+.copy-link-btn:hover {
+    background: var(--bg-main);
+}
+
+.modal-footer {
+    padding: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+.modal-btn {
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.modal-btn-secondary {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.modal-btn-secondary:hover {
+    background: var(--bg-message);
+}
+
+.modal-btn-primary {
+    background: var(--primary);
+    border: none;
+    color: white;
+}
+
+.modal-btn-primary:hover {
+    background: var(--primary-hover);
+}
+</style>

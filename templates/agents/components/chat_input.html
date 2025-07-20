@@ -1,0 +1,68 @@
+<!-- templates/agents/components/chat_input.html -->
+<div class="chat-input-container">
+    <div class="input-wrapper">
+        <!-- Knowledge Base Selector -->
+        <div class="kb-selector-wrapper">
+            <label class="kb-selector-label" for="knowledgeBaseSelect">Knowledge Base:</label>
+            <select id="knowledgeBaseSelect" class="kb-selector-dropdown">
+                <option value="">None (General Chat)</option>
+                {% for kb in knowledge_bases %}
+                    <option value="{{ kb.id }}">{{ kb.display_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Input Form -->
+        <form class="input-form" id="chatForm">
+            <textarea
+                class="chat-textarea"
+                id="chatInput"
+                placeholder="Send a message..."
+                rows="1"
+                autocomplete="off"
+                spellcheck="true"
+            ></textarea>
+
+            <button type="submit" class="send-btn" id="sendBtn">
+                <span>Send</span>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 2L2 7l4 2m8-7l-8 12v-5m8-7v5"/>
+                </svg>
+            </button>
+        </form>
+
+        <!-- Character counter (optional) -->
+        <div class="input-footer">
+            <span class="char-counter" id="charCounter">0 / 4000</span>
+        </div>
+    </div>
+</div>
+
+<style>
+.input-footer {
+    margin-top: 0.5rem;
+    text-align: right;
+}
+
+.char-counter {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* Typing indicator inside input area */
+.typing-indicator-inline {
+    padding: 0.5rem 0;
+    display: none;
+}
+
+.typing-indicator-inline.active {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.typing-text {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+</style>

@@ -1,0 +1,45 @@
+<!-- templates/agents/components/delete_confirm_modal.html -->
+<div class="modal" id="deleteConfirmModal" style="display: none;">
+    <div class="modal-backdrop" onclick="closeDeleteModal()"></div>
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2 class="modal-title">Delete Chat?</h2>
+            <button class="modal-close" onclick="closeDeleteModal()">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <p class="delete-warning">
+                This will permanently delete "<span id="deleteSessionTitle"></span>" and all its messages. This action cannot be undone.
+            </p>
+        </div>
+
+        <div class="modal-footer">
+            <button class="modal-btn modal-btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+            <button class="modal-btn modal-btn-danger" onclick="confirmDelete()">Delete</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.modal-sm {
+    max-width: 24rem;
+}
+
+.delete-warning {
+    color: var(--text-secondary);
+}
+
+.modal-btn-danger {
+    background: #ef4444;
+    border: none;
+    color: white;
+}
+
+.modal-btn-danger:hover {
+    background: #dc2626;
+}
+</style>

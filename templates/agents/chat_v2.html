@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Chat - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="chat-wrapper">
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" id="mobileMenuToggle">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+    </button>
+    
+    <!-- Sidebar -->
+    {% include 'agents/components/chat_sidebar.html' %}
+    
+    <!-- Main Chat Area -->
+    <main class="chat-main">
+        <!-- Chat Header -->
+        {% include 'agents/components/chat_header.html' %}
+        
+        <!-- Messages Container -->
+        <div class="messages-container" id="messagesContainer">
+            <!-- Welcome Screen -->
+            {% include 'agents/components/welcome_screen.html' %}
+        </div>
+        
+        <!-- Input Area -->
+        {% include 'agents/components/chat_input.html' %}
+    </main>
+</div>
+
+<!-- Modals -->
+{% include 'agents/components/share_modal.html' %}
+{% include 'agents/components/delete_confirm_modal.html' %}
+
+<!-- Styles -->
+<style>
+{% include 'agents/styles/chat_v2.css' %}
+</style>
+
+<!-- Scripts -->
+<script>
+// Global variables
+let currentSession = null;
+let currentKnowledgeBase = null;
+let currentModel = 'gpt-4.1';
+let isStreaming = false;
+let currentEventSource = null;
+
+// Initialize on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+    initializeChat();
+});
+
+{% include 'agents/scripts/chat_core.js' %}
+{% include 'agents/scripts/chat_ui.js' %}
+{% include 'agents/scripts/chat_api.js' %}
+</script>
+{% endblock %}

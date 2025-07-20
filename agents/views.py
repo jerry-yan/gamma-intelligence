@@ -455,23 +455,46 @@ def api_clear_session(request, session_id):
 @csrf_exempt
 @require_http_methods(["DELETE"])
 def api_delete_session(request, session_id):
-    """Delete an entire session"""
+    """Delete an entire chat session"""
     try:
         session = ChatSession.objects.get(
             session_id=session_id,
             user=request.user
         )
-
         session.delete()
-        logger.info(f"Deleted session {session_id} for user {request.user.username}")
-
         return JsonResponse({'success': True})
-
     except ChatSession.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Session not found'}, status=404)
     except Exception as e:
         logger.error(f"Error deleting session: {e}")
         return JsonResponse({'success': False, 'error': 'Failed to delete session'}, status=500)
+
+
+@login_required
+@csrf_exempt
+@require_http_methods(["PATCH"])
+def api_rename_session(request, session_id):
+    """Rename a chat session"""
+    try:
+        data = json.loads(request.body)
+        new_title = data.get('title', '').strip()
+
+        if not new_title:
+            return JsonResponse({'success': False, 'error': 'Title is required'}, status=400)
+
+        session = ChatSession.objects.get(
+            session_id=session_id,
+            user=request.user
+        )
+        session.title = new_title
+        session.save()
+
+        return JsonResponse({'success': True, 'title': new_title})
+    except ChatSession.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Session not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error renaming session: {e}")
+        return JsonResponse({'success': False, 'error': 'Failed to rename session'}, status=500)
 
 
 class StockTickerUploadView(LoginRequiredMixin, FormView):
@@ -554,3 +577,21 @@ class StockTickerUploadView(LoginRequiredMixin, FormView):
         except Exception as e:
             messages.error(self.request, f"Error processing file: {str(e)}")
             return self.form_invalid(form)
+
+
+class AgentView2(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
+    """Enhanced chatbot interface view with ChatGPT-like UI"""
+    template_name = 'agents/chat_v2.html'
+    login_url = '/accounts/login/'
+    permission_required = 'accounts.can_view_agents'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['knowledge_bases'] = KnowledgeBase.objects.filter(is_active=True)
+        context['user'] = self.request.user
+        # Add available models
+        context['available_models'] = [
+            {'id': 'o3', 'name': 'O3'},
+            {'id': 'gpt-4.1', 'name': 'GPT-4.1'},
+        ]
+        return context
