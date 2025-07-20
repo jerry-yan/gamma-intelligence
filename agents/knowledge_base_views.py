@@ -56,7 +56,7 @@ class KnowledgeBaseMetricsView(LoginRequiredMixin, TemplateView):
             documents = Document.objects.filter(
                 is_vectorized=True,
                 vector_group_id=kb.vector_group_id
-            ).order_by('filename')
+            ).order_by('-publication_date', 'filename')
 
             kb_data['documents'] = list(documents)
 
@@ -80,7 +80,7 @@ class KnowledgeBaseMetricsView(LoginRequiredMixin, TemplateView):
             )
 
             # Combine both sets of notes (use union to avoid duplicates)
-            all_notes = direct_notes.union(ticker_based_notes).order_by('raw_title')
+            all_notes = direct_notes.union(ticker_based_notes).order_by('-publication_date', 'raw_title')
 
             kb_data['research_notes'] = list(all_notes)
             kb_data['total_count'] = len(kb_data['documents']) + len(kb_data['research_notes'])
