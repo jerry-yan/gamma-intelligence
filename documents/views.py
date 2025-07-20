@@ -146,13 +146,7 @@ def upload_to_s3(local_file_path, s3_key):
 def upload_document(request):
     """
     Handle document upload with duplicate check and automatic vectorization.
-
-    Improvements:
-    - Copies openai_file_id when reusing existing files from S3
-    - Automatically uploads documents to OpenAI if not already uploaded
-    - Adds documents to vector stores with metadata attributes
-    - Sets is_vectorized flag when successfully added to vector store
-    - Provides user feedback about vectorization status
+    Now supports uploading to multiple knowledge bases at once.
     """
     if request.method == 'POST':
         form = DocumentUploadForm(request.POST, request.FILES)
@@ -174,141 +168,185 @@ def upload_document(request):
                 # Get file hash
                 file_hash = get_file_hash(temp_path, file_extension)
 
-                # Get the vector_group_id from the selected knowledge base
-                knowledge_base = form.cleaned_data.get('knowledge_base')
-                vector_group_id = knowledge_base.vector_group_id if knowledge_base else None
+                # Get selected knowledge bases
+                knowledge_bases = form.cleaned_data.get('knowledge_bases', [])
 
-                # Check if document already exists with same file_hash AND vector_group_id
-                existing_doc = Document.objects.filter(
-                    file_hash_id=file_hash,
-                    vector_group_id=vector_group_id
-                ).first()
+                # Get report type and expiration rules
+                report_type = form.get_report_type()
+                is_persistent = form.get_expiration_rules()
 
-                if existing_doc:
-                    # Document already exists with same hash and vector_group_id
-                    kb_name = knowledge_base.display_name if knowledge_base else "No Knowledge Base"
+                # Check if document already exists anywhere (to reuse S3/OpenAI)
+                existing_doc = Document.objects.filter(file_hash_id=file_hash).first()
+
+                # Find which selected knowledge bases already have this document
+                already_exists_in = []
+                new_knowledge_bases = []
+
+                for kb in knowledge_bases:
+                    exists = Document.objects.filter(
+                        file_hash_id=file_hash,
+                        vector_group_id=kb.vector_group_id
+                    ).exists()
+
+                    if exists:
+                        already_exists_in.append(kb)
+                    else:
+                        new_knowledge_bases.append(kb)
+
+                # If document exists in ALL selected knowledge bases, skip entirely
+                if knowledge_bases and len(already_exists_in) == len(knowledge_bases):
+                    kb_names = [kb.display_name for kb in already_exists_in]
                     messages.error(
                         request,
-                        f'This document already exists in "{kb_name}". '
-                        f'The same file cannot be uploaded twice to the same knowledge base.'
+                        f'This document already exists in all selected knowledge bases: {", ".join(kb_names)}. '
+                        f'Please select different knowledge bases or upload a different file.'
                     )
                     return redirect('documents:upload')
 
-                # Check if file exists in S3 (with any vector_group_id)
-                existing_file_in_s3 = Document.objects.filter(file_hash_id=file_hash).first()
-
-                if existing_file_in_s3:
-                    # Reuse existing file's S3 location, but create new document record
-                    document = form.save(commit=False)
-                    document.filename = uploaded_file.name
-                    document.file_hash_id = file_hash
-                    document.file_directory = existing_file_in_s3.file_directory
-                    document.openai_file_id = existing_file_in_s3.openai_file_id  # Copy OpenAI file ID
-                    document.save()
-
-                    kb_name = knowledge_base.display_name if knowledge_base else "No Knowledge Base"
-                    messages.success(
+                # Notify user about knowledge bases that already have this document
+                if already_exists_in:
+                    kb_names = [kb.display_name for kb in already_exists_in]
+                    messages.info(
                         request,
-                        f'Document "{uploaded_file.name}" added to "{kb_name}" '
-                        f'(reusing existing file with hash: {file_hash[:8]}...)'
+                        f'Document already exists in: {", ".join(kb_names)}. '
+                        f'Skipping these knowledge bases.'
                     )
+
+                # Reuse existing S3 URL and OpenAI file ID if document exists
+                if existing_doc:
+                    # Reuse existing S3 key and OpenAI file ID
+                    s3_key = existing_doc.file_directory
+                    s3_url = f"s3://{S3_BUCKET}/{s3_key}"
+                    openai_file_id = existing_doc.openai_file_id
+                    logger.info(f"♻️  Reusing existing file from S3: {s3_url}")
+                    logger.info(f"♻️  Reusing OpenAI file ID: {openai_file_id}")
                 else:
-                    # Upload new file to S3
-                    s3_key = f"{S3_USER_DOCUMENTS_PREFIX}/{file_hash}/{uploaded_file.name}"
+                    # Upload to S3 since this is a new file
+                    s3_key = f"{S3_USER_DOCUMENTS_PREFIX}/{file_hash}{file_extension}"
                     s3_url = upload_to_s3(temp_path, s3_key)
+                    logger.info(f"📤 Uploaded new file to S3: {s3_url}")
 
-                    # Create document record
-                    document = form.save(commit=False)
-                    document.filename = uploaded_file.name
-                    document.file_hash_id = file_hash
-                    document.file_directory = s3_url
-                    document.save()
-
-                    kb_name = knowledge_base.display_name if knowledge_base else "No Knowledge Base"
-                    messages.success(
-                        request,
-                        f'Document "{uploaded_file.name}" uploaded successfully to "{kb_name}" '
-                        f'with hash {file_hash[:8]}...'
-                    )
-
-                # Vectorization process (only if vector_group_id is set)
-                # Documents without vector_group_id or failed vectorizations can be processed
-                # later using a batch vectorization process similar to research notes
-                if vector_group_id and knowledge_base:
+                    # Get or upload file to OpenAI
+                    openai_file_id = None
                     try:
-                        logger.info(f"🔮 Starting vectorization for document {document.id}")
-
-                        # Get OpenAI client
-                        client = get_openai_client()
-
-                        # Check if we need to upload to OpenAI
-                        if not document.openai_file_id:
-                            logger.info(f"📤 Uploading document {document.id} to OpenAI...")
-                            openai_file_id = get_or_upload_file_to_openai(
-                                document.file_directory,
-                                existing_file_id=None
-                            )
-                            document.openai_file_id = openai_file_id
-                            document.save(update_fields=['openai_file_id'])
-                            logger.info(f"💾 OpenAI file ID saved: {openai_file_id}")
-                        else:
-                            logger.info(f"♻️  Using existing OpenAI file ID: {document.openai_file_id}")
-
-                        # Prepare attributes for vector store
-                        attributes = document.metadata.copy() if document.metadata else {}
-
-                        # Add standard fields
-                        attributes.update({
-                            "hash_id": document.file_hash_id,
-                            "report_type": document.report_type,
-                        })
-
-                        # Add publication date if available
-                        if document.publication_date:
-                            attributes["date"] = document.publication_date.isoformat()
-                            attributes["timestamp"] = int(datetime.combine(
-                                document.publication_date,
-                                datetime.min.time()
-                            ).timestamp())
-
-                        # Remove any None values
-                        attributes = {k: v for k, v in attributes.items() if v is not None}
-                        logger.info(f"📋 Prepared {len(attributes)} metadata attributes")
-
-                        # Upload to vector store
-                        vector_store_id = knowledge_base.vector_store_id
-                        logger.info(f"📊 Uploading to vector store {vector_store_id}")
-
-                        success = upload_to_vector_store(
-                            client,
-                            vector_store_id,
-                            document.openai_file_id,
-                            attributes
-                        )
-
-                        if success:
-                            document.is_vectorized = True
-                            document.save(update_fields=['is_vectorized'])
-                            logger.info(f"✅ Document {document.id} successfully vectorized")
-                            messages.info(
-                                request,
-                                f'Document successfully added to vector store for "{kb_name}"'
-                            )
-                        else:
-                            logger.warning(f"⚠️  Failed to vectorize document {document.id}")
-                            messages.warning(
-                                request,
-                                f'Document uploaded but could not be added to vector store. '
-                                f'It will be processed later.'
-                            )
-
+                        openai_file_id = get_or_upload_file_to_openai(s3_key)
+                        logger.info(f"📎 OpenAI file ID: {openai_file_id}")
                     except Exception as e:
-                        logger.error(f"❌ Error during vectorization of document {document.id}: {e}")
+                        logger.error(f"Failed to upload to OpenAI: {e}")
                         messages.warning(
                             request,
-                            f'Document uploaded successfully but vectorization failed: {str(e)}. '
-                            f'It will be processed later.'
+                            f'File uploaded to S3, but OpenAI upload failed: {str(e)}. '
+                            f'Document will be created but may not be vectorized.'
                         )
+
+                # Prepare common document attributes
+                common_attrs = {
+                    'filename': uploaded_file.name,
+                    'file_directory': s3_key,
+                    'file_hash_id': file_hash,
+                    'openai_file_id': openai_file_id,
+                    'publication_date': form.cleaned_data.get('publication_date'),
+                    'report_type': report_type,
+                    'is_persistent_document': is_persistent,
+                    'metadata': form.cleaned_data.get('metadata', {}),
+                }
+
+                # Create document entries and vectorize for new knowledge bases only
+                created_documents = []
+                vectorization_results = []
+
+                # If no knowledge bases selected, create one document without vector_group_id
+                if not knowledge_bases:
+                    document = Document.objects.create(**common_attrs, vector_group_id=None)
+                    created_documents.append(document)
+                    logger.info(f"📄 Created document {document.id} without knowledge base")
+                    messages.success(
+                        request,
+                        f'Document uploaded successfully without knowledge base assignment.'
+                    )
+                else:
+                    # Create a document for each NEW knowledge base only
+                    for kb in new_knowledge_bases:
+                        document = Document.objects.create(
+                            **common_attrs,
+                            vector_group_id=kb.vector_group_id
+                        )
+                        created_documents.append(document)
+                        logger.info(f"📄 Created document {document.id} for knowledge base: {kb.display_name}")
+
+                        # Try to vectorize if we have an OpenAI file ID
+                        if openai_file_id and kb.vector_store_id:
+                            try:
+                                # Get OpenAI client
+                                client = get_openai_client()
+
+                                # Prepare metadata attributes for vector store
+                                attributes = {
+                                    "hash_id": document.file_hash_id,
+                                    "report_type": document.report_type,
+                                }
+
+                                # Add optional attributes
+                                if document.publication_date:
+                                    attributes["date"] = document.publication_date.isoformat()
+                                    attributes["timestamp"] = int(datetime.combine(
+                                        document.publication_date,
+                                        datetime.min.time()
+                                    ).timestamp())
+
+                                # Remove any None values
+                                attributes = {k: v for k, v in attributes.items() if v is not None}
+                                logger.info(f"📋 Prepared {len(attributes)} metadata attributes for {kb.display_name}")
+
+                                # Upload to vector store
+                                success = upload_to_vector_store(
+                                    client,
+                                    kb.vector_store_id,
+                                    document.openai_file_id,
+                                    attributes
+                                )
+
+                                if success:
+                                    document.is_vectorized = True
+                                    document.save(update_fields=['is_vectorized'])
+                                    logger.info(
+                                        f"✅ Document {document.id} successfully vectorized to {kb.display_name}")
+                                    vectorization_results.append((kb.display_name, True, None))
+                                else:
+                                    logger.warning(
+                                        f"⚠️  Failed to vectorize document {document.id} to {kb.display_name}")
+                                    vectorization_results.append((kb.display_name, False, "Vectorization failed"))
+
+                            except Exception as e:
+                                logger.error(f"❌ Error during vectorization of document {document.id}: {e}")
+                                vectorization_results.append((kb.display_name, False, str(e)))
+
+                # Provide user feedback
+                if new_knowledge_bases:
+                    success_count = sum(1 for _, success, _ in vectorization_results if success)
+                    total_count = len(vectorization_results)
+
+                    if success_count == total_count:
+                        messages.success(
+                            request,
+                            f'Document successfully uploaded to {total_count} new knowledge base(s) and vectorized.'
+                        )
+                    elif success_count > 0:
+                        failed_kbs = [kb_name for kb_name, success, _ in vectorization_results if not success]
+                        messages.warning(
+                            request,
+                            f'Document uploaded to {total_count} new knowledge base(s), but vectorization '
+                            f'failed for: {", ".join(failed_kbs)}. These will be processed later.'
+                        )
+                    else:
+                        messages.warning(
+                            request,
+                            f'Document uploaded to {total_count} new knowledge base(s), but vectorization '
+                            f'failed. Documents will be processed later.'
+                        )
+                elif already_exists_in and not new_knowledge_bases:
+                    # All selected KBs already had the document
+                    pass  # Error message already shown above
 
                 return redirect('documents:upload')
 

@@ -45,19 +45,41 @@
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="{{ form.knowledge_base.id_for_label }}" class="form-label">
-                                {{ form.knowledge_base.label }}
+                            <label for="{{ form.knowledge_bases.id_for_label }}" class="form-label">
+                                {{ form.knowledge_bases.label }}
                             </label>
-                            {{ form.knowledge_base }}
-                            <small class="form-text text-muted">{{ form.knowledge_base.help_text }}</small>
-                            {% if form.knowledge_base.errors %}
-                                <div class="invalid-feedback d-block">{{ form.knowledge_base.errors.0 }}</div>
-                            {% endif %}
+                            <div class="knowledge-base-selector">
+                                <button type="button" class="btn btn-outline-secondary dropdown-toggle w-100 text-start"
+                                        id="kb-dropdown-btn"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false">
+                                    <span class="selected-count">None selected</span>
+                                </button>
+                                <div class="dropdown-menu p-3" style="max-height: 300px; overflow-y: auto; width: 100%;">
+                                    <div class="mb-2">
+                                        <button type="button" class="btn btn-sm btn-link p-0" id="select-all-kb">Select All</button>
+                                        |
+                                        <button type="button" class="btn btn-sm btn-link p-0" id="clear-all-kb">Clear All</button>
+                                    </div>
+                                    <div class="kb-checkbox-list">
+                                        {% for checkbox in form.knowledge_bases %}
+                                            <div class="form-check">
+                                                {{ checkbox.tag }}
+                                                <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                                                    {{ checkbox.choice_label }}
+                                                </label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            <small class="form-text text-muted">{{ form.knowledge_bases.help_text }}</small>
                         </div>
 
                         <div class="col-md-6 mb-3">
                             <label for="{{ form.publication_date.id_for_label }}" class="form-label">
-                                {{ form.publication_date.label }} <span class="text-danger">*</span>
+                                {{ form.publication_date.label }}
+                                <span class="text-danger">*</span>
                             </label>
                             {{ form.publication_date }}
                             {% if form.publication_date.errors %}
@@ -72,14 +94,8 @@
                                 {{ form.report_type_choice.label }}
                             </label>
                             {{ form.report_type_choice }}
-                            {% if form.report_type_choice.errors %}
-                                <div class="invalid-feedback d-block">{{ form.report_type_choice.errors.0 }}</div>
-                            {% endif %}
 
-                            <div class="custom-report-group" id="custom-report-type-group">
-                                <label for="{{ form.custom_report_type.id_for_label }}" class="form-label">
-                                    ✏ {{ form.custom_report_type.label }}
-                                </label>
+                            <div class="custom-report-group mt-2" id="custom-report-type-group">
                                 {{ form.custom_report_type }}
                                 {% if form.custom_report_type.errors %}
                                     <div class="invalid-feedback d-block">{{ form.custom_report_type.errors.0 }}</div>
@@ -87,10 +103,10 @@
                             </div>
                         </div>
 
-                        <!-- NEW: Expiration Rules Section -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label">
-                                {{ form.expiration_rules.label }} <span class="text-danger">*</span>
+                                {{ form.expiration_rules.label }}
+                                <span class="text-danger">*</span>
                             </label>
                             <small class="form-text text-muted d-block mb-2">{{ form.expiration_rules.help_text }}</small>
                             <div class="expiration-rules-options">
@@ -140,10 +156,10 @@
                     <p class="text-center mt-2 mb-0">Uploading document...</p>
                 </div>
 
-                <!-- Submit Section -->
+                <!-- Submit Button -->
                 <div class="text-center mt-4">
                     <button type="submit" class="btn btn-primary btn-upload" id="submit-btn">
-                        Upload
+                        <i class="bi bi-cloud-upload"></i> Upload Document
                     </button>
                 </div>
             </form>
@@ -158,7 +174,6 @@
         border-radius: 0.5rem;
         padding: 1.5rem;
         margin-bottom: 1.5rem;
-        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
     }
 
     .form-section h4 {
@@ -168,80 +183,75 @@
 
     /* File Upload Zone */
     .file-upload-zone {
-        border: 2px dashed #ced4da;
+        border: 2px dashed #dee2e6;
         border-radius: 0.5rem;
         padding: 3rem;
         text-align: center;
-        position: relative;
-        cursor: pointer;
-        transition: all 0.3s;
         background-color: #fff;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
     }
 
     .file-upload-zone:hover {
-        border-color: #6c757d;
-        background-color: #f8f9fa;
+        border-color: #0d6efd;
+        background-color: #f0f8ff;
     }
 
     .file-upload-zone.dragover {
         border-color: #0d6efd;
-        background-color: #e7f1ff;
+        background-color: #e7f3ff;
     }
 
     .file-upload-zone input[type="file"] {
         position: absolute;
-        width: 100%;
-        height: 100%;
         top: 0;
         left: 0;
+        width: 100%;
+        height: 100%;
         opacity: 0;
         cursor: pointer;
     }
 
-    .upload-content {
-        pointer-events: none;
-    }
-
     .file-selected {
-        margin-top: 1rem;
-        padding: 1rem;
-        background-color: #e7f1ff;
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
         border-radius: 0.25rem;
+        padding: 1rem;
+        margin-top: 1rem;
         display: flex;
         align-items: center;
         gap: 0.5rem;
     }
 
-    .file-selected i {
-        font-size: 1.5rem;
-        color: #0d6efd;
+    /* Knowledge Base Selector */
+    .knowledge-base-selector {
+        position: relative;
     }
 
-    .file-selected .file-name {
-        font-weight: 500;
-        flex: 1;
+    .kb-checkbox-list {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .dropdown-menu {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
     }
 
     /* Metadata Grid */
     .metadata-grid {
-        max-height: 300px;
-        overflow-y: auto;
-        padding-right: 0.5rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
     }
 
     .metadata-item {
         background-color: #fff;
         border: 1px solid #dee2e6;
-        border-radius: 0.375rem;
-        padding: 0.75rem;
-        margin-bottom: 0.75rem;
-        transition: all 0.2s;
+        border-radius: 0.25rem;
+        padding: 1rem;
         position: relative;
-    }
-
-    .metadata-item:hover {
-        background-color: #e9ecef;
-        border-color: #ced4da;
     }
 
     .metadata-item-fields {
@@ -397,6 +407,49 @@ document.addEventListener('DOMContentLoaded', function() {
     const submitBtn = document.getElementById('submit-btn');
     const uploadProgress = document.getElementById('upload-progress');
 
+    // Knowledge Base Multi-select
+    const kbDropdownBtn = document.getElementById('kb-dropdown-btn');
+    const kbCheckboxes = document.querySelectorAll('input[name="knowledge_bases"]');
+    const selectAllBtn = document.getElementById('select-all-kb');
+    const clearAllBtn = document.getElementById('clear-all-kb');
+
+    // Update selected count for knowledge bases
+    function updateKBSelectedCount() {
+        const checkedCount = document.querySelectorAll('input[name="knowledge_bases"]:checked').length;
+        const selectedCountSpan = kbDropdownBtn.querySelector('.selected-count');
+
+        if (checkedCount === 0) {
+            selectedCountSpan.textContent = 'None selected';
+        } else if (checkedCount === 1) {
+            selectedCountSpan.textContent = '1 knowledge base selected';
+        } else {
+            selectedCountSpan.textContent = `${checkedCount} knowledge bases selected`;
+        }
+    }
+
+    // Knowledge base checkbox listeners
+    kbCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateKBSelectedCount);
+    });
+
+    // Select All / Clear All functionality
+    selectAllBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        kbCheckboxes.forEach(checkbox => checkbox.checked = true);
+        updateKBSelectedCount();
+    });
+
+    clearAllBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        kbCheckboxes.forEach(checkbox => checkbox.checked = false);
+        updateKBSelectedCount();
+    });
+
+    // Prevent dropdown from closing when clicking inside
+    document.querySelector('.knowledge-base-selector .dropdown-menu').addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+
     let metadataCount = 0;
     const maxMetadata = 16;
 
@@ -484,78 +537,74 @@ document.addEventListener('DOMContentLoaded', function() {
                 ✕
             </button>
             <div class="metadata-item-fields">
-                <input type="text" class="form-control form-control-sm metadata-key"
-                       placeholder="Key (e.g., ticker)" value="${key}">
-                <input type="text" class="form-control form-control-sm metadata-value"
-                       placeholder="Value" value="${value}">
+                <input type="text"
+                       class="form-control form-control-sm metadata-key"
+                       placeholder="Key"
+                       value="${key}">
+                <input type="text"
+                       class="form-control form-control-sm metadata-value"
+                       placeholder="Value"
+                       value="${value}">
             </div>
         `;
 
         metadataContainer.appendChild(item);
         metadataCount++;
-        updateMetadataCount();
+        metadataCountSpan.textContent = metadataCount;
 
-        // Focus on the key input if it's a new item
-        if (!key) {
-            item.querySelector('.metadata-key').focus();
-        }
+        updateMetadataJson();
     }
 
     // Make removeMetadataItem globally accessible
-    window.removeMetadataItem = function(btn) {
-        btn.closest('.metadata-item').remove();
+    window.removeMetadataItem = function(button) {
+        const item = button.closest('.metadata-item');
+        item.remove();
         metadataCount--;
-        updateMetadataCount();
-    };
-
-    function updateMetadataCount() {
         metadataCountSpan.textContent = metadataCount;
+        updateMetadataJson();
     }
 
-    // Collect metadata for submission
-    function collectMetadata() {
+    addMetadataBtn.addEventListener('click', () => addMetadataRow());
+
+    // Update metadata JSON when inputs change
+    metadataContainer.addEventListener('input', updateMetadataJson);
+
+    function updateMetadataJson() {
         const metadata = {};
         document.querySelectorAll('.metadata-item').forEach(item => {
             const key = item.querySelector('.metadata-key').value.trim();
             const value = item.querySelector('.metadata-value').value.trim();
-            if (key && value) {
+            if (key) {
                 metadata[key] = value;
             }
         });
-        return metadata;
+        metadataJsonInput.value = JSON.stringify(metadata);
     }
-
-    // Add metadata button click
-    addMetadataBtn.addEventListener('click', () => addMetadataRow());
 
     // Form submission
     uploadForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        // Validate file selection
-        if (!fileInput.files.length) {
-            alert('Please select a file to upload');
-            return;
-        }
-
-        // Validate expiration rules selection
-        const expirationSelected = document.querySelector('input[name="expiration_rules"]:checked');
-        if (!expirationSelected) {
-            alert('Please select an expiration rule (Evergreen or Standard)');
-            return;
-        }
-
-        // Collect and set metadata
-        const metadata = collectMetadata();
-        metadataJsonInput.value = JSON.stringify(metadata);
+        // Update metadata JSON before submission
+        updateMetadataJson();
 
         // Show progress
         submitBtn.disabled = true;
         uploadProgress.style.display = 'block';
 
-        // Submit form
-        this.submit();
+        // Progress animation (simulate)
+        let progress = 0;
+        const progressBar = uploadProgress.querySelector('.progress-bar');
+        const interval = setInterval(() => {
+            progress += Math.random() * 15;
+            if (progress > 90) {
+                clearInterval(interval);
+                progress = 90;
+            }
+            progressBar.style.width = progress + '%';
+        }, 200);
     });
+
+    // Initialize
+    updateKBSelectedCount();
 });
 </script>
 {% endblock %}

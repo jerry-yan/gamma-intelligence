@@ -13,14 +13,13 @@ class DocumentUploadForm(forms.ModelForm):
         widget=forms.FileInput(attrs={'accept': '.pdf,.doc,.docx,.txt,.xlsx,.xls'})
     )
 
-    # Knowledge Base selection dropdown
-    knowledge_base = forms.ModelChoiceField(
+    # Multiple Knowledge Base selection with checkboxes
+    knowledge_bases = forms.ModelMultipleChoiceField(
         queryset=KnowledgeBase.objects.filter(is_active=True),
-        label='Knowledge Base',
-        required=False,  # Made optional
-        empty_label='-- None (No Knowledge Base) --',
-        widget=forms.Select(attrs={'class': 'form-select'}),
-        help_text='Select the knowledge base for this document (optional)'
+        label='Knowledge Bases',
+        required=False,
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
+        help_text='Select one or more knowledge bases for this document (optional)'
     )
 
     # Custom report type field that allows dropdown or custom input
@@ -58,7 +57,6 @@ class DocumentUploadForm(forms.ModelForm):
         ],
         widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
         initial='standard',
-        # help_text='Evergreen documents persist indefinitely, standard documents follow normal expiration'
     )
 
     # Metadata fields (will be handled by JavaScript)
@@ -77,7 +75,7 @@ class DocumentUploadForm(forms.ModelForm):
                 attrs={
                     'class': 'form-control',
                     'type': 'date',
-                    'required': True  # Make required in HTML
+                    'required': True
                 }
             ),
         }
@@ -87,8 +85,8 @@ class DocumentUploadForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Customize the display of knowledge bases in the dropdown
-        self.fields['knowledge_base'].label_from_instance = lambda obj: obj.display_name
+        # Customize the display of knowledge bases in the checkboxes
+        self.fields['knowledge_bases'].label_from_instance = lambda obj: obj.display_name
         self.fields['publication_date'].required = True
 
     def clean(self):
@@ -112,32 +110,19 @@ class DocumentUploadForm(forms.ModelForm):
 
         return cleaned_data
 
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-
-        # Set vector_group_id from the selected knowledge base
-        knowledge_base = self.cleaned_data.get('knowledge_base')
-        if knowledge_base:
-            instance.vector_group_id = knowledge_base.vector_group_id
-
-        # Set report_type based on selection
+    def get_report_type(self):
+        """Helper method to get the final report type"""
         report_type_choice = self.cleaned_data.get('report_type_choice')
         custom_report_type = self.cleaned_data.get('custom_report_type')
 
         if report_type_choice == 'custom':
-            instance.report_type = custom_report_type
+            return custom_report_type
         elif report_type_choice:
-            instance.report_type = report_type_choice
+            return report_type_choice
         else:
-            instance.report_type = 'general'
+            return 'general'
 
+    def get_expiration_rules(self):
+        """Helper method to get if document is persistent"""
         expiration_rules = self.cleaned_data.get('expiration_rules')
-        instance.is_persistent_document = (expiration_rules == 'evergreen')
-
-        # Set metadata
-        instance.metadata = self.cleaned_data.get('metadata', {})
-
-        if commit:
-            instance.save()
-
-        return instance
+        return expiration_rules == 'evergreen'
