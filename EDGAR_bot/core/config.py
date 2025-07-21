@@ -6,7 +6,7 @@ import datetime, logging, os
 from pathlib import Path
 from importlib import resources
 
-START_DATE = datetime.date(2025, 7, 1)   # ignore anything earlier
+START_DATE = datetime.date(2024, 7, 1)   # ignore anything earlier
 
 # ── Identification (SEC requires a contact string) ───────────────────────
 USER_AGENT = "1832AM-EDGARbot/0.1 (derek.bastien@scotiagam.com)"
