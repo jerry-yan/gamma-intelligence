@@ -159,8 +159,8 @@ def download_filing(cik: str, row: Dict, dest_root: Path) -> list[Path] | None:
 
     # ▶ CHANGE: S3 upload for primary (Heroku only)
     if config.ENV == "heroku":
-        s3_key = f"{cik_stripped}/{acc_no_dashes}/{row['primary_doc']}"
-        s3.upload_file(str(out_path), f"{s3_bucket}/edgar-bot", s3_key)
+        s3_key = f"edgar-bot/{cik_stripped}/{acc_no_dashes}/{row['primary_doc']}"
+        s3.upload_file(str(out_path), f"{s3_bucket}", s3_key)
         LOGGER.info("Uploaded primary to s3://%s/%s", s3_bucket, s3_key)
 
     # ── 3. iterate exhibits – heavy filters applied ─────────────────────
@@ -198,7 +198,7 @@ def download_filing(cik: str, row: Dict, dest_root: Path) -> list[Path] | None:
 
             # ▶ CHANGE: S3 upload for exhibit
             if config.ENV == "heroku":
-                ex_key = f"{cik_stripped}/{acc_no_dashes}/{name}"
+                ex_key = f"edgar-bot/{cik_stripped}/{acc_no_dashes}/{name}"
                 s3.upload_file(str(ex_path), s3_bucket, ex_key)
                 LOGGER.info("Uploaded exhibit to s3://%s/%s", s3_bucket, ex_key)
 
