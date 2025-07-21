@@ -34,7 +34,8 @@
 
 .chat-wrapper {
     display: flex;
-    height: 100vh;
+    height: calc(100vh - 56px); /* Subtract navbar height */
+    margin-top: 56px; /* Push down below fixed navbar */
     overflow: hidden;
     background: var(--bg-main);
     position: relative;
@@ -44,7 +45,7 @@
 .mobile-menu-toggle {
     display: none;
     position: fixed;
-    top: 1rem;
+    top: 4.5rem; /* Move down below navbar (56px + some spacing) */
     left: 1rem;
     z-index: 1001;
     background: var(--bg-main);
@@ -53,6 +54,7 @@
     padding: 0.5rem;
     cursor: pointer;
     transition: all 0.2s;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .mobile-menu-toggle:hover {
@@ -187,17 +189,18 @@
 .header-actions {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem; /* Increase gap between elements */
 }
 
 .model-selector {
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0.75rem;
     background: transparent;
     border: 1px solid var(--border-color);
     border-radius: 0.5rem;
     font-size: 0.875rem;
     cursor: pointer;
     color: var(--text-primary);
+    min-width: 80px; /* Prevent squishing */
 }
 
 .share-btn, .settings-btn {
@@ -208,6 +211,11 @@
     color: var(--text-secondary);
     border-radius: 0.5rem;
     transition: all 0.2s;
+    min-width: 40px; /* Ensure minimum clickable area */
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .share-btn:hover, .settings-btn:hover {
@@ -330,7 +338,8 @@
 .chat-input-container {
     border-top: 1px solid var(--border-color);
     background: var(--bg-main);
-    padding: 1.5rem;
+    padding: 1rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom)); /* Account for iPhone home bar */
 }
 
 .input-wrapper {
@@ -456,37 +465,113 @@
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
-    .mobile-menu-toggle {
-        display: block;
+    .chat-wrapper {
+        height: calc(100vh - 56px);
+        margin-top: 0; /* Reset on mobile if needed */
     }
 
+    .mobile-menu-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .chat-header {
+        padding: 0 1rem;
+        padding-left: 3.5rem; /* Make room for menu button */
+    }
+
+    .header-actions {
+        gap: 0.5rem;
+        flex-wrap: nowrap; /* Prevent wrapping */
+    }
+
+    /* Hide settings button on very small screens to save space */
+    @media (max-width: 380px) {
+        .settings-btn {
+            display: none;
+        }
+
+        .model-selector {
+            font-size: 0.75rem;
+            padding: 0.4rem 0.6rem;
+        }
+    }
+
+    /* Adjust chat title on mobile */
+    .chat-title {
+        font-size: 1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 120px;
+    }
+
+    /* Fix sidebar on mobile */
     .chat-sidebar {
         position: fixed;
         left: 0;
-        top: 0;
-        height: 100vh;
+        top: 56px; /* Below navbar */
+        height: calc(100vh - 56px);
         z-index: 1000;
         transform: translateX(-100%);
         box-shadow: 2px 0 10px rgba(0,0,0,0.1);
     }
 
-    .chat-sidebar.mobile-open {
-        transform: translateX(0);
+    /* Messages container adjustment */
+    .messages-container {
+        padding: 1rem 0;
+        height: calc(100vh - 56px - var(--header-height) - var(--input-height));
     }
 
-    .chat-header {
-        padding-left: 3.5rem;
+    /* Input area adjustments */
+    .kb-selector-wrapper {
+        margin-bottom: 0.5rem;
     }
 
-    .header-actions {
-        flex-wrap: wrap;
+    .kb-selector-label {
+        font-size: 0.75rem;
+    }
+
+    .kb-selector-dropdown {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.75rem;
+        min-width: 150px;
+    }
+
+    .input-form {
+        gap: 0.5rem;
+    }
+
+    .send-btn {
+        padding: 0.75rem 1rem;
+    }
+
+    .send-btn span {
+        display: none; /* Hide text on mobile, show only icon */
+    }
+}
+
+@supports (padding: max(0px)) {
+    .chat-input-container {
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
+
+    .chat-sidebar {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+}
+
+/* Fix for iOS Safari */
+@media (max-width: 768px) {
+    /* Prevent bounce scrolling */
+    .chat-wrapper {
+        position: fixed;
+        width: 100%;
+        top: 56px; /* Adjust based on your navbar height */
     }
 
     .messages-container {
-        padding: 1rem 0;
-    }
-
-    .message-content-wrapper {
-        padding: 0 1rem;
+        -webkit-overflow-scrolling: touch;
     }
 }

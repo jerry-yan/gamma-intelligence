@@ -45,12 +45,36 @@
 // Global variables
 let currentSession = null;
 let currentKnowledgeBase = null;
-let currentModel = 'gpt-4.1';
+let currentModel = 'o3';
 let isStreaming = false;
 let currentEventSource = null;
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
+    // Get actual navbar height
+    const navbar = document.querySelector('.navbar');
+    if (navbar) {
+        const navbarHeight = navbar.offsetHeight;
+        const chatWrapper = document.querySelector('.chat-wrapper');
+        if (chatWrapper) {
+            chatWrapper.style.height = `calc(100vh - ${navbarHeight}px)`;
+            chatWrapper.style.marginTop = `${navbarHeight}px`;
+        }
+
+        // Adjust mobile menu toggle position
+        const mobileToggle = document.querySelector('.mobile-menu-toggle');
+        if (mobileToggle) {
+            mobileToggle.style.top = `${navbarHeight + 10}px`;
+        }
+
+        // Adjust sidebar position
+        const sidebar = document.querySelector('.chat-sidebar');
+        if (sidebar && window.innerWidth <= 768) {
+            sidebar.style.top = `${navbarHeight}px`;
+            sidebar.style.height = `calc(100vh - ${navbarHeight}px)`;
+        }
+    }
+
     initializeChat();
 });
 

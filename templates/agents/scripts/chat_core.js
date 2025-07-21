@@ -18,8 +18,12 @@ function initializeChat() {
         loadSession(sessionId);
     }
 
-    // Set default model
-    document.getElementById('modelSelector').value = currentModel;
+    // Set default model to o3
+    const modelSelector = document.getElementById('modelSelector');
+    if (modelSelector) {
+        modelSelector.value = 'o3'; // Ensure o3 is selected
+        currentModel = 'o3';
+    }
 }
 
 // Setup all event listeners

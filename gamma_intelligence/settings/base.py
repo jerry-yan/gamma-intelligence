@@ -22,6 +22,7 @@ LOCAL_APPS = [
     'research_summaries',
     'agents',
     'documents',
+    'EDGAR_bot',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

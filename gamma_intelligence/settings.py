@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'research_summaries',
     'agents',
     'documents',
+    'EDGAR_bot',
 ]
 
 MIDDLEWARE = [
