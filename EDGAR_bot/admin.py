@@ -14,11 +14,6 @@ class ProcessedFilingAdmin(admin.ModelAdmin):
     search_fields  = ("ticker", "cik", "accession")
     ordering       = ("-filing_date",)
 
-    # These tables are managed exclusively by the crawler – make them read‑only.
-    def has_add_permission   (self, *a, **kw): return False
-    def has_change_permission(self, *a, **kw): return False
-    def has_delete_permission(self, *a, **kw): return False
-
 
 @admin.register(ProcessedFile)
 class ProcessedFileAdmin(admin.ModelAdmin):
@@ -42,8 +37,3 @@ class ProcessedFileAdmin(admin.ModelAdmin):
     @admin.display(description="file_id")
     def file_id_short(self, obj):
         return obj.file_id[:12] + "…"
-
-    # read‑only – see comment above
-    def has_add_permission   (self, *a, **kw): return False
-    def has_change_permission(self, *a, **kw): return False
-    def has_delete_permission(self, *a, **kw): return False
