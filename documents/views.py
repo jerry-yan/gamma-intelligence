@@ -173,7 +173,8 @@ def upload_document(request):
 
                 # Get report type and expiration rules
                 report_type = form.get_report_type()
-                is_persistent = form.get_expiration_rules()
+                expiration_rule = form.get_expiration_rule()
+                is_persistent = True if expiration_rule == 1 else False
 
                 # Check if document already exists anywhere (to reuse S3/OpenAI)
                 existing_doc = Document.objects.filter(file_hash_id=file_hash).first()
@@ -248,6 +249,7 @@ def upload_document(request):
                     'publication_date': form.cleaned_data.get('publication_date'),
                     'report_type': report_type,
                     'is_persistent_document': is_persistent,
+                    'expiration_rule': expiration_rule,
                     'metadata': form.cleaned_data.get('metadata', {}),
                 }
 

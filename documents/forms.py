@@ -50,15 +50,16 @@ class DocumentUploadForm(forms.ModelForm):
         })
     )
 
-    expiration_rules = forms.ChoiceField(
-        label='Expiration Rules',
+    expiration_rule = forms.ChoiceField(
+        label='Expiration Rule',
         required=True,
         choices=[
-            ('evergreen', 'Evergreen'),
-            ('standard', 'Standard'),
+            (0, 'Standard'),
+            (1, 'Evergreen'),
+            (2, 'Temporary'),
         ],
         widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
-        initial='standard',
+        initial=0,
     )
 
     # Metadata fields (will be handled by JavaScript)
@@ -124,7 +125,7 @@ class DocumentUploadForm(forms.ModelForm):
         else:
             return 'general'
 
-    def get_expiration_rules(self):
-        """Helper method to get if document is persistent"""
-        expiration_rules = self.cleaned_data.get('expiration_rules')
-        return expiration_rules == 'evergreen'
+    def get_expiration_rule(self):
+        """Helper method to get the expiration rule as integer"""
+        expiration_rule = self.cleaned_data.get('expiration_rule')
+        return int(expiration_rule) if expiration_rule is not None else 0
