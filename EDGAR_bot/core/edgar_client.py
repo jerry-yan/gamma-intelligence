@@ -1,45 +1,50 @@
 """
-Thin wrapper around SEC JSON endpoints + file download with
-retry/back‑off and START_DATE filtering.
+EDGAR helper – list + download SEC filings
+Re‑written 2025‑07‑22
 """
+
 from __future__ import annotations
 
-import logging, time, httpx, re, os, boto3
+import logging, os, re, time, boto3, requests
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
 
-import requests
 from requests.adapters import HTTPAdapter, Retry
 
-from . import config
+from EDGAR_bot.core import config
+from EDGAR_bot.core.state import StateDB
+from EDGAR_bot.core.utils import _as_date
 
-LOGGER = logging.getLogger("edgar_client")
+log = logging.getLogger("edgar_client")
 
+# ───────────────────────── constants ─────────────────────────
 _SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik}.json"
-_ARCHIVES = "https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/{doc}"
-_ARCH = "https://www.sec.gov/Archives/edgar/data"
+_ARCHIVES        = "https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/{doc}"
+_ARCH            = "https://www.sec.gov/Archives/edgar/data"
 
-EARNINGS_PAT = re.compile(config.EARNINGS_EXHIBIT_RE, re.I)
+EARNINGS_PAT = re.compile(
+    r"(?i)("
+    r"ex(?:hibit)?\s*[-_\.]?\s*99"           # EX‑99, Exhibit‑99, etc.
+    r"|(?<!\d)99(?!\d)"                      # stand‑alone “99”
+    r"|press\s*release"
+    r"|news\s*release"
+    r"|earnings"
+    r"|financial"
+    r"|investor"
+    r"|presentation"
+    r"|transcript"
+    r")",
+    re.I,
+)
+
 EX_RE = re.compile(r"(?i)ex(?:hibit)?\s*[-_\.]?\s*\d")
 
-def _list_directory(cik: str, accession: str) -> List[Dict]:
-    """
-    Return the JSON directory listing for one filing.
+ALLOWED_EXT = {".htm", ".html", ".txt", ".pdf"}
 
-    Raises if SEC returns non‑200.
-    """
-    cik_num         = int(cik.lstrip("0"))            #  0000200406 → 200406
-    accession_nodash = accession.replace("-", "")     #  0000200406-25-000170 → 000020040625000170
-    url             = f"{_ARCH}/{cik_num}/{accession_nodash}/index.json"
-
-    time.sleep(config.SLEEP_BETWEEN_CALLS)
-    r = httpx.get(url, headers=config.HEADERS, timeout=config.REQUEST_TIMEOUT)
-    r.raise_for_status()
-    return r.json()["directory"]["item"]              # list[dict]
-
+# ─────────────────────── HTTP plumbing ───────────────────────
 def _build_session() -> requests.Session:
-    sess = requests.Session()
+    s = requests.Session()
     retry = Retry(
         total=config.REQUEST_RETRY_TOTAL,
         backoff_factor=config.REQUEST_RETRY_BACKOFF,
@@ -47,26 +52,44 @@ def _build_session() -> requests.Session:
         allowed_methods=["GET"],
         respect_retry_after_header=True,
     )
-    sess.headers.update(config.HEADERS)
-    sess.mount("https://", HTTPAdapter(max_retries=retry))
-    return sess
+    s.headers.update(config.HEADERS)
+    s.mount("https://", HTTPAdapter(max_retries=retry))
+    return s
 
 
 _session = _build_session()
 
 
 def _safe_get(url: str) -> requests.Response:
-    """Global rate‑limit + retry handled by session adapter."""
-    time.sleep(config.SLEEP_BETWEEN_CALLS)
+    time.sleep(config.SLEEP_BETWEEN_CALLS)          # global politeness delay
     r = _session.get(url, timeout=config.REQUEST_TIMEOUT)
     r.raise_for_status()
     return r
 
 
-# ── Public API ────────────────────────────────────────────────────────────
+# ───────────────────────── utilities ─────────────────────────
+def _list_directory(cik: str, accession: str) -> List[Dict]:
+    cik_num          = int(cik.lstrip("0"))
+    accession_nodash = accession.replace("-", "")
+    url              = f"{_ARCH}/{cik_num}/{accession_nodash}/index.json"
+    return _safe_get(url).json()["directory"]["item"]
+
+
+def _looks_like_earnings(text: str) -> bool:
+    return bool(EARNINGS_PAT.search(text))
+
+
+def _dir_has_earnings(dir_items: List[Dict]) -> bool:
+    for it in dir_items:
+        blob = f"{it['name']} {it.get('description','')} {it.get('type','')}"
+        if _looks_like_earnings(blob):
+            return True
+    return False
+
+
+# ────────────────────────── public API ───────────────────────
 def list_recent_filings(cik: str) -> List[Dict]:
-    url = _SUBMISSIONS_URL.format(cik=cik)
-    data = _safe_get(url).json()
+    data  = _safe_get(_SUBMISSIONS_URL.format(cik=cik)).json()
     recent = data["filings"]["recent"]
 
     rows = [
@@ -83,128 +106,108 @@ def list_recent_filings(cik: str) -> List[Dict]:
             recent["primaryDocument"],
         )
     ]
-
     return [r for r in rows if r["filing_date"] >= config.START_DATE]
 
 
-def _has_earnings_exhibit(dir_items: List[Dict]) -> bool:
-    """
-    Return True when the directory listing contains at least one EX‑99 exhibit
-    (file name, description, or type).
-    """
-    for item in dir_items:
-        name = item["name"]
-        desc = item.get("description", "")
-        typ  = item.get("type", "")
-        hit = EARNINGS_PAT.search(name) or EARNINGS_PAT.search(desc) or EARNINGS_PAT.search(typ)
-
-        # ▶ DEBUG – comment out once verified
-        LOGGER.debug("earnings‑scan | %s | %s | %s | hit=%s",
-                     name, desc or "‑", typ or "‑", hit)
-
-        if hit:
-            return True
-    return False
-
-
+# ------------------------------------------------------------------
 def download_filing(cik: str, row: Dict, dest_root: Path) -> list[Path] | None:
     """
-    Download the primary document plus qualifying exhibits for a filing.
-
-    • 10‑K / 10‑Q (and amendments) are always kept.
-    • 8‑K is kept **only** when an earnings‑release exhibit (Ex‑99.*) exists.
-    • In Heroku mode (`EDGAR_ENV=heroku`) every saved file is also
-      uploaded to an S3 bucket specified via $S3_BUCKET.
+    Download the primary document and qualifying exhibits.
+    Returns a list[Path] of saved files or None if skipped/failed.
     """
-    # ── 0. init paths & (optional) S3 client ─────────────────────────────
-    cik_stripped   = cik.lstrip("0")
-    acc_no_dashes  = row["accession"].replace("-", "")
-    dest_dir       = dest_root / cik_stripped / acc_no_dashes
+    cik_str   = cik.lstrip("0")
+    acc_clean = row["accession"].replace("-", "")
+    dest_dir  = dest_root / cik_str / acc_clean
     dest_dir.mkdir(parents=True, exist_ok=True)
 
-    exhibits: list[Path] = []
-
-    # ▶ CHANGE: create S3 client only in Heroku env
     if config.ENV == "heroku":
         s3        = boto3.client("s3")
         s3_bucket = os.environ["S3_BUCKET"]
 
-    # ── 1. grab directory JSON first (lets us pre‑filter 8‑K) ───────────
+    # 1. directory JSON --------------------------------------------------
     try:
         dir_items = _list_directory(cik, row["accession"])
     except Exception as exc:
-        LOGGER.error("Could not read filing directory %s: %s", row["accession"], exc)
+        log.error("Dir‑listing failed for %s: %s", row["accession"], exc)
         return None
 
-    if row["form"].startswith("8-K") and not _has_earnings_exhibit(dir_items):
-        LOGGER.info("Skip 8‑K (no earnings exhibit) %s", row["accession"])
+    # 8‑K gate – skip if nothing smells like earnings
+    if row["form"].startswith("8-K") and not _dir_has_earnings(dir_items):
+        log.info("Skip 8‑K (no earnings exhibit) %s", row["accession"])
+
+        # --- Mark it as processed, regardless of the execution context ----
+        async def _mark():
+            await StateDB().mark_processed(
+                cik,
+                row.get("ticker", ""),
+                row["accession"],
+                _as_date(row["filing_date"]),
+            )
+
+        try:
+            import asyncio
+            loop = asyncio.get_running_loop()  # ← we’re inside an async task
+            loop.create_task(_mark())  # fire‑and‑forget, non‑blocking
+        except RuntimeError:
+            # no running loop (download_filing called from sync code) ─ use sync bridge
+            from asgiref.sync import async_to_sync
+            async_to_sync(_mark)()  # runs the coroutine in a thread
+
         return None
 
-    # ── 2. download primary document ────────────────────────────────────
-    primary_url = _ARCHIVES.format(
-        cik=cik_stripped,
-        accession=acc_no_dashes,
-        doc=row["primary_doc"],
-    )
-
+    # 2. primary ---------------------------------------------------------
+    primary_url = _ARCHIVES.format(cik=cik_str, accession=acc_clean, doc=row["primary_doc"])
     try:
-        resp = _safe_get(primary_url)
-    except requests.HTTPError as ex:
-        LOGGER.error("Primary download failed for %s: %s", row["accession"], ex)
+        out_path = dest_dir / row["primary_doc"]
+        out_path.write_bytes(_safe_get(primary_url).content)
+    except Exception as exc:
+        log.error("Primary download failed for %s: %s", row["accession"], exc)
         return None
 
-    out_path = dest_dir / row["primary_doc"]
-    out_path.write_bytes(resp.content)
-    LOGGER.debug("Saved primary %s", out_path)
-
-    # ▶ CHANGE: S3 upload for primary (Heroku only)
     if config.ENV == "heroku":
-        s3_key = f"edgar-bot/{cik_stripped}/{acc_no_dashes}/{row['primary_doc']}"
-        s3.upload_file(str(out_path), f"{s3_bucket}", s3_key)
-        LOGGER.info("Uploaded primary to s3://%s/%s", s3_bucket, s3_key)
+        s3.upload_file(str(out_path), s3_bucket, f"edgar-bot/{cik_str}/{acc_clean}/{out_path.name}")
 
-    # ── 3. iterate exhibits – heavy filters applied ─────────────────────
+    saved: list[Path] = [out_path]
+
+    # 3. exhibits --------------------------------------------------------
     for item in dir_items:
         name = item["name"]
+        ext  = Path(name).suffix.lower()
 
-        # keep only human‑readable formats
-        if not name.lower().endswith((".htm", ".html", ".txt", ".pdf")):
+        # 3‑A) format guard
+        if ext and ext not in ALLOWED_EXT:
             continue
 
-        t    = item["type"].upper()
-        desc = item.get("description", "").upper()
+        t    = item.get("type", "")
+        desc = item.get("description", "")
+        blob = f"{name} {t} {desc}"
 
-        # coarse EX filter
-        if not (t.startswith("EX") or desc.startswith("EX") or EX_RE.search(name)):
-            continue
+        # 3‑B) should we keep it?
+        if row["form"].startswith("8-K"):
+            if not _looks_like_earnings(blob):
+                continue
+        else:
+            if not (t.upper().startswith("EX") or desc.upper().startswith("EX") or EX_RE.search(name)):
+                continue
 
-        # parent is 8‑K: keep only earnings exhibits
-        if row["form"].startswith("8-K") and not (
-            EARNINGS_PAT.search(name) or EARNINGS_PAT.search(desc) or EARNINGS_PAT.search(t)):
-            continue
-
+        # 3‑C) download
         ex_path = dest_dir / name
-        exhibits.append(ex_path)
-
         if ex_path.exists():
-            LOGGER.debug("Skip existing exhibit %s", ex_path)
-            continue
+            continue  # already present (resume run)
 
-        ex_url = f"{_ARCH}/{cik_stripped}/{acc_no_dashes}/{name}"
         try:
+            ex_url = f"{_ARCH}/{cik_str}/{acc_clean}/{name}"
             ex_resp = _safe_get(ex_url)
             ex_path.write_bytes(ex_resp.content)
-            LOGGER.info("Saved exhibit %s", ex_path)
+            saved.append(ex_path)
+            log.info("Saved exhibit %s", ex_path)
 
-            # ▶ CHANGE: S3 upload for exhibit
             if config.ENV == "heroku":
-                ex_key = f"edgar-bot/{cik_stripped}/{acc_no_dashes}/{name}"
+                ex_key = f"edgar-bot/{cik_str}/{acc_clean}/{name}"
                 s3.upload_file(str(ex_path), s3_bucket, ex_key)
-                LOGGER.info("Uploaded exhibit to s3://%s/%s", s3_bucket, ex_key)
+                log.info("Uploaded exhibit to s3://%s/%s", s3_bucket, ex_key)
 
         except Exception as exc:
-            LOGGER.warning("Failed exhibit %s: %s", name, exc)
+            log.warning("Failed exhibit %s: %s", name, exc)
 
-        time.sleep(0.12)           # stay polite (max ~8 req/s)
-
-    return [out_path] + exhibits
+    return saved if saved else None

@@ -79,6 +79,3 @@ ALLOWED_FORMS = {
     "10-Q", "10-Q/A",
     "8-K",  "8-K/A",
 }
-
-# regex used in edgar_client to detect earnings press‑release exhibits
-EARNINGS_EXHIBIT_RE = r"(?i)(ex|exhibit)[-_\.]?99|earnings.?release|press.?release"

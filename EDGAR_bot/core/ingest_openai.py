@@ -7,8 +7,6 @@ linked to the ticker.
 
 from __future__ import annotations
 import asyncio, logging, os, pathlib
-from typing import Iterable
-
 import openai
 from openai import OpenAI
 from asgiref.sync import sync_to_async
@@ -16,7 +14,7 @@ from asgiref.sync import sync_to_async
 # ── Django bootstrap (only if not started via manage.py) ────────────────────
 import django
 if not django.apps.apps.ready:
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "edgar-gamma-bot.settings")
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "gamma-intelligence.settings")
     django.setup()
 
 from agents.models import StockTicker, KnowledgeBase
