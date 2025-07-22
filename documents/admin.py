@@ -13,6 +13,7 @@ class DocumentAdmin(admin.ModelAdmin):
         'vector_group_display',
         'publication_date',
         'is_persistent_display',
+        'expiration_rule_display',
         'upload_date_formatted',
         'is_vectorized_display',
         'file_hash_truncated',
@@ -22,6 +23,7 @@ class DocumentAdmin(admin.ModelAdmin):
         'report_type',
         'is_vectorized',
         'is_persistent_document',
+        'expiration_rule',
         'upload_date',
         'publication_date',
         'vector_group_id',
@@ -56,6 +58,7 @@ class DocumentAdmin(admin.ModelAdmin):
                 'report_type',
                 'publication_date',
                 'is_persistent_document',
+                'expiration_rule',
                 'upload_date',
             )
         }),
@@ -116,7 +119,6 @@ class DocumentAdmin(admin.ModelAdmin):
     is_vectorized_display.short_description = 'Vectorized'
     is_vectorized_display.admin_order_field = 'is_vectorized'
 
-    # NEW: Display method for persistence status
     def is_persistent_display(self, obj):
         if obj.is_persistent_document:
             return format_html('<span style="color: blue; font-weight: bold;">Evergreen</span>')
@@ -124,6 +126,22 @@ class DocumentAdmin(admin.ModelAdmin):
 
     is_persistent_display.short_description = 'Expiration Rule'
     is_persistent_display.admin_order_field = 'is_persistent_document'
+
+    def expiration_rule_display(self, obj):
+        colors = {
+            0: 'orange',  # Standard
+            1: 'blue',  # Evergreen
+            2: 'red'  # Temporary
+        }
+        color = colors.get(obj.expiration_rule, 'gray')
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color,
+            obj.get_expiration_rule_display()
+        )
+
+    expiration_rule_display.short_description = 'Expiration Rule'
+    expiration_rule_display.admin_order_field = 'expiration_rule'
 
     def upload_date_formatted(self, obj):
         return obj.upload_date.strftime('%Y-%m-%d %H:%M')
@@ -158,7 +176,8 @@ class DocumentAdmin(admin.ModelAdmin):
     knowledge_base_link.short_description = 'Knowledge Base'
 
     # Actions
-    actions = ['mark_as_vectorized', 'mark_as_not_vectorized', 'clear_vector_group']
+    actions = ['mark_as_vectorized', 'mark_as_not_vectorized', 'clear_vector_group',
+               'set_as_evergreen', 'set_as_standard', 'set_as_temporary']
 
     def mark_as_vectorized(self, request, queryset):
         updated = queryset.update(is_vectorized=True, updated_at=timezone.now())
@@ -181,6 +200,24 @@ class DocumentAdmin(admin.ModelAdmin):
         self.message_user(request, f'{updated} documents had vector group cleared.')
 
     clear_vector_group.short_description = "Clear vector group assignment"
+
+    def set_as_evergreen(self, request, queryset):
+        updated = queryset.update(expiration_rule=1, updated_at=timezone.now())
+        self.message_user(request, f'{updated} documents set as Evergreen.')
+
+    set_as_evergreen.short_description = "Set expiration rule to Evergreen"
+
+    def set_as_standard(self, request, queryset):
+        updated = queryset.update(expiration_rule=0, updated_at=timezone.now())
+        self.message_user(request, f'{updated} documents set as Standard.')
+
+    set_as_standard.short_description = "Set expiration rule to Standard"
+
+    def set_as_temporary(self, request, queryset):
+        updated = queryset.update(expiration_rule=2, updated_at=timezone.now())
+        self.message_user(request, f'{updated} documents set as Temporary.')
+
+    set_as_temporary.short_description = "Set expiration rule to Temporary"
 
     # Optimize queries
     def get_queryset(self, request):

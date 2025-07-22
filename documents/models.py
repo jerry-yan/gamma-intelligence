@@ -60,6 +60,18 @@ class Document(models.Model):
         help_text="Whether this is an evergreen/persistent document (True) or standard/temporary (False)"
     )
 
+    EXPIRATION_RULE_CHOICES = [
+        (0, "Standard"),
+        (1, "Evergreen"),
+        (2, "Temporary"),
+    ]
+
+    expiration_rule = models.PositiveIntegerField(
+        choices=EXPIRATION_RULE_CHOICES,
+        default=0,
+        help_text="Document expiration rule: 0=Standard, 1=Evergreen, 2=Temporary"
+    )
+
     # Document classification - free text field
     report_type = models.CharField(
         max_length=100,
@@ -84,7 +96,7 @@ class Document(models.Model):
             models.Index(fields=['file_hash_id']),
             models.Index(fields=['vector_group_id']),
             models.Index(fields=['is_vectorized']),
-            models.Index(fields=['is_persistent_document']),
+            models.Index(fields=['expiration_rule']),
             models.Index(fields=['report_type']),
             models.Index(fields=['-upload_date']),
         ]
@@ -112,3 +124,7 @@ class Document(models.Model):
         """Mark document as successfully vectorized"""
         self.is_vectorized = True
         self.save(update_fields=['is_vectorized', 'updated_at'])
+
+    def get_expiration_rule_display_custom(self):
+        """Custom display method for expiration rule"""
+        return dict(self.EXPIRATION_RULE_CHOICES).get(self.expiration_rule, 'Unknown')
