@@ -319,19 +319,18 @@
             <!-- Display all available fields in a generic way -->
             {% for key, value in summary_data.items %}
                 <h6 class="mt-4">{{ key|replace_underscores|title }}</h6>
-                {% with first_item=value|first %}
-                    {% if first_item and first_item|length > 1 %}
-                        <!-- It's a list (first item is a full string, not a single character) -->
-                        <ul>
-                            {% for item in value %}
-                                <li>{{ item }}</li>
-                            {% endfor %}
-                        </ul>
-                    {% else %}
-                        <!-- It's a string -->
-                        <p>{{ value }}</p>
-                    {% endif %}
-                {% endwith %}
+
+                {% if value|can_iterate %}
+                    <!-- It's iterable (list, tuple, etc.) but not a string -->
+                    <ul>
+                        {% for item in value %}
+                            <li>{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <!-- It's a single value -->
+                    <p>{{ value|default:"Not specified" }}</p>
+                {% endif %}
             {% endfor %}
         {% endif %}
     </div>
