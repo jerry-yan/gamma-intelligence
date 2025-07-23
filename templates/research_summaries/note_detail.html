@@ -303,35 +303,51 @@
             {% endif %}
 
         {% else %}
-            <!-- Generic Format for other report types - FIXED -->
-            {% if summary_data.sentiment %}
-                <p><strong>Sentiment:</strong>
-                    {% if summary_data.sentiment == "Positive" %}
-                        <span class="badge bg-success">{{ summary_data.sentiment }}</span>
-                    {% elif summary_data.sentiment == "Negative" %}
-                        <span class="badge bg-danger">{{ summary_data.sentiment }}</span>
-                    {% else %}
-                        <span class="badge bg-secondary">{{ summary_data.sentiment }}</span>
-                    {% endif %}
-                </p>
-            {% endif %}
-
-            <!-- Display all available fields in a generic way -->
-            {% for key, value in summary_data.items %}
-                <h6 class="mt-4">{{ key|replace_underscores|title }}</h6>
-
-                {% if value|can_iterate %}
-                    <!-- It's iterable (list, tuple, etc.) but not a string -->
-                    <ul>
-                        {% for item in value %}
-                            <li>{{ item }}</li>
-                        {% endfor %}
-                    </ul>
+            <!-- Generic Format for other report types -->
+            {% for field_name, value in summary_data|get_ordered_fields %}
+                <!-- Special handling for sentiment with badges -->
+                {% if field_name == "sentiment" %}
+                    <p><strong>Sentiment:</strong>
+                        {% if value == "Positive" %}
+                            <span class="badge bg-success">{{ value }}</span>
+                        {% elif value == "Negative" %}
+                            <span class="badge bg-danger">{{ value }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ value }}</span>
+                        {% endif %}
+                    </p>
                 {% else %}
-                    <!-- It's a single value -->
-                    <p>{{ value|default:"Not specified" }}</p>
+                    <!-- Regular field display -->
+                    <h6 class="mt-4">{{ field_name|replace_underscores|title }}</h6>
+
+                    {% if value|can_iterate %}
+                        <!-- Handle lists -->
+                        <ul>
+                            {% for item in value %}
+                                {% if item|is_dict %}
+                                    <!-- Handle dictionaries (like stock_recaps) -->
+                                    <li>
+                                        {% for sub_key, sub_value in item.items %}
+                                            {% if sub_value %}
+                                                <strong>{{ sub_key|replace_underscores|title }}:</strong> {{ sub_value }}{% if not forloop.last %}, {% endif %}
+                                            {% endif %}
+                                        {% endfor %}
+                                    </li>
+                                {% else %}
+                                    <!-- Simple list item -->
+                                    <li>{{ item }}</li>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <!-- Single value -->
+                        <p>{{ value }}</p>
+                    {% endif %}
                 {% endif %}
             {% endfor %}
+
+
+
         {% endif %}
     </div>
 </div>
