@@ -44,7 +44,9 @@ class ResearchNoteAdmin(admin.ModelAdmin):
         'raw_author',
         'source',
         'raw_companies',
-        'parsed_ticker'
+        'parsed_ticker',
+        'openai_file_id',
+        'file_hash_id'
     ]
     readonly_fields = [
         'created_at',
