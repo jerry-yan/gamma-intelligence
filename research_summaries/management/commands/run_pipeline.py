@@ -45,6 +45,9 @@ class Command(BaseCommand):
                     self.stdout.write(f'🔮 Vectorizing {vectorization_count} documents...')
                     call_command('vectorize_documents')
 
+                self.stdout.write('🗑️  Cleaning temporary vectorized documents...')
+                call_command('clean_temp_documents', hours=12)
+
                 if pending_count == 0:
                     elapsed = timezone.now() - start_time
                     self.stdout.write(
@@ -55,9 +58,6 @@ class Command(BaseCommand):
                     )
                     time.sleep(20 * 60)  # 20 minutes
                     continue
-
-                self.stdout.write('🗑️  Cleaning temporary vectorized documents...')
-                call_command('clean_temp_documents', hours=12)
 
                 self.stdout.write('📝 Summarizing documents...')
                 call_command('summarize_documents')
