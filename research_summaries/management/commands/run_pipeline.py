@@ -56,6 +56,9 @@ class Command(BaseCommand):
                     time.sleep(20 * 60)  # 20 minutes
                     continue
 
+                self.stdout.write('🗑️  Cleaning temporary vectorized documents...')
+                call_command('clean_temp_documents', hours=12)
+
                 self.stdout.write('📝 Summarizing documents...')
                 call_command('summarize_documents')
 
@@ -70,8 +73,7 @@ class Command(BaseCommand):
                     self.style.SUCCESS(f'✅ Pipeline completed in {elapsed.total_seconds():.1f}s')
                 )
 
-                self.stdout.write('🗑️  Cleaning temporary vectorized documents...')
-                call_command('clean_temp_documents', hours=12)
+
 
                 # Short sleep between cycles when there's active work
                 self.stdout.write('😴 Sleeping for 1 minute before next cycle...')
