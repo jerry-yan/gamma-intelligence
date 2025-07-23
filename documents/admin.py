@@ -12,7 +12,7 @@ class DocumentAdmin(admin.ModelAdmin):
         'report_type',
         'vector_group_display',
         'publication_date',
-        'is_persistent_display',
+        # 'is_persistent_display',
         'expiration_rule_display',
         'upload_date_formatted',
         'is_vectorized_display',
@@ -22,7 +22,7 @@ class DocumentAdmin(admin.ModelAdmin):
     list_filter = [
         'report_type',
         'is_vectorized',
-        'is_persistent_document',
+        # 'is_persistent_document',
         'expiration_rule',
         'upload_date',
         'publication_date',
@@ -57,7 +57,7 @@ class DocumentAdmin(admin.ModelAdmin):
             'fields': (
                 'report_type',
                 'publication_date',
-                'is_persistent_document',
+                # 'is_persistent_document',
                 'expiration_rule',
                 'upload_date',
             )
@@ -119,13 +119,13 @@ class DocumentAdmin(admin.ModelAdmin):
     is_vectorized_display.short_description = 'Vectorized'
     is_vectorized_display.admin_order_field = 'is_vectorized'
 
-    def is_persistent_display(self, obj):
-        if obj.is_persistent_document:
-            return format_html('<span style="color: blue; font-weight: bold;">Evergreen</span>')
-        return format_html('<span style="color: orange;">Standard</span>')
-
-    is_persistent_display.short_description = 'Expiration Rule'
-    is_persistent_display.admin_order_field = 'is_persistent_document'
+    # def is_persistent_display(self, obj):
+    #     if obj.is_persistent_document:
+    #         return format_html('<span style="color: blue; font-weight: bold;">Evergreen</span>')
+    #     return format_html('<span style="color: orange;">Standard</span>')
+    #
+    # is_persistent_display.short_description = 'Expiration Rule'
+    # is_persistent_display.admin_order_field = 'is_persistent_document'
 
     def expiration_rule_display(self, obj):
         colors = {
