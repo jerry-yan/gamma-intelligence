@@ -34,7 +34,7 @@ def get_ordered_fields(summary_data):
     Returns a list of (key, value) tuples.
     """
     FIELD_ORDER = [
-        "stock_ticker", "source", "authors", "sentiment",
+        "title", "stock_ticker", "source", "authors", "sentiment",
         "price_target", "stock_rating", "recap", "summary",
         "executive_summary", "expectations", "risk_points",
         "opportunity_points", "bull_points", "bear_points",
