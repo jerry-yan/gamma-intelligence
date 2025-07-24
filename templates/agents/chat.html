@@ -5,7 +5,7 @@
 <head>
     <title>Research Assistant - Gamma Intelligence</title>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <!-- Include marked.js for markdown parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- Include DOMPurify for security -->
@@ -39,11 +39,77 @@
             color: var(--text-primary);
             height: 100vh;
             overflow: hidden;
+            margin: 0;
+            padding: 0;
+            -webkit-text-size-adjust: 100%;
         }
 
         .app-container {
             display: flex;
             height: 100vh;
+            position: relative;
+        }
+
+        /* Mobile Menu Toggle */
+        .mobile-menu-toggle {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 100;
+            width: 40px;
+            height: 40px;
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .mobile-menu-toggle:hover {
+            background-color: var(--bg-tertiary);
+        }
+
+        .menu-icon {
+            width: 20px;
+            height: 2px;
+            background-color: var(--text-primary);
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .menu-icon::before,
+        .menu-icon::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 2px;
+            background-color: var(--text-primary);
+            transition: all 0.3s;
+        }
+
+        .menu-icon::before {
+            top: -6px;
+        }
+
+        .menu-icon::after {
+            top: 6px;
+        }
+
+        .mobile-menu-toggle.active .menu-icon {
+            background-color: transparent;
+        }
+
+        .mobile-menu-toggle.active .menu-icon::before {
+            top: 0;
+            transform: rotate(45deg);
+        }
+
+        .mobile-menu-toggle.active .menu-icon::after {
+            top: 0;
+            transform: rotate(-45deg);
         }
 
         /* Sidebar */
@@ -54,6 +120,7 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
+            flex-shrink: 0;
         }
 
         .sidebar-header {
@@ -518,6 +585,7 @@
             gap: 0.5rem;
             margin-bottom: 0.75rem;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .kb-selector {
@@ -662,28 +730,124 @@
 
         /* Responsive */
         @media (max-width: 768px) {
+            .mobile-menu-toggle {
+                display: flex;
+            }
+
             .sidebar {
-                width: 100%;
                 position: fixed;
+                left: 0;
+                top: 0;
+                width: 280px;
                 z-index: 50;
                 transform: translateX(-100%);
-                transition: transform 0.3s;
+                transition: transform 0.3s ease;
             }
 
             .sidebar.open {
                 transform: translateX(0);
+                box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
+            }
+
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: rgba(0, 0, 0, 0.5);
+                z-index: 40;
+            }
+
+            .sidebar-overlay.active {
+                display: block;
             }
 
             .chat-main {
                 margin-left: 0;
+                width: 100%;
+            }
+
+            .chat-header {
+                padding-left: 4rem;
+            }
+
+            .messages-container {
+                padding: 1rem;
+                height: calc(100vh - 120px - 140px); /* Account for header and input */
+            }
+
+            .input-container {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background-color: var(--bg-primary);
+                padding: 1rem;
+                box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            }
+
+            .kb-selector {
+                font-size: 0.8125rem;
+            }
+
+            .kb-select {
+                font-size: 0.8125rem;
+                padding: 0.25rem 0.5rem;
+                min-width: 150px;
+            }
+
+            .chat-input {
+                font-size: 0.875rem;
+                padding: 0.625rem 0.875rem;
+            }
+
+            .send-button {
+                font-size: 0.875rem;
+                padding: 0.625rem 1rem;
+            }
+
+            .message-content {
+                font-size: 0.875rem;
+            }
+
+            .welcome-content {
+                padding: 1rem;
+                max-width: 100%;
+            }
+
+            .welcome-title {
+                font-size: 1.5rem;
+            }
+
+            .welcome-text {
+                font-size: 1rem;
+            }
+
+            .message-action-btn {
+                font-size: 0.625rem;
+                padding: 0.125rem 0.25rem;
+            }
+
+            .session-info {
+                display: none;
             }
         }
     </style>
 </head>
 <body>
     <div class="app-container">
+        <!-- Mobile Menu Toggle -->
+        <div class="mobile-menu-toggle" id="mobileMenuToggle">
+            <div class="menu-icon"></div>
+        </div>
+
+        <!-- Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <h1 class="app-title">Research Assistant</h1>
                 <div class="user-info">{{ user.get_full_name|default:user.username }}</div>
@@ -711,7 +875,7 @@
                 </div>
             </div>
 
-            <div id="chatInterface" style="display: none; flex: 1; flex-direction: column; height: 100%;">
+            <div id="chatInterface" style="display: none; flex: 1; flex-direction: column; height: 100%; position: relative;">
                 <header class="chat-header">
                     <div class="chat-header-content">
                         <div class="chat-title" id="chatTitle">New Chat</div>
@@ -723,7 +887,7 @@
                     </div>
                 </header>
 
-                <div class="messages-container" id="messagesContainer"></div>
+                <div class="messages-container" id="messagesContainer" style="flex: 1; overflow-y: auto; padding-bottom: 140px;"></div>
 
                 <div class="typing-indicator" id="typingIndicator">
                     <div class="message-avatar">AI</div>
@@ -778,6 +942,9 @@
 
         // DOM elements
         const elements = {
+            sidebar: document.getElementById('sidebar'),
+            mobileMenuToggle: document.getElementById('mobileMenuToggle'),
+            sidebarOverlay: document.getElementById('sidebarOverlay'),
             newChatButton: document.getElementById('newChatButton'),
             welcomeNewChatButton: document.getElementById('welcomeNewChatButton'),
             knowledgeBaseSelect: document.getElementById('knowledgeBaseSelect'),
@@ -799,7 +966,26 @@
             loadUserSessions();
             setupEventListeners();
             autoResizeTextarea();
+            setupMobileMenu();
         });
+
+        // Mobile menu functionality
+        function setupMobileMenu() {
+            elements.mobileMenuToggle.addEventListener('click', toggleSidebar);
+            elements.sidebarOverlay.addEventListener('click', closeSidebar);
+        }
+
+        function toggleSidebar() {
+            elements.sidebar.classList.toggle('open');
+            elements.sidebarOverlay.classList.toggle('active');
+            elements.mobileMenuToggle.classList.toggle('active');
+        }
+
+        function closeSidebar() {
+            elements.sidebar.classList.remove('open');
+            elements.sidebarOverlay.classList.remove('active');
+            elements.mobileMenuToggle.classList.remove('active');
+        }
 
         // Event listeners
         function setupEventListeners() {
@@ -834,6 +1020,11 @@
 
                 // Reload sessions list
                 loadUserSessions();
+
+                // Close sidebar on mobile
+                if (window.innerWidth <= 768) {
+                    closeSidebar();
+                }
 
             } catch (error) {
                 console.error('Error creating session:', error);
@@ -880,6 +1071,10 @@
                 sessionEl.addEventListener('click', (e) => {
                     if (!e.target.classList.contains('session-delete')) {
                         loadSession(session.session_id);
+                        // Close sidebar on mobile
+                        if (window.innerWidth <= 768) {
+                            closeSidebar();
+                        }
                     }
                 });
 
@@ -1188,10 +1383,6 @@
                 // Configure PDF options
                 const opt = {
                     margin: [0, 10, 0, 10],
-                    // pagebreak: {
-                    //     mode: ['avoid-all', 'css'],
-                    //     after: '.message'
-                    // },
                     filename: `chat-export-${currentSession.substring(0, 8)}-${new Date().toISOString().split('T')[0]}.pdf`,
                     image: { type: 'jpeg', quality: 0.98 },
                     html2canvas: {
