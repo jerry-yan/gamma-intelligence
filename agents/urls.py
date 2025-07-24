@@ -22,8 +22,9 @@ urlpatterns = [
     path('api/chat/stream/', views.api_chat_stream, name='api_chat_stream'),
     path('api/sessions/<uuid:session_id>/history/', views.api_session_history, name='api_session_history'),
     path('api/sessions/<uuid:session_id>/clear/', views.api_clear_session, name='api_clear_session'),
-    path('api/sessions/<uuid:session_id>/delete/', views.api_delete_session, name='api_delete_session'),  # New
-    path('api/sessions/<uuid:session_id>/rename/', views.api_rename_session, name='api_rename_session'),  # New
+    path('api/sessions/<uuid:session_id>/delete/', views.api_delete_session, name='api_delete_session'),
+    path('api/sessions/<uuid:session_id>/rename/', views.api_rename_session, name='api_rename_session'),
+    path('api/sessions/<uuid:session_id>/export-pdf/', views.api_export_session_pdf, name='api_export_session_pdf'),  # Export PDF
     path('api/sessions/', views.api_user_sessions, name='api_user_sessions'),
     path('api/messages/<int:message_id>/delete/', views.api_delete_message, name='api_delete_message'),
 

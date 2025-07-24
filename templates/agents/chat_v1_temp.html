@@ -10,8 +10,6 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- Include DOMPurify for security -->
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
-    <!-- Include html2pdf.js for PDF export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -1130,84 +1128,44 @@
             if (!currentSession) return;
 
             try {
-                // Create a temporary container for PDF content
-                const pdfContent = document.createElement('div');
-                pdfContent.style.padding = '20px';
-                pdfContent.style.backgroundColor = 'white';
-                pdfContent.style.color = '#111827';
-                pdfContent.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+                // Show loading state
+                elements.exportChatBtn.disabled = true;
+                elements.exportChatBtn.textContent = 'Exporting...';
 
-                // Add header with session info
-                const header = document.createElement('div');
-                header.style.marginBottom = '30px';
-                header.innerHTML = `
-                    <h1 style="font-size: 24px; margin-bottom: 10px;">Chat Export</h1>
-                    <p style="color: #6b7280; font-size: 14px;">Session: ${currentSession}</p>
-                    <p style="color: #6b7280; font-size: 14px;">Exported: ${new Date().toLocaleString()}</p>
-                    <p style="color: #6b7280; font-size: 14px;">User: {{ user.username }}</p>
-                `;
-                pdfContent.appendChild(header);
+                // Call the server-side PDF export endpoint
+                const response = await fetch(`/agents/api/sessions/${currentSession}/export-pdf/`);
 
-                // Get all messages from the current view
-                const messagesContainer = elements.messagesContainer;
-                const messages = messagesContainer.querySelectorAll('.message');
+                if (!response.ok) {
+                    throw new Error('Failed to export PDF');
+                }
 
-                // Process each message
-                messages.forEach(msg => {
-                    const role = msg.querySelector('.message-role')?.textContent || '';
-                    const content = msg.querySelector('.message-content')?.innerHTML || '';
-                    const kbBadge = msg.querySelector('.kb-badge')?.textContent || '';
+                // Get the blob from the response
+                const blob = await response.blob();
 
-                    // Skip if it's a system message or empty
-                    if (!role || !content) return;
+                // Create a download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
 
-                    const messageDiv = document.createElement('div');
-                    messageDiv.style.marginBottom = '20px';
-                    messageDiv.style.borderBottom = '1px solid #e5e7eb';
-                    messageDiv.style.paddingBottom = '15px';
+                // Extract filename from Content-Disposition header or use default
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = `chat-export-${currentSession.substring(0, 8)}-${new Date().toISOString().split('T')[0]}.pdf`;
 
-                    // Message header
-                    const msgHeader = document.createElement('div');
-                    msgHeader.style.marginBottom = '10px';
-                    msgHeader.innerHTML = `
-                        <strong style="color: ${role === 'You' ? '#2563eb' : '#7c3aed'};">${role}</strong>
-                        ${kbBadge ? `<span style="font-size: 12px; color: #6b7280; margin-left: 10px;">[${kbBadge}]</span>` : ''}
-                    `;
-                    messageDiv.appendChild(msgHeader);
-
-                    // Message content
-                    const msgContent = document.createElement('div');
-                    msgContent.style.fontSize = '14px';
-                    msgContent.style.lineHeight = '1.6';
-                    msgContent.innerHTML = content;
-                    messageDiv.appendChild(msgContent);
-
-                    pdfContent.appendChild(messageDiv);
-                });
-
-                // Configure PDF options
-                const opt = {
-                    margin: [2, 10, 2, 10],
-                    pagebreak: {
-                        mode: ['avoid-all', 'css'],
-                        after: '.message'
-                    },
-                    filename: `chat-export-${currentSession.substring(0, 8)}-${new Date().toISOString().split('T')[0]}.pdf`,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: {
-                        scale: 2,
-                        useCORS: true,
-                        letterRendering: true
-                    },
-                    jsPDF: {
-                        unit: 'mm',
-                        format: 'a4',
-                        orientation: 'portrait'
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                    if (filenameMatch && filenameMatch[1]) {
+                        filename = filenameMatch[1].replace(/['"]/g, '');
                     }
-                };
+                }
 
-                // Generate and save the PDF
-                html2pdf().set(opt).from(pdfContent).save();
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+
+                // Cleanup
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
 
                 // Show success message
                 const successMsg = document.createElement('div');
@@ -1221,6 +1179,10 @@
             } catch (error) {
                 console.error('Error exporting chat:', error);
                 showError('Failed to export chat. Please try again.');
+            } finally {
+                // Reset button state
+                elements.exportChatBtn.disabled = false;
+                elements.exportChatBtn.textContent = 'Export';
             }
         }
 

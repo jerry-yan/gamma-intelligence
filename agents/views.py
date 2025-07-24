@@ -3,7 +3,7 @@ import json
 import logging
 import pandas as pd
 from datetime import date
-from django.http import JsonResponse, StreamingHttpResponse
+from django.http import JsonResponse, StreamingHttpResponse, FileResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib import messages
@@ -16,6 +16,16 @@ from django.db import transaction
 from .models import KnowledgeBase, ChatSession, ChatMessage, StockTicker
 from research_summaries.openai_utils import get_openai_client
 from .forms import ExcelUploadForm
+from io import BytesIO
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+from reportlab.platypus.tableofcontents import TableOfContents
+from reportlab.lib.enums import TA_LEFT, TA_CENTER
+import html
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +141,7 @@ def api_chat_stream(request):
                 # Get OpenAI client
                 client = get_openai_client()
 
-                today_str = date.today().strftime("%B %d, %Y")  # e.g. “July 15, 2025”
+                today_str = date.today().strftime("%B %d, %Y")  # e.g. "July 15, 2025"
 
                 instructions = (
                     "You are a veteran portfolio manager with 20 years experience, you now write investment commentaries that result in people making huge sums of money with your timely and accurate insights. \n"
@@ -495,6 +505,188 @@ def api_rename_session(request, session_id):
     except Exception as e:
         logger.error(f"Error renaming session: {e}")
         return JsonResponse({'success': False, 'error': 'Failed to rename session'}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_export_session_pdf(request, session_id):
+    """Export chat session as PDF with selectable text"""
+    try:
+        # Get session and verify ownership
+        session = ChatSession.objects.get(
+            session_id=session_id,
+            user=request.user
+        )
+
+        # Get all messages
+        messages = session.messages.exclude(role='system').select_related('knowledge_base').order_by('created_at')
+
+        # Create PDF buffer
+        buffer = BytesIO()
+
+        # Create the PDF object
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            rightMargin=72,
+            leftMargin=72,
+            topMargin=72,
+            bottomMargin=72
+        )
+
+        # Container for the 'Flowable' objects
+        elements = []
+
+        # Define styles
+        styles = getSampleStyleSheet()
+
+        # Custom styles
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=colors.HexColor('#111827'),
+            spaceAfter=12,
+            alignment=TA_CENTER
+        )
+
+        header_style = ParagraphStyle(
+            'Header',
+            parent=styles['Normal'],
+            fontSize=12,
+            textColor=colors.HexColor('#6b7280'),
+            spaceAfter=6,
+            alignment=TA_CENTER
+        )
+
+        user_style = ParagraphStyle(
+            'UserMessage',
+            parent=styles['Normal'],
+            fontSize=12,
+            textColor=colors.HexColor('#2563eb'),
+            spaceAfter=6,
+            fontName='Helvetica-Bold'
+        )
+
+        assistant_style = ParagraphStyle(
+            'AssistantMessage',
+            parent=styles['Normal'],
+            fontSize=12,
+            textColor=colors.HexColor('#7c3aed'),
+            spaceAfter=6,
+            fontName='Helvetica-Bold'
+        )
+
+        content_style = ParagraphStyle(
+            'MessageContent',
+            parent=styles['Normal'],
+            fontSize=11,
+            textColor=colors.HexColor('#111827'),
+            spaceAfter=18,
+            spaceBefore=6,
+            leading=16
+        )
+
+        kb_style = ParagraphStyle(
+            'KnowledgeBase',
+            parent=styles['Normal'],
+            fontSize=10,
+            textColor=colors.HexColor('#6b7280'),
+            spaceAfter=3
+        )
+
+        # Add title
+        elements.append(Paragraph("Chat Export", title_style))
+        elements.append(Spacer(1, 12))
+
+        # Add header info
+        elements.append(Paragraph(f"Session: {session_id}", header_style))
+        elements.append(Paragraph(f"Exported: {timezone.now().strftime('%B %d, %Y at %I:%M %p')}", header_style))
+        elements.append(Paragraph(f"User: {request.user.get_full_name() or request.user.username}", header_style))
+        elements.append(Spacer(1, 24))
+
+        # Function to clean and escape HTML content
+        def clean_content(content):
+            # First, decode any HTML entities
+            content = html.unescape(content)
+
+            # Convert markdown-style formatting to HTML
+            # Bold: **text** or __text__
+            content = re.sub(r'\*\*([^*]+)\*\*', r'<b>\1</b>', content)
+            content = re.sub(r'__([^_]+)__', r'<b>\1</b>', content)
+
+            # Italic: *text* or _text_
+            content = re.sub(r'\*([^*]+)\*', r'<i>\1</i>', content)
+            content = re.sub(r'(?<!\w)_([^_]+)_(?!\w)', r'<i>\1</i>', content)
+
+            # Code blocks: ```text```
+            content = re.sub(r'```([^`]+)```', r'<font name="Courier">\1</font>', content)
+
+            # Inline code: `text`
+            content = re.sub(r'`([^`]+)`', r'<font name="Courier">\1</font>', content)
+
+            # Convert newlines to <br/> tags
+            content = content.replace('\n', '<br/>')
+
+            # Escape any remaining problematic characters for ReportLab
+            content = content.replace('&', '&amp;')
+            content = content.replace('<', '&lt;').replace('>', '&gt;')
+
+            # Re-enable our formatted tags
+            content = content.replace('&lt;b&gt;', '<b>').replace('&lt;/b&gt;', '</b>')
+            content = content.replace('&lt;i&gt;', '<i>').replace('&lt;/i&gt;', '</i>')
+            content = content.replace('&lt;br/&gt;', '<br/>')
+            content = content.replace('&lt;font name="Courier"&gt;', '<font name="Courier">').replace('&lt;/font&gt;',
+                                                                                                      '</font>')
+
+            return content
+
+        # Add messages
+        for msg in messages:
+            # Add role header
+            if msg.role == 'user':
+                elements.append(Paragraph("You", user_style))
+            else:
+                elements.append(Paragraph("Assistant", assistant_style))
+
+            # Add knowledge base info if present
+            if msg.knowledge_base:
+                elements.append(Paragraph(f"[{msg.knowledge_base.display_name}]", kb_style))
+
+            # Clean and add message content
+            cleaned_content = clean_content(msg.content)
+            try:
+                elements.append(Paragraph(cleaned_content, content_style))
+            except Exception as e:
+                # If parsing fails, add plain text
+                logger.warning(f"Failed to parse message content: {e}")
+                elements.append(Paragraph(html.escape(msg.content), content_style))
+
+            # Add a line separator
+            elements.append(Spacer(1, 6))
+
+        # Build PDF
+        doc.build(elements)
+
+        # FileResponse sets the Content-Disposition header so that browsers
+        # present the option to save the file.
+        buffer.seek(0)
+
+        filename = f"chat-export-{session_id.hex[:8]}-{timezone.now().strftime('%Y%m%d')}.pdf"
+        response = FileResponse(
+            buffer,
+            as_attachment=True,
+            filename=filename,
+            content_type='application/pdf'
+        )
+
+        return response
+
+    except ChatSession.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Session not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error exporting session to PDF: {e}")
+        return JsonResponse({'success': False, 'error': 'Failed to export session'}, status=500)
 
 
 class StockTickerUploadView(LoginRequiredMixin, FormView):
