@@ -1187,11 +1187,11 @@
 
                 // Configure PDF options
                 const opt = {
-                    margin: [2, 10, 2, 10],
-                    pagebreak: {
-                        mode: ['avoid-all', 'css'],
-                        after: '.message'
-                    },
+                    margin: [1, 10, 1, 10],
+                    // pagebreak: {
+                    //     mode: ['avoid-all', 'css'],
+                    //     after: '.message'
+                    // },
                     filename: `chat-export-${currentSession.substring(0, 8)}-${new Date().toISOString().split('T')[0]}.pdf`,
                     image: { type: 'jpeg', quality: 0.98 },
                     html2canvas: {
