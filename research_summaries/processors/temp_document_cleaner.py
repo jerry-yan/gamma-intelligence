@@ -67,7 +67,8 @@ def clean_temporary_documents(hours_threshold: int = 12):
                 print(f"✅ Successfully deleted OpenAI file {doc.openai_file_id}")
             except Exception as e:
                 # If the file is already deleted or doesn't exist, we still want to mark it as not vectorized
-                if "No such file" in str(e) or "not found" in str(e).lower():
+                error_str = str(e).lower()
+                if "no such file" in error_str or "not found" in error_str:
                     logger.info(f"ℹ️  File {doc.openai_file_id} already deleted or not found")
                     print(f"ℹ️  File {doc.openai_file_id} already deleted or not found")
                 else:
