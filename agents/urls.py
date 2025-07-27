@@ -27,6 +27,7 @@ urlpatterns = [
     path('api/sessions/<uuid:session_id>/export-pdf/', views.api_export_session_pdf, name='api_export_session_pdf'),  # Export PDF
     path('api/sessions/', views.api_user_sessions, name='api_user_sessions'),
     path('api/messages/<int:message_id>/delete/', views.api_delete_message, name='api_delete_message'),
+    path('api/sessions/<uuid:session_id>/check-response/', views.api_check_response_status, name='api_check_response_status'),
 
     path('api/knowledge-bases/create/', api_views.api_create_knowledge_base, name='api_create_knowledge_base'),
     path('api/knowledge-bases/list/', api_views.api_list_knowledge_bases, name='api_list_knowledge_bases'),

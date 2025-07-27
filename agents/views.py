@@ -137,6 +137,14 @@ def api_chat_stream(request):
 
         def event_stream():
             """Generate SSE events for streaming response"""
+            # Variables to accumulate the response
+            assistant_message = ""
+            response_id = None
+            tool_uses = []
+            citations = []
+            last_save_length = 0
+            assistant_msg_obj = None
+
             try:
                 # Get OpenAI client
                 client = get_openai_client()
@@ -177,86 +185,103 @@ def api_chat_stream(request):
                 # Stream the response
                 response = client.responses.create(**stream_params)
 
-                assistant_message = ""
-                response_id = None
-                tool_uses = []
-                citations = []
-
                 for chunk in response:
-                    # Capture response ID
-                    if hasattr(chunk, 'response') and hasattr(chunk.response, 'id'):
-                        response_id = chunk.response.id
+                    # Check if client is still connected
+                    try:
+                        # Capture response ID
+                        if hasattr(chunk, 'response') and hasattr(chunk.response, 'id'):
+                            response_id = chunk.response.id
 
-                    # Handle different event types from Responses API
-                    if hasattr(chunk, 'type'):
-                        # Handle text delta events
-                        if chunk.type == 'response.output_text.delta' and hasattr(chunk, 'delta'):
-                            assistant_message += chunk.delta
-                            yield f"data: {json.dumps({'type': 'content', 'content': chunk.delta})}\n\n"
+                        # Handle different event types from Responses API
+                        if hasattr(chunk, 'type'):
+                            # Handle text delta events
+                            if chunk.type == 'response.output_text.delta' and hasattr(chunk, 'delta'):
+                                assistant_message += chunk.delta
+                                yield f"data: {json.dumps({'type': 'content', 'content': chunk.delta})}\n\n"
 
-                        # Handle tool use events (file search)
-                        elif chunk.type == 'response.tool_call.delta' and hasattr(chunk, 'tool_call'):
-                            if chunk.tool_call.type == 'file_search':
-                                tool_uses.append('file_search')
-                                yield f"data: {json.dumps({'type': 'tool_use', 'tool': 'file_search', 'status': 'searching'})}\n\n"
+                                # Periodically save the message in case of disconnection
+                                if len(assistant_message) - last_save_length > 500:  # Save every 500 chars
+                                    if not assistant_msg_obj:
+                                        assistant_msg_obj = ChatMessage.objects.create(
+                                            session=session,
+                                            role='assistant',
+                                            content=assistant_message,
+                                            knowledge_base=knowledge_base,
+                                            metadata={'partial': True, 'response_id': response_id}
+                                        )
+                                    else:
+                                        assistant_msg_obj.content = assistant_message
+                                        assistant_msg_obj.save(update_fields=['content'])
+                                    last_save_length = len(assistant_message)
 
-                        # Handle citation events if available
-                        elif chunk.type == 'response.citation' and hasattr(chunk, 'citation'):
-                            citations.append({
-                                'file_id': chunk.citation.file_id,
-                                'quote': chunk.citation.quote
-                            })
+                            # Handle tool use events (file search)
+                            elif chunk.type == 'response.tool_call.delta' and hasattr(chunk, 'tool_call'):
+                                if chunk.tool_call.type == 'file_search':
+                                    tool_uses.append('file_search')
+                                    yield f"data: {json.dumps({'type': 'tool_use', 'tool': 'file_search', 'status': 'searching'})}\n\n"
 
-                        # === REASONING EVENTS (keep connection alive) ===
-                        elif chunk.type == 'response.reasoning_summary_part.added':
-                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_part_added'})}\n\n"
+                            # Handle citation events if available
+                            elif chunk.type == 'response.citation' and hasattr(chunk, 'citation'):
+                                citations.append({
+                                    'file_id': chunk.citation.file_id,
+                                    'quote': chunk.citation.quote
+                                })
 
-                        elif chunk.type == 'response.reasoning_summary_part.done':
-                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_part_done'})}\n\n"
+                            # === REASONING EVENTS (keep connection alive) ===
+                            elif chunk.type == 'response.reasoning_summary_part.added':
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_part_added'})}\n\n"
 
-                        elif chunk.type == 'response.reasoning_summary_text.delta':
-                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_text_delta'})}\n\n"
+                            elif chunk.type == 'response.reasoning_summary_part.done':
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_part_done'})}\n\n"
 
-                        elif chunk.type == 'response.reasoning_summary_text.done':
-                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_text_done'})}\n\n"
+                            elif chunk.type == 'response.reasoning_summary_text.delta':
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_text_delta'})}\n\n"
 
-                        elif chunk.type == 'response.reasoning.delta':
-                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_delta'})}\n\n"
+                            elif chunk.type == 'response.reasoning_summary_text.done':
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_text_done'})}\n\n"
 
-                        elif chunk.type == 'response.reasoning.done':
-                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_done'})}\n\n"
+                            elif chunk.type == 'response.reasoning.delta':
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_delta'})}\n\n"
 
-                        elif chunk.type == 'response.reasoning_summary.delta':
-                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_summary_delta'})}\n\n"
+                            elif chunk.type == 'response.reasoning.done':
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_done'})}\n\n"
 
-                        elif chunk.type == 'response.reasoning_summary.done':
-                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_summary_done'})}\n\n"
+                            elif chunk.type == 'response.reasoning_summary.delta':
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_summary_delta'})}\n\n"
 
-                        # === OUTPUT ITEM EVENTS ===
-                        elif chunk.type == 'response.output_item.added':
-                            yield f"data: {json.dumps({'type': 'output', 'status': 'item_added'})}\n\n"
+                            elif chunk.type == 'response.reasoning_summary.done':
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_summary_done'})}\n\n"
 
-                        elif chunk.type == 'response.output_item.done':
-                            yield f"data: {json.dumps({'type': 'output', 'status': 'item_done'})}\n\n"
+                            # === OUTPUT ITEM EVENTS ===
+                            elif chunk.type == 'response.output_item.added':
+                                yield f"data: {json.dumps({'type': 'output', 'status': 'item_added'})}\n\n"
 
-                        # === CONTENT PART EVENTS ===
-                        elif chunk.type == 'response.content_part.added':
-                            yield f"data: {json.dumps({'type': 'content_part', 'status': 'added'})}\n\n"
+                            elif chunk.type == 'response.output_item.done':
+                                yield f"data: {json.dumps({'type': 'output', 'status': 'item_done'})}\n\n"
 
-                        elif chunk.type == 'response.content_part.done':
-                            yield f"data: {json.dumps({'type': 'content_part', 'status': 'done'})}\n\n"
+                            # === CONTENT PART EVENTS ===
+                            elif chunk.type == 'response.content_part.added':
+                                yield f"data: {json.dumps({'type': 'content_part', 'status': 'added'})}\n\n"
 
-                        # === TOOL CALL DELTA EVENTS (updated) ===
-                        elif chunk.type == 'response.output_tool_calls.delta':
-                            if hasattr(chunk, 'delta') and hasattr(chunk.delta, 'tool_calls'):
-                                for tool_call in chunk.delta.tool_calls:
-                                    if tool_call.type == 'file_search':
-                                        tool_uses.append('file_search')
-                                        yield f"data: {json.dumps({'type': 'tool_use', 'tool': 'file_search', 'status': 'searching'})}\n\n"
+                            elif chunk.type == 'response.content_part.done':
+                                yield f"data: {json.dumps({'type': 'content_part', 'status': 'done'})}\n\n"
 
-                        # Log unhandled events for debugging
-                        else:
-                            logger.debug(f"Unhandled chunk type: {chunk.type}")
+                            # === TOOL CALL DELTA EVENTS (updated) ===
+                            elif chunk.type == 'response.output_tool_calls.delta':
+                                if hasattr(chunk, 'delta') and hasattr(chunk.delta, 'tool_calls'):
+                                    for tool_call in chunk.delta.tool_calls:
+                                        if tool_call.type == 'file_search':
+                                            tool_uses.append('file_search')
+                                            yield f"data: {json.dumps({'type': 'tool_use', 'tool': 'file_search', 'status': 'searching'})}\n\n"
+
+                            # Log unhandled events for debugging
+                            else:
+                                logger.debug(f"Unhandled chunk type: {chunk.type}")
+
+                    except Exception as e:
+                        logger.warning(f"Client possibly disconnected during streaming: {e}")
+                        # Continue processing even if client disconnected
+                        continue
 
                 # Update session with response ID
                 if response_id and response_id != session.response_id:
@@ -268,24 +293,43 @@ def api_chat_stream(request):
                 if assistant_message:
                     metadata = {
                         'tool_uses': tool_uses,
-                        'response_id': response_id
+                        'response_id': response_id,
+                        'partial': False
                     }
                     if citations:
                         metadata['citations'] = citations
 
-                    ChatMessage.objects.create(
-                        session=session,
-                        role='assistant',
-                        content=assistant_message,
-                        knowledge_base=knowledge_base,  # Store which KB was used (if any)
-                        metadata=metadata
-                    )
+                    if assistant_msg_obj:
+                        # Update existing partial message
+                        assistant_msg_obj.content = assistant_message
+                        assistant_msg_obj.metadata = metadata
+                        assistant_msg_obj.save(update_fields=['content', 'metadata'])
+                    else:
+                        # Create new message if not already created
+                        ChatMessage.objects.create(
+                            session=session,
+                            role='assistant',
+                            content=assistant_message,
+                            knowledge_base=knowledge_base,  # Store which KB was used (if any)
+                            metadata=metadata
+                        )
 
                 # Send completion signal
                 yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
             except Exception as e:
                 logger.error(f"Streaming error in session {session.session_id}: {str(e)}", exc_info=True)
+
+                # Save whatever we have so far
+                if assistant_message and not assistant_msg_obj:
+                    ChatMessage.objects.create(
+                        session=session,
+                        role='assistant',
+                        content=assistant_message + "\n\n[Response interrupted due to error]",
+                        knowledge_base=knowledge_base,
+                        metadata={'error': str(e), 'partial': True, 'response_id': response_id}
+                    )
+
                 yield f"data: {json.dumps({'type': 'error', 'error': 'An error occurred while generating the response.'})}\n\n"
 
         # Return streaming response with keep-alive headers
@@ -687,6 +731,49 @@ def api_export_session_pdf(request, session_id):
     except Exception as e:
         logger.error(f"Error exporting session to PDF: {e}")
         return JsonResponse({'success': False, 'error': 'Failed to export session'}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_check_response_status(request, session_id):
+    """Check if there's a new assistant response for a session"""
+    try:
+        session = ChatSession.objects.get(
+            session_id=session_id,
+            user=request.user
+        )
+
+        # Get the last assistant message
+        last_assistant_msg = session.messages.filter(
+            role='assistant'
+        ).order_by('-created_at').first()
+
+        if last_assistant_msg:
+            return JsonResponse({
+                'success': True,
+                'has_response': True,
+                'message': {
+                    'id': last_assistant_msg.id,
+                    'content': last_assistant_msg.content,
+                    'created_at': last_assistant_msg.created_at.isoformat(),
+                    'metadata': last_assistant_msg.metadata or {},
+                    'knowledge_base': {
+                        'id': last_assistant_msg.knowledge_base.id,
+                        'name': last_assistant_msg.knowledge_base.display_name
+                    } if last_assistant_msg.knowledge_base else None
+                }
+            })
+        else:
+            return JsonResponse({
+                'success': True,
+                'has_response': False
+            })
+
+    except ChatSession.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Session not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error checking response status: {e}")
+        return JsonResponse({'success': False, 'error': 'Failed to check status'}, status=500)
 
 
 class StockTickerUploadView(LoginRequiredMixin, FormView):

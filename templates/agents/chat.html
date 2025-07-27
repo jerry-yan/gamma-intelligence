@@ -939,6 +939,8 @@
         // State management
         let currentSession = null;
         let isStreaming = false;
+        let pollingInterval = null;
+        let lastMessageCount = 0;
 
         // DOM elements
         const elements = {
@@ -967,6 +969,18 @@
             setupEventListeners();
             autoResizeTextarea();
             setupMobileMenu();
+
+            // Check if we have an interrupted session to reload
+            const wasInterrupted = sessionStorage.getItem('streamingInterrupted');
+            const interruptedSession = sessionStorage.getItem('interruptedSession');
+
+            if (wasInterrupted === 'true' && interruptedSession) {
+                sessionStorage.removeItem('streamingInterrupted');
+                sessionStorage.removeItem('interruptedSession');
+
+                // Load the interrupted session
+                loadSession(interruptedSession);
+            }
         });
 
         // Mobile menu functionality
@@ -1112,6 +1126,32 @@
             }
         }
 
+        // Check for incomplete responses when loading a session
+        async function checkIncompleteResponses(sessionId) {
+            try {
+                const response = await fetch(`/agents/api/sessions/${sessionId}/history/`);
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const messages = data.messages;
+
+                // Check if the last message is an assistant message marked as partial
+                if (messages.length > 0) {
+                    const lastMessage = messages[messages.length - 1];
+                    if (lastMessage.role === 'assistant' && lastMessage.metadata?.partial) {
+                        // Show a notice that the response was interrupted
+                        const noticeEl = document.createElement('div');
+                        noticeEl.className = 'error-message';
+                        noticeEl.textContent = 'The previous response was interrupted. You can ask me to continue or start a new question.';
+                        elements.messagesContainer.appendChild(noticeEl);
+                        scrollToBottom();
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking incomplete responses:', error);
+            }
+        }
+
         // Load existing session
         async function loadSession(sessionId) {
             try {
@@ -1131,9 +1171,17 @@
                     if (msg.role === 'user') {
                         addUserMessage(msg.content, msg.knowledge_base, msg.id);
                     } else if (msg.role === 'assistant') {
-                        addAssistantMessage(msg.content, msg.knowledge_base, msg.id);
+                        // Check if message is partial
+                        let content = msg.content;
+                        if (msg.metadata?.partial) {
+                            content += '\n\n*[Response was interrupted]*';
+                        }
+                        addAssistantMessage(content, msg.knowledge_base, msg.id);
                     }
                 });
+
+                // Check for incomplete responses
+                await checkIncompleteResponses(sessionId);
 
                 // Reload sessions to update active state
                 loadUserSessions();
@@ -1152,6 +1200,64 @@
             elements.clearChatBtn.style.display = 'block';
             elements.exportChatBtn.style.display = 'block';
             elements.chatInput.focus();
+        }
+
+        // Polling functions
+        function startPolling(sessionId) {
+            // Clear any existing polling
+            stopPolling();
+
+            // Count current messages
+            const currentMessages = elements.messagesContainer.querySelectorAll('.assistant-message');
+            lastMessageCount = currentMessages.length;
+
+            // Poll every 2 seconds
+            pollingInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/agents/api/sessions/${sessionId}/check-response/`);
+                    if (!response.ok) {
+                        stopPolling();
+                        return;
+                    }
+
+                    const data = await response.json();
+                    if (data.has_response) {
+                        // Check if this is a new message
+                        const currentAssistantMessages = elements.messagesContainer.querySelectorAll('.assistant-message');
+                        const messageExists = Array.from(currentAssistantMessages).some(
+                            msg => msg.dataset.messageId === data.message.id.toString()
+                        );
+
+                        if (!messageExists) {
+                            // Add the new message
+                            hideTypingIndicator();
+                            addAssistantMessage(
+                                data.message.content,
+                                data.message.knowledge_base,
+                                data.message.id
+                            );
+
+                            // Stop polling if the response is complete (not partial)
+                            if (!data.message.metadata?.partial) {
+                                stopPolling();
+                                isStreaming = false;
+                                elements.chatInput.disabled = false;
+                                elements.sendButton.disabled = false;
+                                elements.chatInput.focus();
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Polling error:', error);
+                }
+            }, 2000);
+        }
+
+        function stopPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
         }
 
         // Send message
@@ -1178,9 +1284,18 @@
             // Show typing indicator
             showTypingIndicator();
 
+            // Detect if we're on mobile Safari
+            const isMobileSafari = /iPhone|iPad|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent);
+
+            // Start polling as a backup on mobile
+            if (isMobileSafari) {
+                startPolling(currentSession);
+            }
+
             // Create a placeholder for the assistant message
             let currentMessageEl = null;
             let currentMessageContent = '';
+            let sseConnected = false;
 
             try {
                 const body = {
@@ -1210,6 +1325,12 @@
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
+
+                    sseConnected = true;
+                    // If SSE is working, stop polling
+                    if (isMobileSafari) {
+                        stopPolling();
+                    }
 
                     buffer += decoder.decode(value, { stream: true });
                     const lines = buffer.split('\n');
@@ -1247,6 +1368,7 @@
                                         break;
                                     case 'done':
                                         // Streaming complete
+                                        stopPolling();
                                         break;
                                 }
                             } catch (e) {
@@ -1262,6 +1384,14 @@
             } catch (error) {
                 console.error('Error sending message:', error);
                 showError('Failed to send message. Please try again.');
+
+                // If SSE failed and we're on mobile, rely on polling
+                if (isMobileSafari && !sseConnected) {
+                    console.log('SSE failed, relying on polling for response');
+                    // Keep polling active
+                } else {
+                    stopPolling();
+                }
             } finally {
                 hideTypingIndicator();
                 elements.chatInput.disabled = false;
@@ -1567,6 +1697,40 @@
             textarea.style.height = 'auto';
             textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
         }
+
+        // Add visibility change detection to save state
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && isStreaming) {
+                console.log('Page becoming hidden while streaming - response may be interrupted');
+                // You could set a flag here to check when returning
+                sessionStorage.setItem('streamingInterrupted', 'true');
+                sessionStorage.setItem('interruptedSession', currentSession);
+            } else if (!document.hidden) {
+                // Check if we previously had streaming interrupted
+                const wasInterrupted = sessionStorage.getItem('streamingInterrupted');
+                const interruptedSession = sessionStorage.getItem('interruptedSession');
+
+                if (wasInterrupted === 'true' && interruptedSession === currentSession) {
+                    sessionStorage.removeItem('streamingInterrupted');
+                    sessionStorage.removeItem('interruptedSession');
+
+                    // Reload the session to get any saved partial responses
+                    if (currentSession) {
+                        loadSession(currentSession);
+                    }
+                }
+            }
+        });
+
+        // Add beforeunload handler to try to save state
+        window.addEventListener('beforeunload', (e) => {
+            if (isStreaming) {
+                // Try to flag that streaming was interrupted
+                sessionStorage.setItem('streamingInterrupted', 'true');
+                sessionStorage.setItem('interruptedSession', currentSession);
+            }
+            stopPolling();
+        });
     </script>
 </body>
 </html>
