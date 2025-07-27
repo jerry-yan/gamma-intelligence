@@ -137,11 +137,23 @@ def api_chat_stream(request):
 
         def event_stream():
             """Generate SSE events for streaming response"""
+            # Variables to accumulate the response
+            assistant_message = ""
+            response_id = None
+            tool_uses = []
+            citations = []
+            last_save_length = 0
+            assistant_msg_obj = None
+            chunk_count = 0
+            stream_start_time = timezone.now()
+
+            logger.info(f"[STREAM START] Session {session.session_id} - User: {request.user.username}")
+
             try:
                 # Get OpenAI client
                 client = get_openai_client()
 
-                today_str = date.today().strftime("%B %d, %Y")  # e.g. "July 15, 2025"
+                today_str = date.today().strftime("%B %d, %Y")
 
                 instructions = (
                     "You are a veteran portfolio manager with 20 years experience, you now write investment commentaries that result in people making huge sums of money with your timely and accurate insights. \n"
@@ -151,14 +163,10 @@ def api_chat_stream(request):
 
                 # Build parameters for Responses API
                 stream_params = {
-                    # "model": "gpt-4o-mini",
-                    # "model": "gpt-4.1-mini-2025-04-14",
                     "model": "o3-2025-04-16",
-                    # "model": "o3-mini-2025-01-31",
                     "instructions": instructions,
                     "input": message,
                     "stream": True,
-                    # "temperature": 0.7,
                 }
 
                 # Add tools only if knowledge base is specified
@@ -174,95 +182,123 @@ def api_chat_stream(request):
                 if session.response_id:
                     stream_params["previous_response_id"] = session.response_id
 
+                logger.info(f"[OPENAI REQUEST] Session {session.session_id} - Starting OpenAI stream")
+
                 # Stream the response
                 response = client.responses.create(**stream_params)
 
-                assistant_message = ""
-                response_id = None
-                tool_uses = []
-                citations = []
-
                 for chunk in response:
-                    # Capture response ID
-                    if hasattr(chunk, 'response') and hasattr(chunk.response, 'id'):
-                        response_id = chunk.response.id
+                    chunk_count += 1
 
-                    # Handle different event types from Responses API
-                    if hasattr(chunk, 'type'):
-                        # Handle text delta events
-                        if chunk.type == 'response.output_text.delta' and hasattr(chunk, 'delta'):
-                            assistant_message += chunk.delta
-                            yield f"data: {json.dumps({'type': 'content', 'content': chunk.delta})}\n\n"
+                    # Log every 10th chunk to avoid log spam
+                    if chunk_count % 10 == 0:
+                        logger.info(
+                            f"[CHUNK {chunk_count}] Session {session.session_id} - Message length: {len(assistant_message)}")
 
-                        # Handle tool use events (file search)
-                        elif chunk.type == 'response.tool_call.delta' and hasattr(chunk, 'tool_call'):
-                            if chunk.tool_call.type == 'file_search':
-                                tool_uses.append('file_search')
-                                yield f"data: {json.dumps({'type': 'tool_use', 'tool': 'file_search', 'status': 'searching'})}\n\n"
+                    # Check if client is still connected
+                    try:
+                        # Capture response ID
+                        if hasattr(chunk, 'response') and hasattr(chunk.response, 'id'):
+                            response_id = chunk.response.id
+                            logger.info(f"[RESPONSE ID] Session {session.session_id} - Got response_id: {response_id}")
 
-                        # Handle citation events if available
-                        elif chunk.type == 'response.citation' and hasattr(chunk, 'citation'):
-                            citations.append({
-                                'file_id': chunk.citation.file_id,
-                                'quote': chunk.citation.quote
-                            })
+                        # Handle different event types from Responses API
+                        if hasattr(chunk, 'type'):
+                            # Log specific event types
+                            if chunk.type in ['response.output_text.delta', 'response.done',
+                                              'response.tool_call.delta']:
+                                logger.debug(f"[EVENT] Session {session.session_id} - Type: {chunk.type}")
 
-                        # === REASONING EVENTS (keep connection alive) ===
-                        elif chunk.type == 'response.reasoning_summary_part.added':
-                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_part_added'})}\n\n"
+                            # Handle text delta events
+                            if chunk.type == 'response.output_text.delta' and hasattr(chunk, 'delta'):
+                                assistant_message += chunk.delta
+                                yield f"data: {json.dumps({'type': 'content', 'content': chunk.delta})}\n\n"
 
-                        elif chunk.type == 'response.reasoning_summary_part.done':
-                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_part_done'})}\n\n"
+                                # Periodically save the message in case of disconnection
+                                if len(assistant_message) - last_save_length > 500:  # Save every 500 chars
+                                    logger.info(
+                                        f"[PERIODIC SAVE] Session {session.session_id} - Saving at {len(assistant_message)} chars")
 
-                        elif chunk.type == 'response.reasoning_summary_text.delta':
-                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_text_delta'})}\n\n"
+                            # Handle tool use events (file search)
+                            elif chunk.type == 'response.tool_call.delta' and hasattr(chunk, 'tool_call'):
+                                if chunk.tool_call.type == 'file_search':
+                                    tool_uses.append('file_search')
+                                    logger.info(f"[TOOL USE] Session {session.session_id} - File search initiated")
+                                    yield f"data: {json.dumps({'type': 'tool_use', 'tool': 'file_search', 'status': 'searching'})}\n\n"
 
-                        elif chunk.type == 'response.reasoning_summary_text.done':
-                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_text_done'})}\n\n"
+                            # Handle citation events if available
+                            elif chunk.type == 'response.citation' and hasattr(chunk, 'citation'):
+                                citations.append({
+                                    'file_id': chunk.citation.file_id,
+                                    'quote': chunk.citation.quote
+                                })
 
-                        elif chunk.type == 'response.reasoning.delta':
-                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_delta'})}\n\n"
+                            # === REASONING EVENTS (keep connection alive) ===
+                            elif chunk.type == 'response.reasoning_summary_part.added':
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_part_added'})}\n\n"
 
-                        elif chunk.type == 'response.reasoning.done':
-                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_done'})}\n\n"
+                            elif chunk.type == 'response.reasoning_summary_part.done':
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_part_done'})}\n\n"
 
-                        elif chunk.type == 'response.reasoning_summary.delta':
-                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_summary_delta'})}\n\n"
+                            elif chunk.type == 'response.reasoning_summary_text.delta':
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_text_delta'})}\n\n"
 
-                        elif chunk.type == 'response.reasoning_summary.done':
-                            yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_summary_done'})}\n\n"
+                            elif chunk.type == 'response.reasoning_summary_text.done':
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_text_done'})}\n\n"
 
-                        # === OUTPUT ITEM EVENTS ===
-                        elif chunk.type == 'response.output_item.added':
-                            yield f"data: {json.dumps({'type': 'output', 'status': 'item_added'})}\n\n"
+                            elif chunk.type == 'response.reasoning.delta':
+                                if chunk_count % 5 == 0:  # Log every 5th reasoning event
+                                    logger.info(f"[REASONING] Session {session.session_id} - Reasoning in progress")
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_delta'})}\n\n"
 
-                        elif chunk.type == 'response.output_item.done':
-                            yield f"data: {json.dumps({'type': 'output', 'status': 'item_done'})}\n\n"
+                            elif chunk.type == 'response.reasoning.done':
+                                logger.info(f"[REASONING DONE] Session {session.session_id}")
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_done'})}\n\n"
 
-                        # === CONTENT PART EVENTS ===
-                        elif chunk.type == 'response.content_part.added':
-                            yield f"data: {json.dumps({'type': 'content_part', 'status': 'added'})}\n\n"
+                            elif chunk.type == 'response.reasoning_summary.delta':
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_summary_delta'})}\n\n"
 
-                        elif chunk.type == 'response.content_part.done':
-                            yield f"data: {json.dumps({'type': 'content_part', 'status': 'done'})}\n\n"
+                            elif chunk.type == 'response.reasoning_summary.done':
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_summary_done'})}\n\n"
 
-                        # === TOOL CALL DELTA EVENTS (updated) ===
-                        elif chunk.type == 'response.output_tool_calls.delta':
-                            if hasattr(chunk, 'delta') and hasattr(chunk.delta, 'tool_calls'):
-                                for tool_call in chunk.delta.tool_calls:
-                                    if tool_call.type == 'file_search':
-                                        tool_uses.append('file_search')
-                                        yield f"data: {json.dumps({'type': 'tool_use', 'tool': 'file_search', 'status': 'searching'})}\n\n"
+                            # === OUTPUT ITEM EVENTS ===
+                            elif chunk.type == 'response.output_item.added':
+                                yield f"data: {json.dumps({'type': 'output', 'status': 'item_added'})}\n\n"
 
-                        # Log unhandled events for debugging
-                        else:
-                            logger.debug(f"Unhandled chunk type: {chunk.type}")
+                            elif chunk.type == 'response.output_item.done':
+                                yield f"data: {json.dumps({'type': 'output', 'status': 'item_done'})}\n\n"
+
+                            # === CONTENT PART EVENTS ===
+                            elif chunk.type == 'response.content_part.added':
+                                yield f"data: {json.dumps({'type': 'content_part', 'status': 'added'})}\n\n"
+
+                            elif chunk.type == 'response.content_part.done':
+                                yield f"data: {json.dumps({'type': 'content_part', 'status': 'done'})}\n\n"
+
+                            # === TOOL CALL DELTA EVENTS (updated) ===
+                            elif chunk.type == 'response.output_tool_calls.delta':
+                                if hasattr(chunk, 'delta') and hasattr(chunk.delta, 'tool_calls'):
+                                    for tool_call in chunk.delta.tool_calls:
+                                        if tool_call.type == 'file_search':
+                                            tool_uses.append('file_search')
+                                            yield f"data: {json.dumps({'type': 'tool_use', 'tool': 'file_search', 'status': 'searching'})}\n\n"
+
+                    except Exception as e:
+                        logger.warning(
+                            f"[CLIENT DISCONNECT] Session {session.session_id} - Chunk {chunk_count} - Error: {str(e)}")
+                        logger.warning(
+                            f"[DISCONNECT STATS] Message length: {len(assistant_message)}, Chunks: {chunk_count}")
+                        # Continue processing even if client disconnected
+                        continue
+
+                logger.info(
+                    f"[STREAM COMPLETE] Session {session.session_id} - Total chunks: {chunk_count}, Message length: {len(assistant_message)}")
 
                 # Update session with response ID
                 if response_id and response_id != session.response_id:
                     session.response_id = response_id
                     session.save(update_fields=['response_id'])
-                    logger.info(f"Updated session {session.session_id} with response_id: {response_id}")
+                    logger.info(f"[SESSION UPDATE] Session {session.session_id} - Updated response_id: {response_id}")
 
                 # Save assistant message with knowledge base reference
                 if assistant_message:
@@ -283,9 +319,34 @@ def api_chat_stream(request):
 
                 # Send completion signal
                 yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                logger.info(f"[DONE SENT] Session {session.session_id}")
 
             except Exception as e:
-                logger.error(f"Streaming error in session {session.session_id}: {str(e)}", exc_info=True)
+                logger.error(f"[STREAM ERROR] Session {session.session_id} - Error: {str(e)}", exc_info=True)
+                logger.error(f"[ERROR STATS] Chunks: {chunk_count}, Message length: {len(assistant_message)}")
+
+                # Save whatever we have so far
+                if assistant_message:
+                    try:
+                        if not assistant_msg_obj:
+                            ChatMessage.objects.create(
+                                session=session,
+                                role='assistant',
+                                content=assistant_message + "\n\n[Response interrupted due to error]",
+                                knowledge_base=knowledge_base,
+                                metadata={
+                                    'error': str(e),
+                                    'partial': True,
+                                    'response_id': response_id,
+                                    'chunks_received': chunk_count,
+                                    'error_time': timezone.now().isoformat()
+                                }
+                            )
+                            logger.info(f"[ERROR SAVE] Session {session.session_id} - Saved partial message on error")
+                    except Exception as save_error:
+                        logger.error(
+                            f"[SAVE ERROR] Session {session.session_id} - Failed to save on error: {str(save_error)}")
+
                 yield f"data: {json.dumps({'type': 'error', 'error': 'An error occurred while generating the response.'})}\n\n"
 
         # Return streaming response with keep-alive headers
