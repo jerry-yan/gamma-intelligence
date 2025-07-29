@@ -1496,14 +1496,18 @@ class ResearchNotePersistenceView(LoginRequiredMixin, PermissionRequiredMixin, T
     permission_required = 'accounts.can_view_research_summaries'
 
     def get_context_data(self, **kwargs):
-        import json  # Add this import
+        import json
+        from django.core.serializers.json import DjangoJSONEncoder
+
         context = super().get_context_data(**kwargs)
         context['page_title'] = 'Manage Research Note Persistence'
 
         # Get only research notes that have been uploaded to OpenAI
         research_notes = ResearchNote.objects.filter(
             openai_file_id__isnull=False
-        ).select_related().order_by('-publication_date')
+        ).exclude(
+            openai_file_id__exact=''
+        ).select_related().order_by('-publication_date', '-file_summary_time')
 
         # Process notes to include vector group information
         notes_data = []
@@ -1517,27 +1521,33 @@ class ResearchNotePersistenceView(LoginRequiredMixin, PermissionRequiredMixin, T
 
             # Get vector IDs from StockTicker mapping
             if note.parsed_ticker:
-                ticker_vector_ids = StockTicker.objects.filter(
+                ticker_vector_ids = list(StockTicker.objects.filter(
                     main_ticker=note.parsed_ticker
-                ).values_list('vector_id', flat=True)
+                ).values_list('vector_id', flat=True))
                 vector_ids.update(ticker_vector_ids)
 
             notes_data.append({
                 'id': note.id,
                 'raw_title': note.raw_title or 'Untitled',
                 'source': note.source or '-',
-                'publication_date': note.publication_date.isoformat() if note.publication_date else None,  # Convert to string
+                'publication_date': note.publication_date.isoformat() if note.publication_date else None,
                 'parsed_ticker': note.parsed_ticker or '-',
                 'report_type': note.report_type or '-',
-                'vector_group_ids': sorted(list(vector_ids)) if vector_ids else [],
+                'vector_group_ids': sorted(list(vector_ids)),
                 'is_persistent_document': note.is_persistent_document,
-                'status': note.get_status_display(),
-                'created_at': note.created_at.isoformat() if note.created_at else None,  # Convert to string
             })
 
-        # Serialize to JSON
-        context['research_notes'] = json.dumps(notes_data)
-        context['research_notes_count'] = len(notes_data)  # Add count for debugging
+        # Properly serialize to JSON using DjangoJSONEncoder
+        context['research_notes_json'] = json.dumps(notes_data, cls=DjangoJSONEncoder)
+        context['total_count'] = len(notes_data)
+
+        # Get unique values for filters
+        context['unique_sources'] = sorted(list(set(n['source'] for n in notes_data if n['source'] != '-')))
+        context['unique_tickers'] = sorted(
+            list(set(n['parsed_ticker'] for n in notes_data if n['parsed_ticker'] != '-')))
+        context['unique_report_types'] = sorted(
+            list(set(n['report_type'] for n in notes_data if n['report_type'] != '-')))
+
         return context
 
 
@@ -1552,21 +1562,45 @@ def api_update_persistence_status(request):
         is_persistent = data.get('is_persistent', False)
 
         if not note_ids:
-            return JsonResponse({'error': 'No note IDs provided'}, status=400)
+            return JsonResponse({
+                'success': False,
+                'error': 'No note IDs provided'
+            }, status=400)
+
+        # Validate note IDs are integers
+        try:
+            note_ids = [int(note_id) for note_id in note_ids]
+        except (ValueError, TypeError):
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid note ID format'
+            }, status=400)
 
         # Update the persistence status
-        updated = ResearchNote.objects.filter(id__in=note_ids).update(
+        updated_count = ResearchNote.objects.filter(
+            id__in=note_ids,
+            openai_file_id__isnull=False
+        ).update(
             is_persistent_document=is_persistent
         )
 
         return JsonResponse({
             'success': True,
-            'updated_count': updated,
-            'message': f'Updated {updated} notes to persistent={is_persistent}'
+            'updated_count': updated_count,
+            'message': f'Successfully updated {updated_count} research notes'
         })
 
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        logger.error(f"Error updating persistence status: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
 
 @login_required

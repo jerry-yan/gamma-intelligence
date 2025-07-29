@@ -6,45 +6,44 @@
 {% block extra_css %}
 <style>
     .table-container {
-        overflow-x: auto;
         margin-top: 20px;
     }
-    
+
     .sortable {
         cursor: pointer;
         user-select: none;
         position: relative;
         padding-right: 20px;
     }
-    
+
     .sortable:hover {
         background-color: #f0f0f0;
     }
-    
+
     .sortable::after {
         content: "↕";
         position: absolute;
         right: 5px;
         opacity: 0.5;
     }
-    
+
     .sortable.asc::after {
         content: "↑";
         opacity: 1;
     }
-    
+
     .sortable.desc::after {
         content: "↓";
         opacity: 1;
     }
-    
+
     .filter-section {
         background-color: #f8f9fa;
         padding: 20px;
         border-radius: 5px;
         margin-bottom: 20px;
     }
-    
+
     .vector-badge {
         display: inline-block;
         padding: 2px 8px;
@@ -53,24 +52,26 @@
         border-radius: 3px;
         font-size: 0.875rem;
     }
-    
+
     .persistence-badge {
         font-size: 0.875rem;
+        cursor: pointer;
     }
-    
+
     .table-responsive {
         max-height: 70vh;
         overflow-y: auto;
     }
-    
+
     .sticky-header {
         position: sticky;
         top: 0;
         background-color: #fff;
         z-index: 10;
     }
-    
+
     .bulk-actions {
+        display: none;
         position: sticky;
         bottom: 0;
         background-color: #fff;
@@ -78,366 +79,59 @@
         border-top: 2px solid #dee2e6;
         box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
     }
-    
-    .loading-spinner {
-        display: none;
-        text-align: center;
-        padding: 20px;
+
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
     }
-    
+
+    .loading-overlay.d-none {
+        display: none !important;
+    }
+
     #selectAll {
         cursor: pointer;
+    }
+
+    .text-truncate {
+        max-width: 300px;
     }
 </style>
 {% endblock %}
 
-{% block extra_js %}
-<script>
-// Global variables
-let allNotes = {{ research_notes|safe }};
-let filteredNotes = [...allNotes];
-let currentSort = { field: null, direction: 'asc' };
-let selectedNotes = new Set();
-
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
-    renderTable();
-    setupEventListeners();
-    updateBulkActionsVisibility();
-});
-
-// Setup event listeners
-function setupEventListeners() {
-    // Search functionality
-    document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 300));
-    
-    // Filter inputs
-    document.getElementById('tickerFilter').addEventListener('input', debounce(applyFilters, 300));
-    document.getElementById('sourceFilter').addEventListener('input', debounce(applyFilters, 300));
-    document.getElementById('reportTypeFilter').addEventListener('input', debounce(applyFilters, 300));
-    document.getElementById('persistenceFilter').addEventListener('change', applyFilters);
-    
-    // Clear filters button
-    document.getElementById('clearFilters').addEventListener('click', clearFilters);
-    
-    // Bulk actions
-    document.getElementById('setPersistent').addEventListener('click', () => updatePersistence(true));
-    document.getElementById('setNonPersistent').addEventListener('click', () => updatePersistence(false));
-    
-    // Select all checkbox
-    document.getElementById('selectAll').addEventListener('change', toggleSelectAll);
-    
-    // Sort headers
-    document.querySelectorAll('.sortable').forEach(header => {
-        header.addEventListener('click', () => sortTable(header.dataset.sort));
-    });
-}
-
-// Debounce function for search
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// Apply filters
-function applyFilters() {
-    const search = document.getElementById('searchInput').value.toLowerCase();
-    const ticker = document.getElementById('tickerFilter').value.toLowerCase();
-    const source = document.getElementById('sourceFilter').value.toLowerCase();
-    const reportType = document.getElementById('reportTypeFilter').value.toLowerCase();
-    const persistence = document.getElementById('persistenceFilter').value;
-    
-    filteredNotes = allNotes.filter(note => {
-        const matchesSearch = !search || 
-            note.raw_title.toLowerCase().includes(search) ||
-            note.source.toLowerCase().includes(search) ||
-            note.parsed_ticker.toLowerCase().includes(search) ||
-            note.report_type.toLowerCase().includes(search);
-            
-        const matchesTicker = !ticker || note.parsed_ticker.toLowerCase().includes(ticker);
-        const matchesSource = !source || note.source.toLowerCase().includes(source);
-        const matchesReportType = !reportType || note.report_type.toLowerCase().includes(reportType);
-        const matchesPersistence = persistence === '' || 
-            (persistence === 'true' && note.is_persistent_document) ||
-            (persistence === 'false' && !note.is_persistent_document);
-        
-        return matchesSearch && matchesTicker && matchesSource && matchesReportType && matchesPersistence;
-    });
-    
-    renderTable();
-}
-
-// Clear all filters
-function clearFilters() {
-    document.getElementById('searchInput').value = '';
-    document.getElementById('tickerFilter').value = '';
-    document.getElementById('sourceFilter').value = '';
-    document.getElementById('reportTypeFilter').value = '';
-    document.getElementById('persistenceFilter').value = '';
-    
-    filteredNotes = [...allNotes];
-    renderTable();
-}
-
-// Sort table
-function sortTable(field) {
-    // Update sort direction
-    if (currentSort.field === field) {
-        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
-    } else {
-        currentSort.field = field;
-        currentSort.direction = 'asc';
-    }
-    
-    // Sort the filtered notes
-    filteredNotes.sort((a, b) => {
-        let aVal = a[field];
-        let bVal = b[field];
-        
-        // Handle special cases
-        if (field === 'publication_date') {
-            aVal = aVal ? new Date(aVal) : new Date(0);
-            bVal = bVal ? new Date(bVal) : new Date(0);
-        } else if (field === 'vector_group_ids') {
-            aVal = aVal.length;
-            bVal = bVal.length;
-        } else if (typeof aVal === 'string') {
-            aVal = aVal.toLowerCase();
-            bVal = bVal.toLowerCase();
-        }
-        
-        if (aVal < bVal) return currentSort.direction === 'asc' ? -1 : 1;
-        if (aVal > bVal) return currentSort.direction === 'asc' ? 1 : -1;
-        return 0;
-    });
-    
-    // Update header classes
-    document.querySelectorAll('.sortable').forEach(header => {
-        header.classList.remove('asc', 'desc');
-        if (header.dataset.sort === field) {
-            header.classList.add(currentSort.direction);
-        }
-    });
-    
-    renderTable();
-}
-
-// Render table
-function renderTable() {
-    const tbody = document.getElementById('notesTableBody');
-    tbody.innerHTML = '';
-    
-    filteredNotes.forEach(note => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>
-                <input type="checkbox" class="note-checkbox" value="${note.id}" 
-                    ${selectedNotes.has(note.id) ? 'checked' : ''}>
-            </td>
-            <td class="text-truncate" style="max-width: 300px;" title="${escapeHtml(note.raw_title)}">
-                ${escapeHtml(note.raw_title)}
-            </td>
-            <td>${escapeHtml(note.source)}</td>
-            <td>${note.publication_date ? formatDate(note.publication_date) : '-'}</td>
-            <td>
-                ${note.parsed_ticker !== '-' ? 
-                    `<span class="badge bg-primary">${escapeHtml(note.parsed_ticker)}</span>` : 
-                    '-'}
-            </td>
-            <td>${escapeHtml(note.report_type)}</td>
-            <td>
-                ${note.vector_group_ids.length > 0 ? 
-                    note.vector_group_ids.map(id => 
-                        `<span class="vector-badge">${id}</span>`
-                    ).join('') : 
-                    '-'}
-            </td>
-            <td>
-                ${note.is_persistent_document ? 
-                    '<span class="badge bg-success persistence-badge">Yes</span>' : 
-                    '<span class="badge bg-secondary persistence-badge">No</span>'}
-            </td>
-        `;
-        
-        tbody.appendChild(tr);
-        
-        // Add checkbox event listener
-        tr.querySelector('.note-checkbox').addEventListener('change', (e) => {
-            if (e.target.checked) {
-                selectedNotes.add(parseInt(e.target.value));
-            } else {
-                selectedNotes.delete(parseInt(e.target.value));
-            }
-            updateBulkActionsVisibility();
-            updateSelectAllCheckbox();
-        });
-    });
-    
-    // Update count
-    document.getElementById('resultCount').textContent = 
-        `Showing ${filteredNotes.length} of ${allNotes.length} notes`;
-}
-
-// Toggle select all
-function toggleSelectAll(e) {
-    if (e.target.checked) {
-        filteredNotes.forEach(note => selectedNotes.add(note.id));
-    } else {
-        filteredNotes.forEach(note => selectedNotes.delete(note.id));
-    }
-    renderTable();
-    updateBulkActionsVisibility();
-}
-
-// Update select all checkbox state
-function updateSelectAllCheckbox() {
-    const selectAll = document.getElementById('selectAll');
-    const visibleNoteIds = filteredNotes.map(n => n.id);
-    const visibleSelected = visibleNoteIds.filter(id => selectedNotes.has(id));
-    
-    if (visibleSelected.length === 0) {
-        selectAll.checked = false;
-        selectAll.indeterminate = false;
-    } else if (visibleSelected.length === visibleNoteIds.length) {
-        selectAll.checked = true;
-        selectAll.indeterminate = false;
-    } else {
-        selectAll.checked = false;
-        selectAll.indeterminate = true;
-    }
-}
-
-// Update bulk actions visibility
-function updateBulkActionsVisibility() {
-    const bulkActions = document.querySelector('.bulk-actions');
-    const selectedCount = document.getElementById('selectedCount');
-    
-    if (selectedNotes.size > 0) {
-        bulkActions.style.display = 'block';
-        selectedCount.textContent = `${selectedNotes.size} notes selected`;
-    } else {
-        bulkActions.style.display = 'none';
-    }
-}
-
-// Update persistence status
-async function updatePersistence(isPersistent) {
-    if (selectedNotes.size === 0) return;
-    
-    const confirmMsg = `Are you sure you want to mark ${selectedNotes.size} notes as ${isPersistent ? 'persistent' : 'non-persistent'}?`;
-    if (!confirm(confirmMsg)) return;
-    
-    // Show loading
-    document.querySelector('.loading-spinner').style.display = 'block';
-    
-    try {
-        const response = await fetch('{% url "research_summaries:api_update_persistence" %}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify({
-                note_ids: Array.from(selectedNotes),
-                is_persistent: isPersistent
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            // Update local data
-            allNotes.forEach(note => {
-                if (selectedNotes.has(note.id)) {
-                    note.is_persistent_document = isPersistent;
-                }
-            });
-            
-            // Clear selection
-            selectedNotes.clear();
-            
-            // Re-render
-            applyFilters();
-            updateBulkActionsVisibility();
-            
-            // Show success message
-            showAlert('success', data.message);
-        } else {
-            showAlert('danger', data.error || 'Update failed');
-        }
-    } catch (error) {
-        showAlert('danger', 'Error updating persistence status: ' + error.message);
-    } finally {
-        document.querySelector('.loading-spinner').style.display = 'none';
-    }
-}
-
-// Utility functions
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function formatDate(dateStr) {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-
-function showAlert(type, message) {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-    alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.container-fluid').firstChild);
-    
-    // Auto-dismiss after 5 seconds
-    setTimeout(() => {
-        alertDiv.remove();
-    }, 5000);
-}
-</script>
-{% endblock %}
-
 {% block content %}
 <div class="container-fluid">
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay d-none">
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Processing...</p>
+        </div>
+    </div>
+
     <div class="row mb-4">
         <div class="col-12">
             <h1 class="h2">Manage Research Note Persistence</h1>
             <p class="text-muted">Update the persistent document status for research notes that have been uploaded to OpenAI</p>
         </div>
     </div>
-    
+
     <!-- Filter Section -->
     <div class="filter-section">
         <div class="row g-3">
             <div class="col-md-4">
                 <label for="searchInput" class="form-label">Search</label>
-                <input type="text" class="form-control" id="searchInput" 
+                <input type="text" class="form-control" id="searchInput"
                     placeholder="Search in title, source, ticker, or report type...">
             </div>
             <div class="col-md-2">
@@ -468,14 +162,7 @@ function showAlert(type, message) {
             </div>
         </div>
     </div>
-    
-    <!-- Loading Spinner -->
-    <div class="loading-spinner">
-        <div class="spinner-border" role="status">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-    </div>
-    
+
     <!-- Table -->
     <div class="table-container">
         <div class="table-responsive">
@@ -491,7 +178,7 @@ function showAlert(type, message) {
                         <th class="sortable" data-sort="parsed_ticker">Ticker</th>
                         <th class="sortable" data-sort="report_type">Report Type</th>
                         <th class="sortable" data-sort="vector_group_ids">Vector Groups</th>
-                        <th class="sortable" data-sort="is_persistent_document">Persistent</th>
+                        <th>Persistent</th>
                     </tr>
                 </thead>
                 <tbody id="notesTableBody">
@@ -500,9 +187,9 @@ function showAlert(type, message) {
             </table>
         </div>
     </div>
-    
+
     <!-- Bulk Actions -->
-    <div class="bulk-actions" style="display: none;">
+    <div class="bulk-actions" id="bulkActions">
         <div class="d-flex justify-content-between align-items-center">
             <span id="selectedCount">0 notes selected</span>
             <div>
@@ -516,4 +203,409 @@ function showAlert(type, message) {
         </div>
     </div>
 </div>
+
+<script>
+// Initialize data
+let allNotes = [];
+let filteredNotes = [];
+let currentSort = { field: null, direction: 'asc' };
+let selectedNotes = new Set();
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Parse the JSON data
+    try {
+        allNotes = JSON.parse('{{ research_notes_json|escapejs }}');
+        filteredNotes = [...allNotes];
+        console.log(`Loaded ${allNotes.length} research notes`);
+
+        renderTable();
+        setupEventListeners();
+        updateBulkActionsVisibility();
+    } catch (error) {
+        console.error('Error parsing research notes:', error);
+        showAlert('danger', 'Error loading research notes. Please refresh the page.');
+    }
+});
+
+// Setup event listeners
+function setupEventListeners() {
+    // Search functionality
+    document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 300));
+
+    // Filter inputs
+    document.getElementById('tickerFilter').addEventListener('input', debounce(applyFilters, 300));
+    document.getElementById('sourceFilter').addEventListener('input', debounce(applyFilters, 300));
+    document.getElementById('reportTypeFilter').addEventListener('input', debounce(applyFilters, 300));
+    document.getElementById('persistenceFilter').addEventListener('change', applyFilters);
+
+    // Clear filters button
+    document.getElementById('clearFilters').addEventListener('click', clearFilters);
+
+    // Bulk actions
+    document.getElementById('setPersistent').addEventListener('click', () => updatePersistence(true));
+    document.getElementById('setNonPersistent').addEventListener('click', () => updatePersistence(false));
+
+    // Select all checkbox
+    document.getElementById('selectAll').addEventListener('change', toggleSelectAll);
+
+    // Sort headers
+    document.querySelectorAll('.sortable').forEach(header => {
+        header.addEventListener('click', () => sortTable(header.dataset.sort));
+    });
+}
+
+// Debounce function for search
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Apply filters
+function applyFilters() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const ticker = document.getElementById('tickerFilter').value.toLowerCase();
+    const source = document.getElementById('sourceFilter').value.toLowerCase();
+    const reportType = document.getElementById('reportTypeFilter').value.toLowerCase();
+    const persistence = document.getElementById('persistenceFilter').value;
+
+    filteredNotes = allNotes.filter(note => {
+        const matchesSearch = !search ||
+            note.raw_title.toLowerCase().includes(search) ||
+            note.source.toLowerCase().includes(search) ||
+            note.parsed_ticker.toLowerCase().includes(search) ||
+            note.report_type.toLowerCase().includes(search);
+
+        const matchesTicker = !ticker || note.parsed_ticker.toLowerCase().includes(ticker);
+        const matchesSource = !source || note.source.toLowerCase().includes(source);
+        const matchesReportType = !reportType || note.report_type.toLowerCase().includes(reportType);
+        const matchesPersistence = persistence === '' ||
+            (persistence === 'true' && note.is_persistent_document) ||
+            (persistence === 'false' && !note.is_persistent_document);
+
+        return matchesSearch && matchesTicker && matchesSource && matchesReportType && matchesPersistence;
+    });
+
+    renderTable();
+}
+
+// Clear all filters
+function clearFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('tickerFilter').value = '';
+    document.getElementById('sourceFilter').value = '';
+    document.getElementById('reportTypeFilter').value = '';
+    document.getElementById('persistenceFilter').value = '';
+
+    filteredNotes = [...allNotes];
+    renderTable();
+}
+
+// Sort table
+function sortTable(field) {
+    // Update sort direction
+    if (currentSort.field === field) {
+        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort.field = field;
+        currentSort.direction = 'asc';
+    }
+
+    // Sort the filtered notes
+    filteredNotes.sort((a, b) => {
+        let aVal = a[field];
+        let bVal = b[field];
+
+        // Handle special cases
+        if (field === 'publication_date') {
+            aVal = aVal ? new Date(aVal) : new Date(0);
+            bVal = bVal ? new Date(bVal) : new Date(0);
+        } else if (field === 'vector_group_ids') {
+            aVal = aVal.length;
+            bVal = bVal.length;
+        } else if (typeof aVal === 'string') {
+            aVal = aVal.toLowerCase();
+            bVal = bVal.toLowerCase();
+        }
+
+        if (aVal < bVal) return currentSort.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return currentSort.direction === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    // Update header classes
+    document.querySelectorAll('.sortable').forEach(header => {
+        header.classList.remove('asc', 'desc');
+        if (header.dataset.sort === field) {
+            header.classList.add(currentSort.direction);
+        }
+    });
+
+    renderTable();
+}
+
+// Render table
+function renderTable() {
+    const tbody = document.getElementById('notesTableBody');
+    tbody.innerHTML = '';
+
+    if (filteredNotes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No research notes found</td></tr>';
+        document.getElementById('resultCount').textContent = 'No results';
+        return;
+    }
+
+    filteredNotes.forEach(note => {
+        const tr = document.createElement('tr');
+
+        // Create toggle button for persistence
+        const persistenceButton = note.is_persistent_document ?
+            '<button class="btn btn-sm btn-success persistence-toggle" data-note-id="' + note.id + '">Yes</button>' :
+            '<button class="btn btn-sm btn-secondary persistence-toggle" data-note-id="' + note.id + '">No</button>';
+
+        tr.innerHTML = `
+            <td>
+                <input type="checkbox" class="note-checkbox" value="${note.id}"
+                    ${selectedNotes.has(note.id) ? 'checked' : ''}>
+            </td>
+            <td class="text-truncate" style="max-width: 300px;" title="${escapeHtml(note.raw_title)}">
+                ${escapeHtml(note.raw_title)}
+            </td>
+            <td>${escapeHtml(note.source)}</td>
+            <td>${note.publication_date ? formatDate(note.publication_date) : '-'}</td>
+            <td>
+                ${note.parsed_ticker !== '-' ?
+                    `<span class="badge bg-primary">${escapeHtml(note.parsed_ticker)}</span>` :
+                    '-'}
+            </td>
+            <td>${escapeHtml(note.report_type)}</td>
+            <td>
+                ${note.vector_group_ids.length > 0 ?
+                    note.vector_group_ids.map(id =>
+                        `<span class="vector-badge">${id}</span>`
+                    ).join('') :
+                    '-'}
+            </td>
+            <td>${persistenceButton}</td>
+        `;
+
+        tbody.appendChild(tr);
+
+        // Add checkbox event listener
+        tr.querySelector('.note-checkbox').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                selectedNotes.add(parseInt(e.target.value));
+            } else {
+                selectedNotes.delete(parseInt(e.target.value));
+            }
+            updateBulkActionsVisibility();
+            updateSelectAllCheckbox();
+        });
+
+        // Add persistence toggle event listener
+        tr.querySelector('.persistence-toggle').addEventListener('click', async (e) => {
+            const noteId = parseInt(e.target.dataset.noteId);
+            const currentStatus = note.is_persistent_document;
+            await updateSingleNotePersistence(noteId, !currentStatus);
+        });
+    });
+
+    // Update count
+    document.getElementById('resultCount').textContent =
+        `Showing ${filteredNotes.length} of ${allNotes.length} notes`;
+}
+
+// Toggle select all
+function toggleSelectAll(e) {
+    if (e.target.checked) {
+        filteredNotes.forEach(note => selectedNotes.add(note.id));
+    } else {
+        filteredNotes.forEach(note => selectedNotes.delete(note.id));
+    }
+    renderTable();
+    updateBulkActionsVisibility();
+}
+
+// Update select all checkbox state
+function updateSelectAllCheckbox() {
+    const selectAll = document.getElementById('selectAll');
+    const visibleNoteIds = filteredNotes.map(n => n.id);
+    const visibleSelected = visibleNoteIds.filter(id => selectedNotes.has(id));
+
+    if (visibleSelected.length === 0) {
+        selectAll.checked = false;
+        selectAll.indeterminate = false;
+    } else if (visibleSelected.length === visibleNoteIds.length) {
+        selectAll.checked = true;
+        selectAll.indeterminate = false;
+    } else {
+        selectAll.checked = false;
+        selectAll.indeterminate = true;
+    }
+}
+
+// Update bulk actions visibility
+function updateBulkActionsVisibility() {
+    const bulkActions = document.getElementById('bulkActions');
+    const selectedCount = document.getElementById('selectedCount');
+
+    if (selectedNotes.size > 0) {
+        bulkActions.style.display = 'block';
+        selectedCount.textContent = `${selectedNotes.size} notes selected`;
+    } else {
+        bulkActions.style.display = 'none';
+    }
+}
+
+// Update persistence status for a single note
+async function updateSingleNotePersistence(noteId, isPersistent) {
+    showLoading();
+
+    try {
+        const response = await fetch('{% url "research_summaries:api_update_persistence" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                note_ids: [noteId],
+                is_persistent: isPersistent
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Update local data
+            allNotes.forEach(note => {
+                if (note.id === noteId) {
+                    note.is_persistent_document = isPersistent;
+                }
+            });
+
+            // Re-render
+            applyFilters();
+
+            // Show success message
+            showAlert('success', `Research note ${isPersistent ? 'marked as persistent' : 'marked as non-persistent'}`);
+        } else {
+            showAlert('danger', data.error || 'Update failed');
+        }
+    } catch (error) {
+        showAlert('danger', 'Error updating persistence status: ' + error.message);
+    } finally {
+        hideLoading();
+    }
+}
+
+// Update persistence status for multiple notes
+async function updatePersistence(isPersistent) {
+    if (selectedNotes.size === 0) return;
+
+    const confirmMsg = `Are you sure you want to mark ${selectedNotes.size} notes as ${isPersistent ? 'persistent' : 'non-persistent'}?`;
+    if (!confirm(confirmMsg)) return;
+
+    showLoading();
+
+    try {
+        const response = await fetch('{% url "research_summaries:api_update_persistence" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                note_ids: Array.from(selectedNotes),
+                is_persistent: isPersistent
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Update local data
+            allNotes.forEach(note => {
+                if (selectedNotes.has(note.id)) {
+                    note.is_persistent_document = isPersistent;
+                }
+            });
+
+            // Clear selection
+            selectedNotes.clear();
+
+            // Re-render
+            applyFilters();
+            updateBulkActionsVisibility();
+
+            // Show success message
+            showAlert('success', data.message);
+        } else {
+            showAlert('danger', data.error || 'Update failed');
+        }
+    } catch (error) {
+        showAlert('danger', 'Error updating persistence status: ' + error.message);
+    } finally {
+        hideLoading();
+    }
+}
+
+// Utility functions
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.container-fluid').firstChild);
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+
+function showLoading() {
+    document.getElementById('loadingOverlay').classList.remove('d-none');
+}
+
+function hideLoading() {
+    document.getElementById('loadingOverlay').classList.add('d-none');
+}
+</script>
 {% endblock %}
