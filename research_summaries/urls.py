@@ -37,4 +37,9 @@ urlpatterns = [
     path('recent-notes/', views.get_recent_notes, name='recent_notes'),
     path('cleaning-status/', views.get_cleaning_status, name='get_cleaning_status'),
     path('summarization-status/', views.get_summarization_status, name='get_summarization_status'),
+
+    # Persistence management URLs
+    path('manage-persistence/', views.ResearchNotePersistenceView.as_view(), name='manage_persistence'),
+    path('api/update-persistence/', views.api_update_persistence_status, name='api_update_persistence'),
+    path('api/research-notes-data/', views.api_research_notes_data, name='api_research_notes_data'),
 ]

@@ -1,10 +1,10 @@
 # research_summaries/views.py
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, StreamingHttpResponse
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django.views.generic import TemplateView
 from django.views.decorators.cache import cache_control
 import logging
@@ -22,6 +22,7 @@ from django.utils.html import mark_safe
 from research_summaries.OpenAI_toolbox.prompts import AGGREGATE_SUMMARY_INSTRUCTION
 from research_summaries.openai_utils import get_openai_client
 from research_summaries.processors.file_downloader_2 import download_documents_playwright
+from agents.models import StockTicker
 
 
 logger = logging.getLogger(__name__)
@@ -1486,3 +1487,147 @@ def mark_as_read_advanced(request):
             return JsonResponse({'success': False, 'message': str(e)})
 
     return JsonResponse({'success': False, 'message': 'Invalid request method'})
+
+
+class ResearchNotePersistenceView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
+    """View for managing ResearchNote persistence status"""
+    template_name = 'research_summaries/manage_persistence.html'
+    login_url = '/accounts/login/'
+    permission_required = 'accounts.can_view_research_summaries'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'Manage Research Note Persistence'
+
+        # Get only research notes that have been uploaded to OpenAI
+        research_notes = ResearchNote.objects.filter(
+            openai_file_id__isnull=False
+        ).select_related().order_by('-publication_date')
+
+        # Process notes to include vector group information
+        notes_data = []
+        for note in research_notes:
+            # Get all vector group IDs for this note
+            vector_ids = set()
+
+            # Add the note's own vector_group_id
+            if note.vector_group_id:
+                vector_ids.add(note.vector_group_id)
+
+            # Get vector IDs from StockTicker mapping
+            if note.parsed_ticker:
+                ticker_vector_ids = StockTicker.objects.filter(
+                    main_ticker=note.parsed_ticker
+                ).values_list('vector_id', flat=True)
+                vector_ids.update(ticker_vector_ids)
+
+            notes_data.append({
+                'id': note.id,
+                'raw_title': note.raw_title or 'Untitled',
+                'source': note.source or '-',
+                'publication_date': note.publication_date,
+                'parsed_ticker': note.parsed_ticker or '-',
+                'report_type': note.report_type or '-',
+                'vector_group_ids': sorted(list(vector_ids)) if vector_ids else [],
+                'is_persistent_document': note.is_persistent_document,
+                'status': note.get_status_display(), # Do we need this?
+                'created_at': note.created_at,
+            })
+
+        context['research_notes'] = notes_data
+        return context
+
+
+@login_required
+@permission_required('accounts.can_view_research_summaries', raise_exception=True)
+@require_http_methods(["POST"])
+def api_update_persistence_status(request):
+    """API endpoint to update persistence status for multiple notes"""
+    try:
+        data = json.loads(request.body)
+        note_ids = data.get('note_ids', [])
+        is_persistent = data.get('is_persistent', False)
+
+        if not note_ids:
+            return JsonResponse({'error': 'No note IDs provided'}, status=400)
+
+        # Update the persistence status
+        updated = ResearchNote.objects.filter(id__in=note_ids).update(
+            is_persistent_document=is_persistent
+        )
+
+        return JsonResponse({
+            'success': True,
+            'updated_count': updated,
+            'message': f'Updated {updated} notes to persistent={is_persistent}'
+        })
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@permission_required('accounts.can_view_research_summaries', raise_exception=True)
+@require_http_methods(["GET"])
+def api_research_notes_data(request):
+    """API endpoint to get filtered research notes data"""
+    try:
+        # Get filter parameters
+        search = request.GET.get('search', '')
+        ticker = request.GET.get('ticker', '')
+        source = request.GET.get('source', '')
+        report_type = request.GET.get('report_type', '')
+        is_persistent = request.GET.get('is_persistent', '')
+
+        # Build query
+        notes = ResearchNote.objects.filter(openai_file_id__isnull=False)
+
+        if search:
+            notes = notes.filter(
+                Q(raw_title__icontains=search) |
+                Q(source__icontains=search) |
+                Q(parsed_ticker__icontains=search) |
+                Q(report_type__icontains=search)
+            )
+
+        if ticker:
+            notes = notes.filter(parsed_ticker__iexact=ticker)
+
+        if source:
+            notes = notes.filter(source__icontains=source)
+
+        if report_type:
+            notes = notes.filter(report_type__icontains=report_type)
+
+        if is_persistent != '':
+            notes = notes.filter(is_persistent_document=(is_persistent == 'true'))
+
+        # Get data
+        notes_data = []
+        for note in notes.select_related():
+            # Get vector IDs
+            vector_ids = set()
+            if note.vector_group_id:
+                vector_ids.add(note.vector_group_id)
+
+            if note.parsed_ticker:
+                ticker_vector_ids = StockTicker.objects.filter(
+                    main_ticker=note.parsed_ticker
+                ).values_list('vector_id', flat=True)
+                vector_ids.update(ticker_vector_ids)
+
+            notes_data.append({
+                'id': note.id,
+                'raw_title': note.raw_title or 'Untitled',
+                'source': note.source or '-',
+                'publication_date': note.publication_date.isoformat() if note.publication_date else None,
+                'parsed_ticker': note.parsed_ticker or '-',
+                'report_type': note.report_type or '-',
+                'vector_group_ids': sorted(list(vector_ids)),
+                'is_persistent_document': note.is_persistent_document,
+            })
+
+        return JsonResponse({'notes': notes_data})
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
