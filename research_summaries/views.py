@@ -1496,6 +1496,7 @@ class ResearchNotePersistenceView(LoginRequiredMixin, PermissionRequiredMixin, T
     permission_required = 'accounts.can_view_research_summaries'
 
     def get_context_data(self, **kwargs):
+        import json  # Add this import
         context = super().get_context_data(**kwargs)
         context['page_title'] = 'Manage Research Note Persistence'
 
@@ -1525,16 +1526,18 @@ class ResearchNotePersistenceView(LoginRequiredMixin, PermissionRequiredMixin, T
                 'id': note.id,
                 'raw_title': note.raw_title or 'Untitled',
                 'source': note.source or '-',
-                'publication_date': note.publication_date,
+                'publication_date': note.publication_date.isoformat() if note.publication_date else None,  # Convert to string
                 'parsed_ticker': note.parsed_ticker or '-',
                 'report_type': note.report_type or '-',
                 'vector_group_ids': sorted(list(vector_ids)) if vector_ids else [],
                 'is_persistent_document': note.is_persistent_document,
-                'status': note.get_status_display(), # Do we need this?
-                'created_at': note.created_at,
+                'status': note.get_status_display(),
+                'created_at': note.created_at.isoformat() if note.created_at else None,  # Convert to string
             })
 
-        context['research_notes'] = notes_data
+        # Serialize to JSON
+        context['research_notes'] = json.dumps(notes_data)
+        context['research_notes_count'] = len(notes_data)  # Add count for debugging
         return context
 
 
