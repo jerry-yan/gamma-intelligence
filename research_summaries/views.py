@@ -1508,11 +1508,15 @@ class ResearchNotePersistenceView(LoginRequiredMixin, PermissionRequiredMixin, T
                            for kb in KnowledgeBase.objects.filter(is_active=True)}
 
         # Get only research notes that have been uploaded to OpenAI
-        research_notes = ResearchNote.objects.filter(
-            openai_file_id__isnull=False
-        ).exclude(
-            openai_file_id__exact=''
-        ).select_related().order_by('-publication_date', '-file_summary_time')
+        research_notes = (
+            ResearchNote.objects
+            # must have a non‑empty OpenAI file id
+            .filter(~Q(openai_file_id__in=[None, ""]))
+            # exclude Invalid reports
+            .exclude(report_type__iexact="Invalid")
+            .select_related()
+            .order_by("-publication_date", "-file_summary_time")
+        )
 
         # Process notes to include vector group information
         notes_data = []

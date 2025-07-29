@@ -124,6 +124,10 @@
         border-bottom: 2px solid #dee2e6;
     }
 
+    table.dataTable tbody td {
+        white-space: normal !important;
+    }
+
     .badge {
         font-weight: 500;
     }
@@ -210,7 +214,7 @@
                 <tr>
                     <th>Title</th>
                     <th>Source</th>
-                    <th>Pub Date</th>
+                    <th>Publication Date</th>
                     <th>Ticker</th>
                     <th>Report Type</th>
                     <th>Vector Groups</th>
@@ -259,8 +263,8 @@ function initializeDataTable() {
         columns: [
             {
                 data: 'raw_title',
-                render: function(data, type, row) {
-                    return `<div class="text-truncate" style="max-width: 300px;" title="${escapeHtml(data)}">${escapeHtml(data)}</div>`;
+                render: function (data) {
+                    return `<div title="${escapeHtml(data)}">${escapeHtml(data)}</div>`;
                 }
             },
             {
@@ -286,7 +290,9 @@ function initializeDataTable() {
             {
                 data: 'report_type',
                 render: function(data) {
-                    return escapeHtml(data);
+                    return data !== '-' ?
+                        `<span class="badge bg-secondary">${escapeHtml(data)}</span>` :
+                        '-';
                 }
             },
             {
@@ -295,7 +301,7 @@ function initializeDataTable() {
                     if (!data || data.length === 0) return '-';
                     return data.map(vg =>
                         `<span class="vector-badge" title="ID: ${vg.id}">${escapeHtml(vg.name)}</span>`
-                    ).join('');
+                    ).join(', ');
                 }
             },
             {

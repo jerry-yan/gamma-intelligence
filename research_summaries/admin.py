@@ -76,7 +76,7 @@ class ResearchNoteAdmin(admin.ModelAdmin):
             'fields': ('report_type', 'status')
         }),
         ('Processing Flags', {
-            'fields': ('is_advanced_summary', 'is_vectorized', 'vector_group_id'),
+            'fields': ('is_advanced_summary', 'is_vectorized', 'vector_group_id', 'is_persistent_document'),
             'description': 'Advanced processing and vectorization status'
         }),
         ('File Management', {
