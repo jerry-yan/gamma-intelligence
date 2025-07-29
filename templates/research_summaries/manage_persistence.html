@@ -13,28 +13,26 @@
         cursor: pointer;
         user-select: none;
         position: relative;
-        padding-right: 20px;
+        padding-right: 25px;
     }
 
     .sortable:hover {
         background-color: #f0f0f0;
     }
 
-    .sortable::after {
-        content: "↕";
+    .sortable .sort-icon {
         position: absolute;
-        right: 5px;
-        opacity: 0.5;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        opacity: 0.3;
+        font-size: 0.9em;
     }
 
-    .sortable.asc::after {
-        content: "↑";
+    .sortable.asc .sort-icon,
+    .sortable.desc .sort-icon {
         opacity: 1;
-    }
-
-    .sortable.desc::after {
-        content: "↓";
-        opacity: 1;
+        color: #007bff;
     }
 
     .filter-section {
@@ -53,14 +51,13 @@
         font-size: 0.875rem;
     }
 
-    .persistence-badge {
-        font-size: 0.875rem;
+    .persistence-toggle {
         cursor: pointer;
+        min-width: 60px;
     }
 
     .table-responsive {
-        max-height: 70vh;
-        overflow-y: auto;
+        min-height: 500px;
     }
 
     .sticky-header {
@@ -68,6 +65,7 @@
         top: 0;
         background-color: #fff;
         z-index: 10;
+        box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
     }
 
     .bulk-actions {
@@ -103,6 +101,25 @@
 
     .text-truncate {
         max-width: 300px;
+    }
+
+    .pagination-controls {
+        margin-top: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .page-info {
+        color: #6c757d;
+    }
+
+    .table tbody tr {
+        transition: background-color 0.15s;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
     }
 </style>
 {% endblock %}
@@ -170,14 +187,32 @@
                 <thead class="sticky-header">
                     <tr>
                         <th width="50">
-                            <input type="checkbox" id="selectAll" title="Select all visible">
+                            <input type="checkbox" id="selectAll" title="Select all on this page">
                         </th>
-                        <th class="sortable" data-sort="raw_title">Title</th>
-                        <th class="sortable" data-sort="source">Source</th>
-                        <th class="sortable" data-sort="publication_date">Pub Date</th>
-                        <th class="sortable" data-sort="parsed_ticker">Ticker</th>
-                        <th class="sortable" data-sort="report_type">Report Type</th>
-                        <th class="sortable" data-sort="vector_group_ids">Vector Groups</th>
+                        <th class="sortable" data-sort="raw_title">
+                            Title
+                            <span class="sort-icon">↕</span>
+                        </th>
+                        <th class="sortable" data-sort="source">
+                            Source
+                            <span class="sort-icon">↕</span>
+                        </th>
+                        <th class="sortable" data-sort="publication_date">
+                            Pub Date
+                            <span class="sort-icon">↕</span>
+                        </th>
+                        <th class="sortable" data-sort="parsed_ticker">
+                            Ticker
+                            <span class="sort-icon">↕</span>
+                        </th>
+                        <th class="sortable" data-sort="report_type">
+                            Report Type
+                            <span class="sort-icon">↕</span>
+                        </th>
+                        <th class="sortable" data-sort="vector_group_ids">
+                            Vector Groups
+                            <span class="sort-icon">↕</span>
+                        </th>
                         <th>Persistent</th>
                     </tr>
                 </thead>
@@ -185,6 +220,18 @@
                     <!-- Table rows will be inserted here by JavaScript -->
                 </tbody>
             </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="pagination-controls">
+            <div class="page-info">
+                <span id="pageInfo"></span>
+            </div>
+            <nav aria-label="Page navigation">
+                <ul class="pagination mb-0" id="paginationNav">
+                    <!-- Pagination items will be inserted here -->
+                </ul>
+            </nav>
         </div>
     </div>
 
@@ -211,6 +258,10 @@ let filteredNotes = [];
 let currentSort = { field: null, direction: 'asc' };
 let selectedNotes = new Set();
 
+// Pagination variables
+let currentPage = 1;
+const itemsPerPage = 30;
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     // Parse the JSON data
@@ -231,13 +282,28 @@ document.addEventListener('DOMContentLoaded', function() {
 // Setup event listeners
 function setupEventListeners() {
     // Search functionality
-    document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 300));
+    document.getElementById('searchInput').addEventListener('input', debounce(() => {
+        currentPage = 1; // Reset to first page on filter
+        applyFilters();
+    }, 300));
 
     // Filter inputs
-    document.getElementById('tickerFilter').addEventListener('input', debounce(applyFilters, 300));
-    document.getElementById('sourceFilter').addEventListener('input', debounce(applyFilters, 300));
-    document.getElementById('reportTypeFilter').addEventListener('input', debounce(applyFilters, 300));
-    document.getElementById('persistenceFilter').addEventListener('change', applyFilters);
+    document.getElementById('tickerFilter').addEventListener('input', debounce(() => {
+        currentPage = 1;
+        applyFilters();
+    }, 300));
+    document.getElementById('sourceFilter').addEventListener('input', debounce(() => {
+        currentPage = 1;
+        applyFilters();
+    }, 300));
+    document.getElementById('reportTypeFilter').addEventListener('input', debounce(() => {
+        currentPage = 1;
+        applyFilters();
+    }, 300));
+    document.getElementById('persistenceFilter').addEventListener('change', () => {
+        currentPage = 1;
+        applyFilters();
+    });
 
     // Clear filters button
     document.getElementById('clearFilters').addEventListener('click', clearFilters);
@@ -304,6 +370,7 @@ function clearFilters() {
     document.getElementById('reportTypeFilter').value = '';
     document.getElementById('persistenceFilter').value = '';
 
+    currentPage = 1;
     filteredNotes = [...allNotes];
     renderTable();
 }
@@ -340,15 +407,110 @@ function sortTable(field) {
         return 0;
     });
 
-    // Update header classes
+    // Update header classes and icons
     document.querySelectorAll('.sortable').forEach(header => {
         header.classList.remove('asc', 'desc');
+        const icon = header.querySelector('.sort-icon');
         if (header.dataset.sort === field) {
             header.classList.add(currentSort.direction);
+            icon.textContent = currentSort.direction === 'asc' ? '↑' : '↓';
+        } else {
+            icon.textContent = '↕';
         }
     });
 
+    currentPage = 1; // Reset to first page after sorting
     renderTable();
+}
+
+// Calculate pagination
+function getPaginatedNotes() {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredNotes.slice(startIndex, endIndex);
+}
+
+// Render pagination controls
+function renderPagination() {
+    const totalPages = Math.ceil(filteredNotes.length / itemsPerPage);
+    const paginationNav = document.getElementById('paginationNav');
+    paginationNav.innerHTML = '';
+
+    // Page info
+    const startItem = (currentPage - 1) * itemsPerPage + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, filteredNotes.length);
+    document.getElementById('pageInfo').textContent =
+        filteredNotes.length > 0
+            ? `Showing ${startItem}-${endItem} of ${filteredNotes.length} filtered results (${allNotes.length} total)`
+            : 'No results found';
+
+    if (totalPages <= 1) return;
+
+    // Previous button
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+    prevLi.innerHTML = `<a class="page-link" href="#" data-page="${currentPage - 1}">Previous</a>`;
+    paginationNav.appendChild(prevLi);
+
+    // Page numbers
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    if (endPage - startPage < 4) {
+        startPage = Math.max(1, endPage - 4);
+    }
+
+    if (startPage > 1) {
+        const firstLi = document.createElement('li');
+        firstLi.className = 'page-item';
+        firstLi.innerHTML = `<a class="page-link" href="#" data-page="1">1</a>`;
+        paginationNav.appendChild(firstLi);
+
+        if (startPage > 2) {
+            const ellipsisLi = document.createElement('li');
+            ellipsisLi.className = 'page-item disabled';
+            ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
+            paginationNav.appendChild(ellipsisLi);
+        }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        const li = document.createElement('li');
+        li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+        li.innerHTML = `<a class="page-link" href="#" data-page="${i}">${i}</a>`;
+        paginationNav.appendChild(li);
+    }
+
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            const ellipsisLi = document.createElement('li');
+            ellipsisLi.className = 'page-item disabled';
+            ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
+            paginationNav.appendChild(ellipsisLi);
+        }
+
+        const lastLi = document.createElement('li');
+        lastLi.className = 'page-item';
+        lastLi.innerHTML = `<a class="page-link" href="#" data-page="${totalPages}">${totalPages}</a>`;
+        paginationNav.appendChild(lastLi);
+    }
+
+    // Next button
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+    nextLi.innerHTML = `<a class="page-link" href="#" data-page="${currentPage + 1}">Next</a>`;
+    paginationNav.appendChild(nextLi);
+
+    // Add event listeners to pagination links
+    paginationNav.querySelectorAll('a.page-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const page = parseInt(e.target.dataset.page);
+            if (page && page !== currentPage && page >= 1 && page <= totalPages) {
+                currentPage = page;
+                renderTable();
+            }
+        });
+    });
 }
 
 // Render table
@@ -356,19 +518,21 @@ function renderTable() {
     const tbody = document.getElementById('notesTableBody');
     tbody.innerHTML = '';
 
+    const paginatedNotes = getPaginatedNotes();
+
     if (filteredNotes.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No research notes found</td></tr>';
-        document.getElementById('resultCount').textContent = 'No results';
+        document.getElementById('pageInfo').textContent = 'No results';
+        document.getElementById('paginationNav').innerHTML = '';
         return;
     }
 
-    filteredNotes.forEach(note => {
+    paginatedNotes.forEach(note => {
         const tr = document.createElement('tr');
 
         // Create toggle button for persistence
-        const persistenceButton = note.is_persistent_document ?
-            '<button class="btn btn-sm btn-success persistence-toggle" data-note-id="' + note.id + '">Yes</button>' :
-            '<button class="btn btn-sm btn-secondary persistence-toggle" data-note-id="' + note.id + '">No</button>';
+        const persistenceButtonClass = note.is_persistent_document ? 'btn-success' : 'btn-secondary';
+        const persistenceButtonText = note.is_persistent_document ? 'Yes' : 'No';
 
         tr.innerHTML = `
             <td>
@@ -393,7 +557,13 @@ function renderTable() {
                     ).join('') :
                     '-'}
             </td>
-            <td>${persistenceButton}</td>
+            <td>
+                <button class="btn btn-sm ${persistenceButtonClass} persistence-toggle"
+                        data-note-id="${note.id}"
+                        data-current-status="${note.is_persistent_document}">
+                    ${persistenceButtonText}
+                </button>
+            </td>
         `;
 
         tbody.appendChild(tr);
@@ -410,24 +580,27 @@ function renderTable() {
         });
 
         // Add persistence toggle event listener
-        tr.querySelector('.persistence-toggle').addEventListener('click', async (e) => {
+        const toggleBtn = tr.querySelector('.persistence-toggle');
+        toggleBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
             const noteId = parseInt(e.target.dataset.noteId);
-            const currentStatus = note.is_persistent_document;
+            const currentStatus = e.target.dataset.currentStatus === 'true';
             await updateSingleNotePersistence(noteId, !currentStatus);
         });
     });
 
-    // Update count
-    document.getElementById('resultCount').textContent =
-        `Showing ${filteredNotes.length} of ${allNotes.length} notes`;
+    // Update result count and render pagination
+    renderPagination();
 }
 
-// Toggle select all
+// Toggle select all (for current page only)
 function toggleSelectAll(e) {
+    const paginatedNotes = getPaginatedNotes();
+
     if (e.target.checked) {
-        filteredNotes.forEach(note => selectedNotes.add(note.id));
+        paginatedNotes.forEach(note => selectedNotes.add(note.id));
     } else {
-        filteredNotes.forEach(note => selectedNotes.delete(note.id));
+        paginatedNotes.forEach(note => selectedNotes.delete(note.id));
     }
     renderTable();
     updateBulkActionsVisibility();
@@ -436,7 +609,8 @@ function toggleSelectAll(e) {
 // Update select all checkbox state
 function updateSelectAllCheckbox() {
     const selectAll = document.getElementById('selectAll');
-    const visibleNoteIds = filteredNotes.map(n => n.id);
+    const paginatedNotes = getPaginatedNotes();
+    const visibleNoteIds = paginatedNotes.map(n => n.id);
     const visibleSelected = visibleNoteIds.filter(id => selectedNotes.has(id));
 
     if (visibleSelected.length === 0) {
@@ -485,14 +659,13 @@ async function updateSingleNotePersistence(noteId, isPersistent) {
 
         if (data.success) {
             // Update local data
-            allNotes.forEach(note => {
-                if (note.id === noteId) {
-                    note.is_persistent_document = isPersistent;
-                }
-            });
+            const note = allNotes.find(n => n.id === noteId);
+            if (note) {
+                note.is_persistent_document = isPersistent;
+            }
 
-            // Re-render
-            applyFilters();
+            // Re-render without changing filters
+            renderTable();
 
             // Show success message
             showAlert('success', `Research note ${isPersistent ? 'marked as persistent' : 'marked as non-persistent'}`);
