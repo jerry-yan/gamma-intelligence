@@ -1498,9 +1498,14 @@ class ResearchNotePersistenceView(LoginRequiredMixin, PermissionRequiredMixin, T
     def get_context_data(self, **kwargs):
         import json
         from django.core.serializers.json import DjangoJSONEncoder
+        from agents.models import KnowledgeBase
 
         context = super().get_context_data(**kwargs)
         context['page_title'] = 'Manage Research Note Persistence'
+
+        # Get all knowledge bases for lookup
+        knowledge_bases = {kb.vector_group_id: kb.display_name
+                           for kb in KnowledgeBase.objects.filter(is_active=True)}
 
         # Get only research notes that have been uploaded to OpenAI
         research_notes = ResearchNote.objects.filter(
@@ -1526,6 +1531,15 @@ class ResearchNotePersistenceView(LoginRequiredMixin, PermissionRequiredMixin, T
                 ).values_list('vector_id', flat=True))
                 vector_ids.update(ticker_vector_ids)
 
+            # Convert vector IDs to names
+            vector_groups = []
+            for vid in sorted(vector_ids):
+                kb_name = knowledge_bases.get(vid, f"Group {vid}")
+                vector_groups.append({
+                    'id': vid,
+                    'name': kb_name
+                })
+
             notes_data.append({
                 'id': note.id,
                 'raw_title': note.raw_title or 'Untitled',
@@ -1533,7 +1547,7 @@ class ResearchNotePersistenceView(LoginRequiredMixin, PermissionRequiredMixin, T
                 'publication_date': note.publication_date.isoformat() if note.publication_date else None,
                 'parsed_ticker': note.parsed_ticker or '-',
                 'report_type': note.report_type or '-',
-                'vector_group_ids': sorted(list(vector_ids)),
+                'vector_groups': vector_groups,  # Changed from vector_group_ids
                 'is_persistent_document': note.is_persistent_document,
             })
 

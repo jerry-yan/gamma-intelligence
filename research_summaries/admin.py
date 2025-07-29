@@ -22,6 +22,7 @@ class ResearchNoteAdmin(admin.ModelAdmin):
         'file_hash_id',
         'is_advanced_summary',
         'is_vectorized',
+        'is_persistent_document',
         'vector_group_id',
         'created_at'
     ]
@@ -32,6 +33,7 @@ class ResearchNoteAdmin(admin.ModelAdmin):
         'report_type',
         'is_advanced_summary',
         'is_vectorized',
+        'is_persistent_document',
         'vector_group_id',
         'publication_date',
         'created_at',
