@@ -1512,6 +1512,8 @@ class ResearchNotePersistenceView(LoginRequiredMixin, PermissionRequiredMixin, T
             ResearchNote.objects
             # must have a non‑empty OpenAI file id
             .filter(~Q(openai_file_id__in=[None, ""]))
+            # must have a publication date
+            .filter(publication_date__isnull=False)
             # exclude Invalid reports
             .exclude(report_type__iexact="Invalid")
             .select_related()
