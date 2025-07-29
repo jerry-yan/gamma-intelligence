@@ -51,9 +51,10 @@
         font-size: 0.875rem;
     }
 
-    .persistence-toggle {
+    .persistence-checkbox {
+        width: 20px;
+        height: 20px;
         cursor: pointer;
-        min-width: 60px;
     }
 
     .table-responsive {
@@ -66,16 +67,6 @@
         background-color: #fff;
         z-index: 10;
         box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
-    }
-
-    .bulk-actions {
-        display: none;
-        position: sticky;
-        bottom: 0;
-        background-color: #fff;
-        padding: 15px;
-        border-top: 2px solid #dee2e6;
-        box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
     }
 
     .loading-overlay {
@@ -93,10 +84,6 @@
 
     .loading-overlay.d-none {
         display: none !important;
-    }
-
-    #selectAll {
-        cursor: pointer;
     }
 
     .text-truncate {
@@ -186,9 +173,6 @@
             <table class="table table-hover">
                 <thead class="sticky-header">
                     <tr>
-                        <th width="50">
-                            <input type="checkbox" id="selectAll" title="Select all on this page">
-                        </th>
                         <th class="sortable" data-sort="raw_title">
                             Title
                             <span class="sort-icon">↕</span>
@@ -213,7 +197,7 @@
                             Vector Groups
                             <span class="sort-icon">↕</span>
                         </th>
-                        <th>Persistent</th>
+                        <th class="text-center" width="100">Persistent</th>
                     </tr>
                 </thead>
                 <tbody id="notesTableBody">
@@ -234,21 +218,6 @@
             </nav>
         </div>
     </div>
-
-    <!-- Bulk Actions -->
-    <div class="bulk-actions" id="bulkActions">
-        <div class="d-flex justify-content-between align-items-center">
-            <span id="selectedCount">0 notes selected</span>
-            <div>
-                <button class="btn btn-success" id="setPersistent">
-                    <i class="bi bi-check-circle"></i> Set as Persistent
-                </button>
-                <button class="btn btn-secondary ms-2" id="setNonPersistent">
-                    <i class="bi bi-x-circle"></i> Set as Non-Persistent
-                </button>
-            </div>
-        </div>
-    </div>
 </div>
 
 <script>
@@ -256,11 +225,10 @@
 let allNotes = [];
 let filteredNotes = [];
 let currentSort = { field: null, direction: 'asc' };
-let selectedNotes = new Set();
 
 // Pagination variables
 let currentPage = 1;
-const itemsPerPage = 30;
+const itemsPerPage = 25; // Changed from 30 to 25
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
@@ -272,7 +240,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         renderTable();
         setupEventListeners();
-        updateBulkActionsVisibility();
     } catch (error) {
         console.error('Error parsing research notes:', error);
         showAlert('danger', 'Error loading research notes. Please refresh the page.');
@@ -307,13 +274,6 @@ function setupEventListeners() {
 
     // Clear filters button
     document.getElementById('clearFilters').addEventListener('click', clearFilters);
-
-    // Bulk actions
-    document.getElementById('setPersistent').addEventListener('click', () => updatePersistence(true));
-    document.getElementById('setNonPersistent').addEventListener('click', () => updatePersistence(false));
-
-    // Select all checkbox
-    document.getElementById('selectAll').addEventListener('change', toggleSelectAll);
 
     // Sort headers
     document.querySelectorAll('.sortable').forEach(header => {
@@ -521,7 +481,7 @@ function renderTable() {
     const paginatedNotes = getPaginatedNotes();
 
     if (filteredNotes.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No research notes found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No research notes found</td></tr>';
         document.getElementById('pageInfo').textContent = 'No results';
         document.getElementById('paginationNav').innerHTML = '';
         return;
@@ -530,15 +490,7 @@ function renderTable() {
     paginatedNotes.forEach(note => {
         const tr = document.createElement('tr');
 
-        // Create toggle button for persistence
-        const persistenceButtonClass = note.is_persistent_document ? 'btn-success' : 'btn-secondary';
-        const persistenceButtonText = note.is_persistent_document ? 'Yes' : 'No';
-
         tr.innerHTML = `
-            <td>
-                <input type="checkbox" class="note-checkbox" value="${note.id}"
-                    ${selectedNotes.has(note.id) ? 'checked' : ''}>
-            </td>
             <td class="text-truncate" style="max-width: 300px;" title="${escapeHtml(note.raw_title)}">
                 ${escapeHtml(note.raw_title)}
             </td>
@@ -557,35 +509,37 @@ function renderTable() {
                     ).join('') :
                     '-'}
             </td>
-            <td>
-                <button class="btn btn-sm ${persistenceButtonClass} persistence-toggle"
-                        data-note-id="${note.id}"
-                        data-current-status="${note.is_persistent_document}">
-                    ${persistenceButtonText}
-                </button>
+            <td class="text-center">
+                <input type="checkbox"
+                       class="form-check-input persistence-checkbox"
+                       data-note-id="${note.id}"
+                       ${note.is_persistent_document ? 'checked' : ''}>
             </td>
         `;
 
         tbody.appendChild(tr);
 
-        // Add checkbox event listener
-        tr.querySelector('.note-checkbox').addEventListener('change', (e) => {
-            if (e.target.checked) {
-                selectedNotes.add(parseInt(e.target.value));
-            } else {
-                selectedNotes.delete(parseInt(e.target.value));
-            }
-            updateBulkActionsVisibility();
-            updateSelectAllCheckbox();
-        });
-
-        // Add persistence toggle event listener
-        const toggleBtn = tr.querySelector('.persistence-toggle');
-        toggleBtn.addEventListener('click', async (e) => {
+        // Add persistence checkbox event listener
+        const checkbox = tr.querySelector('.persistence-checkbox');
+        checkbox.addEventListener('change', async (e) => {
             e.preventDefault();
             const noteId = parseInt(e.target.dataset.noteId);
-            const currentStatus = e.target.dataset.currentStatus === 'true';
-            await updateSingleNotePersistence(noteId, !currentStatus);
+            const shouldBePersistent = e.target.checked;
+
+            // Find the note to get its title
+            const note = allNotes.find(n => n.id === noteId);
+            const noteTitle = note ? note.raw_title : 'this note';
+
+            // Confirm the action
+            const action = shouldBePersistent ? 'persistent' : 'non-persistent';
+            const confirmMsg = `Are you sure you want to mark "${noteTitle}" as ${action}?`;
+
+            if (confirm(confirmMsg)) {
+                await updateNotePersistence(noteId, shouldBePersistent);
+            } else {
+                // Revert checkbox if user cancels
+                e.target.checked = !shouldBePersistent;
+            }
         });
     });
 
@@ -593,53 +547,8 @@ function renderTable() {
     renderPagination();
 }
 
-// Toggle select all (for current page only)
-function toggleSelectAll(e) {
-    const paginatedNotes = getPaginatedNotes();
-
-    if (e.target.checked) {
-        paginatedNotes.forEach(note => selectedNotes.add(note.id));
-    } else {
-        paginatedNotes.forEach(note => selectedNotes.delete(note.id));
-    }
-    renderTable();
-    updateBulkActionsVisibility();
-}
-
-// Update select all checkbox state
-function updateSelectAllCheckbox() {
-    const selectAll = document.getElementById('selectAll');
-    const paginatedNotes = getPaginatedNotes();
-    const visibleNoteIds = paginatedNotes.map(n => n.id);
-    const visibleSelected = visibleNoteIds.filter(id => selectedNotes.has(id));
-
-    if (visibleSelected.length === 0) {
-        selectAll.checked = false;
-        selectAll.indeterminate = false;
-    } else if (visibleSelected.length === visibleNoteIds.length) {
-        selectAll.checked = true;
-        selectAll.indeterminate = false;
-    } else {
-        selectAll.checked = false;
-        selectAll.indeterminate = true;
-    }
-}
-
-// Update bulk actions visibility
-function updateBulkActionsVisibility() {
-    const bulkActions = document.getElementById('bulkActions');
-    const selectedCount = document.getElementById('selectedCount');
-
-    if (selectedNotes.size > 0) {
-        bulkActions.style.display = 'block';
-        selectedCount.textContent = `${selectedNotes.size} notes selected`;
-    } else {
-        bulkActions.style.display = 'none';
-    }
-}
-
-// Update persistence status for a single note
-async function updateSingleNotePersistence(noteId, isPersistent) {
+// Update persistence status for a note
+async function updateNotePersistence(noteId, isPersistent) {
     showLoading();
 
     try {
@@ -664,66 +573,16 @@ async function updateSingleNotePersistence(noteId, isPersistent) {
                 note.is_persistent_document = isPersistent;
             }
 
-            // Re-render without changing filters
-            renderTable();
-
             // Show success message
             showAlert('success', `Research note ${isPersistent ? 'marked as persistent' : 'marked as non-persistent'}`);
         } else {
+            // Revert checkbox on error
+            renderTable();
             showAlert('danger', data.error || 'Update failed');
         }
     } catch (error) {
-        showAlert('danger', 'Error updating persistence status: ' + error.message);
-    } finally {
-        hideLoading();
-    }
-}
-
-// Update persistence status for multiple notes
-async function updatePersistence(isPersistent) {
-    if (selectedNotes.size === 0) return;
-
-    const confirmMsg = `Are you sure you want to mark ${selectedNotes.size} notes as ${isPersistent ? 'persistent' : 'non-persistent'}?`;
-    if (!confirm(confirmMsg)) return;
-
-    showLoading();
-
-    try {
-        const response = await fetch('{% url "research_summaries:api_update_persistence" %}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify({
-                note_ids: Array.from(selectedNotes),
-                is_persistent: isPersistent
-            })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            // Update local data
-            allNotes.forEach(note => {
-                if (selectedNotes.has(note.id)) {
-                    note.is_persistent_document = isPersistent;
-                }
-            });
-
-            // Clear selection
-            selectedNotes.clear();
-
-            // Re-render
-            applyFilters();
-            updateBulkActionsVisibility();
-
-            // Show success message
-            showAlert('success', data.message);
-        } else {
-            showAlert('danger', data.error || 'Update failed');
-        }
-    } catch (error) {
+        // Revert checkbox on error
+        renderTable();
         showAlert('danger', 'Error updating persistence status: ' + error.message);
     } finally {
         hideLoading();
