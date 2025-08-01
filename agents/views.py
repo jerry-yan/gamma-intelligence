@@ -191,7 +191,7 @@ def api_chat_stream(request):
                     chunk_count += 1
 
                     # Log every 10th chunk to avoid log spam
-                    if chunk_count % 10 == 0:
+                    if chunk_count % 100 == 0:
                         logger.info(
                             f"[CHUNK {chunk_count}] Session {session.session_id} - Message length: {len(assistant_message)}")
 
@@ -215,9 +215,9 @@ def api_chat_stream(request):
                                 yield f"data: {json.dumps({'type': 'content', 'content': chunk.delta})}\n\n"
 
                                 # Periodically save the message in case of disconnection
-                                if len(assistant_message) - last_save_length > 500:  # Save every 500 chars
-                                    logger.info(
-                                        f"[PERIODIC SAVE] Session {session.session_id} - Saving at {len(assistant_message)} chars")
+                                # if len(assistant_message) - last_save_length > 500:  # Save every 500 chars
+                                #     logger.info(
+                                #         f"[PERIODIC SAVE] Session {session.session_id} - Saving at {len(assistant_message)} chars")
 
                             # Handle tool use events (file search)
                             elif chunk.type == 'response.tool_call.delta' and hasattr(chunk, 'tool_call'):
