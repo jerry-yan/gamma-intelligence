@@ -146,6 +146,12 @@ def fetch_research_summaries():
                             records_created_this_file = 0
 
                             for idx, row in df.iterrows():
+
+                                if row.get("Type") == "Expert":
+                                    yield {"status": "info",
+                                           "message": f"⏩ Row {idx + 1}: Skipping Expert type record"}
+                                    continue
+
                                 link = row.get("Download Link", "")
                                 doc_id = extract_document_id(link)
 

@@ -174,7 +174,7 @@ def api_chat_stream(request):
                     stream_params["tools"] = [{
                         "type": "file_search",
                         "vector_store_ids": [knowledge_base.vector_store_id],
-                        "max_num_results": 20,
+                        "max_num_results": 35,
                     }]
                     yield f"data: {json.dumps({'type': 'info', 'message': f'Using knowledge base: {knowledge_base.display_name}'})}\n\n"
 
