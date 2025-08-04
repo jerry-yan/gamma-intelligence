@@ -111,3 +111,22 @@ class StockTicker(models.Model):
 
     def __str__(self):
         return f"{self.main_ticker} - {self.company_name}"
+
+
+class Prompt(models.Model):
+    """Model to store user-created prompts"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='prompts')
+    name = models.CharField(max_length=200, help_text="Name for this prompt")
+    prompt = models.TextField(help_text="The prompt content")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+        indexes = [
+            models.Index(fields=['user', '-updated_at']),
+        ]
+        unique_together = [['user', 'name']]  # Each user can only have one prompt with the same name
+
+    def __str__(self):
+        return f"{self.name} - {self.user.username}"

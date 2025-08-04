@@ -1,0 +1,324 @@
+<!-- templates/agents/prompts/list.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Prompts - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2">My Prompts</h1>
+                <p class="text-muted">Manage your saved prompts ({{ prompt_count }} total)</p>
+            </div>
+            <div>
+                <a href="{% url 'agents:prompt_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Create New Prompt
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if prompts %}
+        <div class="row">
+            {% for prompt in prompts %}
+                <div class="col-lg-6 col-xl-4 mb-4">
+                    <div class="card h-100 prompt-card" data-prompt-id="{{ prompt.id }}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title text-truncate" style="max-width: 70%;">{{ prompt.name }}</h5>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-link text-muted" type="button" data-bs-toggle="dropdown">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'agents:prompt_update' prompt.pk %}">
+                                                <i class="bi bi-pencil"></i> Edit
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <button class="dropdown-item text-danger delete-prompt"
+                                                    data-prompt-id="{{ prompt.id }}"
+                                                    data-prompt-name="{{ prompt.name }}">
+                                                <i class="bi bi-trash"></i> Delete
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="card-text prompt-preview mb-3">
+                                {{ prompt.prompt|truncatewords:30|linebreaksbr }}
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    Updated {{ prompt.updated_at|timesince }} ago
+                                </small>
+                                <button class="btn btn-sm btn-outline-primary view-prompt"
+                                        data-prompt-id="{{ prompt.id }}">
+                                    View Full
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        {% if is_paginated %}
+            <nav aria-label="Prompt pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                        </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% else %}
+                            <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-chat-square-text" style="font-size: 4rem; color: #dee2e6;"></i>
+            <h3 class="mt-3">No prompts yet</h3>
+            <p class="text-muted">Create your first prompt to get started</p>
+            <a href="{% url 'agents:prompt_create' %}" class="btn btn-primary mt-2">
+                <i class="bi bi-plus-circle"></i> Create Your First Prompt
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<!-- View Prompt Modal -->
+<div class="modal fade" id="viewPromptModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="promptModalTitle">Prompt Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Prompt Name</label>
+                    <p id="promptModalName" class="form-control-plaintext"></p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Prompt Content</label>
+                    <div id="promptModalContent" class="border rounded p-3" style="white-space: pre-wrap; background-color: #f8f9fa;"></div>
+                </div>
+                <div class="text-muted small">
+                    <p class="mb-1">Created: <span id="promptModalCreated"></span></p>
+                    <p class="mb-0">Last updated: <span id="promptModalUpdated"></span></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary copy-prompt" id="copyPromptBtn">
+                    <i class="bi bi-clipboard"></i> Copy Prompt
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.prompt-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+}
+
+.prompt-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.prompt-preview {
+    min-height: 60px;
+    max-height: 120px;
+    overflow: hidden;
+    position: relative;
+}
+
+.prompt-preview::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1));
+}
+
+.bi {
+    margin-right: 0.25rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Delete prompt functionality
+    document.querySelectorAll('.delete-prompt').forEach(button => {
+        button.addEventListener('click', async function(e) {
+            e.preventDefault();
+            const promptId = this.dataset.promptId;
+            const promptName = this.dataset.promptName;
+
+            if (confirm(`Are you sure you want to delete the prompt "${promptName}"?`)) {
+                try {
+                    const response = await fetch(`/agents/prompts/${promptId}/delete/`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRFToken': getCsrfToken()
+                        }
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // Remove the card from the DOM
+                        const card = document.querySelector(`[data-prompt-id="${promptId}"]`);
+                        card.closest('.col-lg-6').remove();
+
+                        // Show success message
+                        showAlert('success', data.message);
+
+                        // Update count
+                        updatePromptCount();
+                    } else {
+                        showAlert('danger', data.error || 'Failed to delete prompt');
+                    }
+                } catch (error) {
+                    showAlert('danger', 'An error occurred while deleting the prompt');
+                }
+            }
+        });
+    });
+
+    // View prompt functionality
+    document.querySelectorAll('.view-prompt').forEach(button => {
+        button.addEventListener('click', async function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const promptId = this.dataset.promptId;
+
+            try {
+                const response = await fetch(`/agents/prompts/${promptId}/detail/`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const prompt = data.prompt;
+                    document.getElementById('promptModalName').textContent = prompt.name;
+                    document.getElementById('promptModalContent').textContent = prompt.prompt;
+                    document.getElementById('promptModalCreated').textContent = new Date(prompt.created_at).toLocaleString();
+                    document.getElementById('promptModalUpdated').textContent = new Date(prompt.updated_at).toLocaleString();
+
+                    // Store prompt content for copy functionality
+                    document.getElementById('copyPromptBtn').dataset.promptContent = prompt.prompt;
+
+                    // Show modal
+                    new bootstrap.Modal(document.getElementById('viewPromptModal')).show();
+                }
+            } catch (error) {
+                showAlert('danger', 'Failed to load prompt details');
+            }
+        });
+    });
+
+    // Copy prompt functionality
+    document.getElementById('copyPromptBtn').addEventListener('click', function() {
+        const promptContent = this.dataset.promptContent;
+        navigator.clipboard.writeText(promptContent).then(() => {
+            // Change button text temporarily
+            const originalHtml = this.innerHTML;
+            this.innerHTML = '<i class="bi bi-check"></i> Copied!';
+            this.classList.add('btn-success');
+            this.classList.remove('btn-primary');
+
+            setTimeout(() => {
+                this.innerHTML = originalHtml;
+                this.classList.remove('btn-success');
+                this.classList.add('btn-primary');
+            }, 2000);
+        });
+    });
+
+    // Card click to view
+    document.querySelectorAll('.prompt-card').forEach(card => {
+        card.addEventListener('click', function(e) {
+            if (!e.target.closest('.dropdown') && !e.target.closest('.btn')) {
+                const viewButton = this.querySelector('.view-prompt');
+                viewButton.click();
+            }
+        });
+    });
+});
+
+function getCsrfToken() {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') {
+            return value;
+        }
+    }
+    return '';
+}
+
+function showAlert(type, message) {
+    const alertHtml = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+
+    const container = document.querySelector('.container-fluid');
+    const firstRow = container.querySelector('.row');
+    container.insertAdjacentHTML('afterbegin', alertHtml);
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        const alert = container.querySelector('.alert');
+        if (alert) {
+            alert.remove();
+        }
+    }, 5000);
+}
+
+function updatePromptCount() {
+    const countElement = document.querySelector('.text-muted');
+    const currentCount = document.querySelectorAll('.prompt-card').length;
+    countElement.textContent = `Manage your saved prompts (${currentCount} total)`;
+
+    // If no prompts left, show empty state
+    if (currentCount === 0) {
+        location.reload();
+    }
+}
+</script>
+{% endblock %}

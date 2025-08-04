@@ -1,0 +1,172 @@
+<!-- templates/agents/prompts/form.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ action }} Prompt - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">{{ action }} Prompt</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <div class="mb-4">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">
+                                {{ form.name.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.name }}
+                            {% if form.name.help_text %}
+                                <div class="form-text">{{ form.name.help_text }}</div>
+                            {% endif %}
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.name.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="{{ form.prompt.id_for_label }}" class="form-label">
+                                {{ form.prompt.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.prompt }}
+                            {% if form.prompt.help_text %}
+                                <div class="form-text">{{ form.prompt.help_text }}</div>
+                            {% endif %}
+                            {% if form.prompt.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.prompt.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text mt-2">
+                                <span id="charCount">0</span> characters
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{% url 'agents:prompt_list' %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Cancel
+                            </a>
+                            <div>
+                                {% if action == 'Edit' %}
+                                    <button type="button" class="btn btn-outline-primary me-2" id="previewBtn">
+                                        <i class="bi bi-eye"></i> Preview
+                                    </button>
+                                {% endif %}
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle"></i> {{ action }} Prompt
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if action == 'Edit' %}
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title">Prompt Information</h5>
+                    <p class="mb-1"><strong>Created:</strong> {{ object.created_at|date:"F d, Y at g:i A" }}</p>
+                    <p class="mb-0"><strong>Last Updated:</strong> {{ object.updated_at|date:"F d, Y at g:i A" }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+{% if action == 'Edit' %}
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Prompt Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6 id="previewName" class="mb-3"></h6>
+                <div id="previewContent" class="border rounded p-3" style="white-space: pre-wrap; background-color: #f8f9fa;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+.form-control:focus, .form-select:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.invalid-feedback {
+    font-size: 0.875em;
+}
+
+textarea.form-control {
+    min-height: 200px;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const promptTextarea = document.getElementById('{{ form.prompt.id_for_label }}');
+    const charCountSpan = document.getElementById('charCount');
+
+    // Update character count
+    function updateCharCount() {
+        charCountSpan.textContent = promptTextarea.value.length.toLocaleString();
+    }
+
+    promptTextarea.addEventListener('input', updateCharCount);
+    updateCharCount(); // Initial count
+
+    // Preview functionality
+    {% if action == 'Edit' %}
+    document.getElementById('previewBtn').addEventListener('click', function() {
+        const nameInput = document.getElementById('{{ form.name.id_for_label }}');
+        document.getElementById('previewName').textContent = nameInput.value || 'Untitled Prompt';
+        document.getElementById('previewContent').textContent = promptTextarea.value || 'No content to preview';
+
+        new bootstrap.Modal(document.getElementById('previewModal')).show();
+    });
+    {% endif %}
+
+    // Auto-resize textarea
+    function autoResize() {
+        promptTextarea.style.height = 'auto';
+        promptTextarea.style.height = Math.max(200, promptTextarea.scrollHeight) + 'px';
+    }
+
+    promptTextarea.addEventListener('input', autoResize);
+    autoResize(); // Initial resize
+
+    // Form validation visual feedback
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        if (!form.checkValidity()) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+});
+</script>
+{% endblock %}

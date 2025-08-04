@@ -1,8 +1,6 @@
 # agents/urls.py
 from django.urls import path
-from . import views
-from . import api_views
-from . import knowledge_base_views
+from . import views, api_views, knowledge_base_views, prompt_views
 
 app_name = 'agents'
 
@@ -31,6 +29,13 @@ urlpatterns = [
     path('api/knowledge-bases/create/', api_views.api_create_knowledge_base, name='api_create_knowledge_base'),
     path('api/knowledge-bases/list/', api_views.api_list_knowledge_bases, name='api_list_knowledge_bases'),
     path('api/knowledge-bases/<int:kb_id>/delete/', api_views.api_delete_knowledge_base, name='api_delete_knowledge_base'),
+
+    # Prompts
+    path('prompts/', prompt_views.PromptListView.as_view(), name='prompt_list'),
+    path('prompts/create/', prompt_views.PromptCreateView.as_view(), name='prompt_create'),
+    path('prompts/<int:pk>/edit/', prompt_views.PromptUpdateView.as_view(), name='prompt_update'),
+    path('prompts/<int:pk>/delete/', prompt_views.prompt_delete_view, name='prompt_delete'),
+    path('prompts/<int:pk>/detail/', prompt_views.prompt_detail_api, name='prompt_detail'),
 
     # Other support functions
     path('upload-stocks/', views.StockTickerUploadView.as_view(), name='stock_ticker_upload'),

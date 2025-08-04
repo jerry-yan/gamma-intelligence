@@ -1,6 +1,6 @@
 # chatbot/admin.py
 from django.contrib import admin
-from .models import KnowledgeBase, ChatSession, ChatMessage, StockTicker
+from .models import KnowledgeBase, ChatSession, ChatMessage, StockTicker, Prompt
 
 
 @admin.register(KnowledgeBase)
@@ -40,3 +40,28 @@ class StockTickerAdmin(admin.ModelAdmin):
     list_filter = ['industry', 'sub_industry']
     search_fields = ['main_ticker', 'full_ticker', 'company_name']
     ordering = ['main_ticker']
+
+
+@admin.register(Prompt)
+class PromptAdmin(admin.ModelAdmin):
+    list_display = ['name', 'user', 'prompt_preview', 'created_at', 'updated_at']
+    list_filter = ['created_at', 'updated_at', 'user']
+    search_fields = ['name', 'prompt', 'user__username', 'user__email']
+    readonly_fields = ['created_at', 'updated_at']
+    raw_id_fields = ['user']
+    ordering = ['-updated_at']
+
+    def prompt_preview(self, obj):
+        return obj.prompt[:100] + '...' if len(obj.prompt) > 100 else obj.prompt
+
+    prompt_preview.short_description = 'Prompt Preview'
+
+    fieldsets = (
+        (None, {
+            'fields': ('user', 'name', 'prompt')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
