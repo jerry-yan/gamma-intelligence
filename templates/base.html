@@ -61,12 +61,10 @@
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="toolsDropdown">
                                     <li><a class="dropdown-item" href="{% url 'research_summaries:manage_persistence' %}">Manage Evergreen</a></li>
-                                </ul>
-                                {% if perms.accounts.can_view_agents %}
-                                    <ul class="dropdown-menu" aria-labelledby="toolsDropdown">
+                                    {% if perms.accounts.can_view_agents %}
                                         <li><a class="dropdown-item" href="{% url 'agents:prompt_list' %}">My Prompts</a></li>
-                                    </ul>
-                                {% endif %}
+                                    {% endif %}
+                                </ul>
                             </li>
                         {% endif %}
                     {% endif %}
