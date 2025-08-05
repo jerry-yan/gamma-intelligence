@@ -40,7 +40,8 @@ class AgentView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         context['knowledge_bases'] = KnowledgeBase.objects.filter(is_active=True)
         context['user'] = self.request.user
-        context['user_prompts'] = Prompt.objects.filter(user=self.request.user)
+        user_prompts = Prompt.objects.filter(user=self.request.user).values('id', 'name', 'prompt')
+        context['user_prompts'] = list(user_prompts)
         return context
 
 

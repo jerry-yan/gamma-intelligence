@@ -962,7 +962,6 @@
                 <div class="input-container">
                     <div style="max-width: 50rem; margin: 0 auto;">
 
-
                         <div class="input-controls">
                             <div class="kb-selector">
                                 <label for="knowledgeBaseSelect">Knowledge Base:</label>
@@ -982,7 +981,7 @@
                                     <select id="promptSelect" class="prompt-select">
                                         <option value="">Select a prompt...</option>
                                         {% for prompt in user_prompts %}
-                                        <option value="{{ prompt.id }}" data-prompt-content="{{ prompt.prompt|escapejs }}">
+                                        <option value="{{ prompt.id }}">
                                             {{ prompt.name }}
                                         </option>
                                         {% endfor %}
@@ -992,6 +991,7 @@
                                     </button>
                                 </div>
                             </div>
+
                         </div>
 
                         <div class="input-wrapper">
@@ -1005,6 +1005,9 @@
                         </div>
                     </div>
                 </div>
+
+                {{ user_prompts|json_script:"user-prompts-data" }}
+
             </div>
         </main>
     </div>
@@ -1082,6 +1085,17 @@
             const promptSelect = document.getElementById('promptSelect');
             const usePromptBtn = document.getElementById('usePromptBtn');
 
+            // Get the prompts data from the JSON script tag
+            const promptsDataElement = document.getElementById('user-prompts-data');
+            let userPromptsData = {};
+            if (promptsDataElement) {
+                const promptsArray = JSON.parse(promptsDataElement.textContent);
+                // Convert array to object keyed by ID
+                promptsArray.forEach(prompt => {
+                    userPromptsData[prompt.id] = prompt.prompt;
+                });
+            }
+
             // Enable/disable use button based on selection
             promptSelect.addEventListener('change', function() {
                 usePromptBtn.disabled = !this.value;
@@ -1091,7 +1105,9 @@
             usePromptBtn.addEventListener('click', function() {
                 const selectedOption = promptSelect.selectedOptions[0];
                 if (selectedOption && selectedOption.value) {
-                    const promptContent = selectedOption.dataset.promptContent;
+                    const promptId = selectedOption.value;
+                    const promptContent = userPromptsData[promptId];
+
                     if (promptContent) {
                         // Get the chat input
                         const chatInput = document.getElementById('chatInput');
@@ -1114,6 +1130,7 @@
                     }
                 }
             });
+
         }
 
         // Create new chat
