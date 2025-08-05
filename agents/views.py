@@ -13,7 +13,7 @@ from django.views.generic import FormView, TemplateView
 from django.utils import timezone
 from django.urls import reverse_lazy
 from django.db import transaction
-from .models import KnowledgeBase, ChatSession, ChatMessage, StockTicker
+from .models import KnowledgeBase, ChatSession, ChatMessage, StockTicker, Prompt
 from research_summaries.openai_utils import get_openai_client
 from .forms import ExcelUploadForm
 from io import BytesIO
@@ -40,6 +40,7 @@ class AgentView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         context['knowledge_bases'] = KnowledgeBase.objects.filter(is_active=True)
         context['user'] = self.request.user
+        context['user_prompts'] = Prompt.objects.filter(user=self.request.user)
         return context
 
 
