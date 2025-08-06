@@ -53,6 +53,7 @@ class ResearchNote(models.Model):
         (4, "Advanced Summarized"),
         (10, "Error 1"),
         (11, "Error 2"),
+        (12, "Testing"),
     ]
     status = models.PositiveIntegerField(choices=STATUS_CHOICES, default=0)
 
