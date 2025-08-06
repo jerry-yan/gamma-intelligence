@@ -147,10 +147,7 @@ def fetch_research_summaries():
 
                             for idx, row in df.iterrows():
 
-                                if row.get("Type") == "Expert":
-                                    yield {"status": "info",
-                                           "message": f"⏩ Row {idx + 1}: Skipping Expert type record"}
-                                    continue
+                                is_expert_type = row.get("Type") == "Expert"
 
                                 link = row.get("Download Link", "")
                                 doc_id = extract_document_id(link)
@@ -186,6 +183,20 @@ def fetch_research_summaries():
                                     raw_page_count = row.get("Pages")
                                     file_update_time = now()
 
+                                    publication_date = None
+                                    if is_expert_type:
+                                        date_str = row.get("Date")
+                                        if date_str and not pd.isna(date_str):
+                                            try:
+                                                # Parse date in format "2025-12-07"
+                                                from datetime import datetime
+                                                publication_date = datetime.strptime(str(date_str).strip(),
+                                                                                     "%Y-%m-%d").date()
+                                            except ValueError:
+                                                yield {"status": "warning",
+                                                       "message": f"⚠️  Row {idx + 1}: Invalid date format '{date_str}'"}
+                                                publication_date = None
+
                                     note = ResearchNote.objects.create(
                                         source=cleaned_source,
                                         provider="AlphaSense",
@@ -197,11 +208,12 @@ def fetch_research_summaries():
                                         raw_author=raw_author,
                                         raw_title=raw_title,
                                         raw_page_count=raw_page_count,
-                                        report_type=None,
+                                        report_type="Expert Call" if is_expert_type else None,
                                         report_summary=None,
                                         file_download_time=None,
                                         file_update_time=file_update_time,
-                                        status=0,
+                                        publication_date=publication_date,
+                                        status=12 if is_expert_type else 0,
                                     )
 
                                     records_created_this_file += 1

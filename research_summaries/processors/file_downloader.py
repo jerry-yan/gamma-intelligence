@@ -313,7 +313,10 @@ def download_documents():
                     s3_key = f"{S3_DOCUMENTS_PREFIX}{note.file_id}/{pdf_path.name}"
                     s3_url = upload_to_s3(pdf_path, s3_key)
 
-                    publication_date = extract_publication_date_from_filename(pdf_path.name)
+                    if note.publication_date is None:
+                        publication_date = extract_publication_date_from_filename(pdf_path.name)
+                    else:
+                        publication_date = note.publication_date
 
                     # Update database
                     note.status = 1
