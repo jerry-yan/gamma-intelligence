@@ -189,8 +189,7 @@ def fetch_research_summaries():
                                         if date_str and not pd.isna(date_str):
                                             try:
                                                 # Parse date in format "2025-12-07"
-                                                from datetime import datetime
-                                                publication_date = datetime.strptime(str(date_str).strip(),
+                                                publication_date = datetime.datetime.strptime(str(date_str).strip(),
                                                                                      "%Y-%m-%d").date()
                                             except ValueError:
                                                 yield {"status": "warning",
