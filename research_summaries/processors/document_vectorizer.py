@@ -66,38 +66,127 @@ def upload_to_vector_store(
         bool: True if successful, False otherwise
     """
     try:
+        logger.info(f"🔍 DEBUG: Starting upload_to_vector_store")
+        logger.info(f"    Vector Store ID: {vector_store_id}")
+        logger.info(f"    File ID: {file_id}")
+        logger.info(f"    Attributes: {attributes}")
+
         # Add file to vector store with metadata
+        logger.info(f"📤 DEBUG: Creating vector store file...")
         vector_file = client.vector_stores.files.create(
             vector_store_id=vector_store_id,
             file_id=file_id,
             attributes=attributes
         )
 
+        logger.info(f"✅ DEBUG: Vector file created successfully")
+        logger.info(f"    Vector File ID: {vector_file.id}")
+        logger.info(f"    Initial Status: {vector_file.status if hasattr(vector_file, 'status') else 'N/A'}")
+
+        # Log all attributes of the response
+        logger.info(f"    Full response object attributes: {dir(vector_file)}")
+        if hasattr(vector_file, '__dict__'):
+            logger.info(f"    Response data: {vector_file.__dict__}")
+
         # Poll for completion
         max_attempts = 20
         for attempt in range(max_attempts):
-            status_response = client.vector_stores.files.poll(
-                file_id=vector_file.id,
-                vector_store_id=vector_store_id
-            )
+            logger.info(f"🔄 DEBUG: Polling attempt {attempt + 1}/{max_attempts}")
 
-            if status_response.status == 'completed':
-                logger.info(f"✅ Added file {file_id} to vector store {vector_store_id} - indexing complete")
-                return True
-            elif status_response.status == 'failed':
-                logger.error(f"❌ File indexing failed for {file_id} in vector store {vector_store_id}")
-                return False
-            else:
-                # Still processing
-                if attempt % 6 == 0:  # Log every 30 seconds
-                    logger.info(f"⏳ Still indexing file {file_id} in vector store {vector_store_id}...")
-                time.sleep(3)  # Wait 5 seconds before checking again
+            try:
+                # Make the poll request
+                logger.info(f"    Making poll request for file_id={vector_file.id}, vector_store_id={vector_store_id}")
+                status_response = client.vector_stores.files.poll(
+                    file_id=vector_file.id,
+                    vector_store_id=vector_store_id
+                )
+
+                # Log the full response
+                logger.info(f"    Poll response received!")
+                logger.info(f"    Status: {status_response.status}")
+                logger.info(f"    Response type: {type(status_response)}")
+                logger.info(f"    Response attributes: {dir(status_response)}")
+
+                # Try to get more details about the response
+                if hasattr(status_response, '__dict__'):
+                    logger.info(f"    Full response data: {status_response.__dict__}")
+
+                # If there's an error message, log it
+                if hasattr(status_response, 'error'):
+                    logger.error(f"    ⚠️ Error in response: {status_response.error}")
+
+                if hasattr(status_response, 'last_error'):
+                    logger.error(f"    ⚠️ Last error: {status_response.last_error}")
+
+                # Check status and handle accordingly
+                if status_response.status == 'completed':
+                    logger.info(f"✅ DEBUG: File indexing completed successfully!")
+                    logger.info(f"✅ Added file {file_id} to vector store {vector_store_id} - indexing complete")
+                    return True
+
+                elif status_response.status == 'failed':
+                    logger.error(f"❌ DEBUG: File indexing failed!")
+                    if hasattr(status_response, 'last_error'):
+                        logger.error(f"    Failure reason: {status_response.last_error}")
+                    logger.error(f"❌ File indexing failed for {file_id} in vector store {vector_store_id}")
+                    return False
+
+                elif status_response.status == 'in_progress':
+                    logger.info(f"⏳ DEBUG: Still in progress...")
+                    if hasattr(status_response, 'file_counts'):
+                        logger.info(f"    File counts: {status_response.file_counts}")
+
+                    # Log progress every 6 attempts (30 seconds)
+                    if attempt % 6 == 0:
+                        logger.info(f"⏳ Still indexing file {file_id} in vector store {vector_store_id}...")
+
+                    # Wait before next poll
+                    logger.info(f"    Waiting 3 seconds before next poll...")
+                    time.sleep(3)
+
+                else:
+                    # Unknown status
+                    logger.warning(f"⚠️ DEBUG: Unknown status: {status_response.status}")
+                    logger.info(f"    Full response for debugging: {status_response}")
+                    time.sleep(3)
+
+            except Exception as poll_error:
+                logger.error(f"❌ DEBUG: Error during polling attempt {attempt + 1}")
+                logger.error(f"    Error type: {type(poll_error).__name__}")
+                logger.error(f"    Error message: {str(poll_error)}")
+                logger.error(f"    Full exception:", exc_info=True)
+
+                # If it's a specific OpenAI error, try to get more details
+                if hasattr(poll_error, 'response'):
+                    logger.error(
+                        f"    Response status code: {poll_error.response.status_code if hasattr(poll_error.response, 'status_code') else 'N/A'}")
+                    logger.error(
+                        f"    Response body: {poll_error.response.text if hasattr(poll_error.response, 'text') else 'N/A'}")
+
+                # Decide whether to continue or fail
+                if attempt < max_attempts - 1:
+                    logger.info(f"    Retrying in 5 seconds...")
+                    time.sleep(5)
+                else:
+                    raise poll_error
 
         # Timeout after max attempts
+        logger.error(f"⏱️ DEBUG: Timeout reached after {max_attempts} attempts")
         logger.error(f"⏱️ Timeout: File indexing took too long for {file_id} in vector store {vector_store_id}")
         return False
 
     except Exception as e:
+        logger.error(f"❌ DEBUG: Exception in upload_to_vector_store")
+        logger.error(f"    Error type: {type(e).__name__}")
+        logger.error(f"    Error message: {str(e)}")
+        logger.error(f"    Full exception:", exc_info=True)
+
+        # Try to get more details about OpenAI-specific errors
+        if hasattr(e, 'response'):
+            logger.error(
+                f"    Response status: {e.response.status_code if hasattr(e.response, 'status_code') else 'N/A'}")
+            logger.error(f"    Response body: {e.response.text if hasattr(e.response, 'text') else 'N/A'}")
+
         logger.error(f"❌ Failed to add file to vector store {vector_store_id}: {e}")
         return False
 
