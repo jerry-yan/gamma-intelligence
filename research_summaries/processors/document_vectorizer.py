@@ -96,7 +96,7 @@ def upload_to_vector_store(
             try:
                 # Make the poll request
                 logger.info(f"    Making poll request for file_id={vector_file.id}, vector_store_id={vector_store_id}")
-                status_response = client.vector_stores.files.poll(
+                status_response = client.vector_stores.files.retrieve(
                     file_id=vector_file.id,
                     vector_store_id=vector_store_id
                 )
