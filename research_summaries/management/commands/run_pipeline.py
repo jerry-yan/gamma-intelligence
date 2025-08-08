@@ -43,7 +43,7 @@ class Command(BaseCommand):
                 # Run vectorization if there are summarized notes not yet vectorized
                 if vectorization_count > 0:
                     self.stdout.write(f'🔮 Vectorizing {vectorization_count} documents...')
-                    # call_command('vectorize_documents')
+                    call_command('vectorize_documents')
 
                 self.stdout.write('🗑️  Cleaning temporary vectorized documents...')
                 call_command('clean_temp_documents', hours=12)
