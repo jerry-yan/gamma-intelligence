@@ -18,7 +18,8 @@ from research_summaries.OpenAI_toolbox.prompts import (
 )
 from research_summaries.OpenAI_toolbox.structured_outputs import SCHEMAS
 
-MODEL = 'gpt-4.1-mini-2025-04-14'
+MODEL_ONE = 'gpt-4.1-mini-2025-04-14'
+MODEL = 'gpt-5-mini-2025-08-07'
 
 TICKER_OVERRIDES = {
     "2330": "TSMC",
@@ -99,7 +100,7 @@ def categorize_document(client, model: str, file_id: str, company_count: int, co
                 },
             },
         },
-        temperature=0.001,
+        # temperature=0.001,
     )
 
     return json.loads(response.output_text).get('report_type')
@@ -167,7 +168,7 @@ def categorize_document_v2(client, model: str, file_id: str, company_count: int,
                 },
             },
         },
-        temperature=0.001,
+        # temperature=0.001,
     )
 
     result = json.loads(response.output_text)
@@ -194,7 +195,7 @@ def summarize_document(client, model: str, file_id: str, instructions: str, sche
             }
         ],
         text=schema,
-        temperature=0.1,
+        # temperature=0.1,
     )
 
     return json.loads(response.output_text)
