@@ -351,7 +351,8 @@ MACRO_REPORT_SCHEMA = {
                         "sentiment": {
                             "type": "string",
                             "enum": ["Positive", "Neutral", "Negative"]
-                        },"executive_summary": {"type": "string"},
+                        },
+                        "executive_summary": {"type": "string"},
                         "key_themes": {
                             "type": "array",
                             "items": {"type": "string"},

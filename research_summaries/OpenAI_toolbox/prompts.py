@@ -190,7 +190,7 @@ and your goal will be to output a summary of around 350 words that contains the 
 - Source: The name of the firm that published the report
 - Author(s): A list of the authors of the report
 - Sentiment: How the author feels about the stock
-- General summary of the key points in the report
+- General summary of the key points in the report. Put this under 'summary' for the JSON output and do not include details already given under other JSON keys such as the report title.
 - Bullet points on positive key dynamics such tailwinds and opportunities in the stock
 - Bullet points on negative key dynamics such headwinds and challenges facing in the stock
 - Upside scenario valuation on the stock and how it is derived
@@ -210,7 +210,7 @@ Create a summary strictly between 160 and 190 words containing the following inf
 - Sentiment (how the author views the stock)
 - Price target (specific number, if any)
 - Stock rating (Buy, Hold, or Sell if mentioned)
-- Executive summary of the report which may include a recap of recent events or developments, relevant data, analysis, updated valuation analysis, and other information
+- Executive summary of the report which may include a recap of recent events or developments, relevant data, analysis, updated valuation analysis, and other information. Put this under 'executive_summary' for the JSON output and do not include details already given under other JSON keys such as the report title.
 - Clear bullet points of bullish arguments mentioned
 - Clear bullet points of bearish arguments mentioned
 - Summary of valuation analysis provided by the report (if any)
@@ -233,7 +233,7 @@ Create a summary strictly between 170 and 200 words containing the following inf
 - Sentiment (how the author views the stock)
 - Price target (specific number)
 - Stock rating (Buy, Hold, or Sell if mentioned)
-- General summary of the key points in the report
+- General summary of the key points in the report. Put this under 'summary' for the JSON output and do not include details already given under other JSON keys such as the report title.
 - Detailed summary of any expectations going into earnings (both qualitative and quantitative if possible)
 - Clear bullet points on risks mentioned
 - Clear bullet points on opportunities mentioned
@@ -257,7 +257,7 @@ Create a summary strictly between 190 and 220 words containing the following inf
 - Sentiment (how the author views the stock)
 - Price target (specific number)
 - Stock rating (Buy, Hold, or Sell if mentioned)
-- Brief recap of the key points discussed in the report
+- Brief recap of the key points discussed in the report. Put this under 'recap' for the JSON output and do not include details already given under other JSON keys such as the report title.
 - Clear bullet points of bullish arguments mentioned
 - Clear bullet points of bearish arguments mentioned
 - Summary of valuation analysis provided by the report
@@ -275,7 +275,7 @@ and your goal will be to output a summary of around 500 words that contains the 
 - Source: The name of the firm that published the report
 - Author(s): A list of the authors of the report
 - Sentiment: How the author feels about the industry
-- Executive summary of the report
+- Executive summary of the report. Put this under 'executive_summary' for the JSON output and do not include details already given under other JSON keys such as the report title.
 - Bullet points on the key industry dynamics, challenges, risk, opportunities and analysis
 - Detailed bullet points on industry-related valuation analysis supported by financial metrics, ratios, and numbers where possible
 - Recap of each stock that was discussed which consists of the stock ticker, rating (if any), outlook for the company, and valuation (if any). Valuation is a target price backed by a financial metric such as P/E. For instance, "Target price of $54, with a P/E of 11.0x for 2025 EPS". 
@@ -289,7 +289,7 @@ and your goal will be to output a summary of around 450 words that contains the 
 - Author(s): A list of the authors of the report
 - Source: The name of the firm that published the report
 - Sentiment: How the author feels about the stock
-- Detailed executive summary of the report of at least 2-3 sentences
+- Detailed executive summary of the report of at least 2-3 sentences. Put this under 'executive_summary' for the JSON output and do not include details already given under other JSON keys such as the report title.
 - Detailed bullet points on key themes and insights and whether the subject is leaning bullish or bearish
 - Bullet points on valuation analysis (if any)
 - Bullet points on strategic recommendations (if any)
