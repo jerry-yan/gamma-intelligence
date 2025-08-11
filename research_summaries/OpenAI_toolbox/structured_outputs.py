@@ -19,7 +19,10 @@ INITIATION_REPORT_SCHEMA = {
                     "type": "string",
                     "enum": ["Positive", "Neutral", "Negative"]
                 },
-                "summary": {"type": "string"},
+                "summary": {
+                    "type": "string",
+                    "description": "A summary of the report including recent events, key developments, relevant analysis, updated valuation insights, and important points from the report. Do not format this string in JSON format."
+                },
                 "positive_dynamics": {
                     "type": "array",
                     "items": {"type": "string"},
@@ -79,7 +82,7 @@ COMPANY_UPDATE_SCHEMA = {
                 },
                 "executive_summary": {
                     "type": "string",
-                    "description": "Concise executive summary including recent events, key developments, relevant analysis, updated valuation insights, and important points from the report (approximately 100-120 words)."
+                    "description": "Concise executive summary including recent events, key developments, relevant analysis, updated valuation insights, and important points from the report (approximately 100-120 words). Do not format this string in JSON format."
                 },
                 "bull_points": {
                     "type": "array",
@@ -151,7 +154,7 @@ QUARTER_PREVIEW_SCHEMA = {
                 },
                 "summary": {
                     "type": "string",
-                    "description": "Concise general summary of key points from the report, including important events, developments, and main findings (approximately 80-100 words)."
+                    "description": "Concise general summary of key points from the report, including important events, developments, and main findings (approximately 80-100 words). Do not format this string in JSON format."
                 },
                 "expectations": {
                     "type": "string",
@@ -227,7 +230,7 @@ QUARTER_REVIEW_SCHEMA = {
                 },
                 "recap": {
                     "type": "string",
-                    "description": "A concise, clearly written recap of the key points of the report, including recent developments, key financial or market updates, and relevant analysis. Approximately 100-150 words."
+                    "description": "A concise, clearly written recap of the key points of the report, including recent developments, key financial or market updates, and relevant analysis. Approximately 100-150 words. Do not format this string in JSON format."
                 },
                 "bull_points": {
                     "type": "array",

@@ -212,7 +212,8 @@ def fetch_research_summaries():
                                         file_download_time=None,
                                         file_update_time=file_update_time,
                                         publication_date=publication_date,
-                                        status=12 if is_expert_type else 0,
+                                        status=0,
+                                        # status=12 if is_expert_type else 0,
                                     )
 
                                     records_created_this_file += 1
