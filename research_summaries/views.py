@@ -27,6 +27,13 @@ from agents.models import StockTicker
 
 logger = logging.getLogger(__name__)
 
+EXCLUDED_REPORT_TYPES = [
+    'Expert Calls',
+    # Add more report types to exclude in the future
+    # 'Conference Calls',
+    # 'Management Meetings',
+]
+
 class ResearchSummariesView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
     template_name = 'research_summaries/research_summaries.html'
     login_url = '/accounts/login/'
@@ -70,7 +77,9 @@ class ResearchSummariesView(LoginRequiredMixin, PermissionRequiredMixin, Templat
             filter_datetime = default_datetime
 
         # Base queryset - only show summarized research notes
-        queryset = ResearchNote.objects.filter(status=3).order_by('-file_summary_time')
+        queryset = ResearchNote.objects.filter(status=3).exclude(
+            report_type__in=EXCLUDED_REPORT_TYPES
+        ).order_by('-file_summary_time')
 
         # Apply datetime filter - show reports updated after the filter datetime
         queryset = queryset.filter(file_summary_time__gte=filter_datetime)
@@ -750,6 +759,8 @@ def aggregate_summary_stream(request, ticker):
                 status=3,  # Only summarized notes
                 parsed_ticker=ticker,
                 report_summary__isnull=False
+            ).exclude(
+                report_type__in=EXCLUDED_REPORT_TYPES
             ).order_by('-file_summary_time')
 
             # Apply datetime filter - show reports updated after the filter datetime
@@ -860,9 +871,10 @@ def aggregate_summary(request, ticker):
             queryset = ResearchNote.objects.filter(
                 status=3,
                 parsed_ticker=ticker,
-                report_summary__isnull=False,
-                file_summary_time__gte=filter_datetime
-            )
+                report_summary__isnull=False
+            ).exclude(
+                report_type__in=EXCLUDED_REPORT_TYPES
+            ).filter(file_summary_time__gte=filter_datetime)
 
             if source_filter:
                 queryset = queryset.filter(source__icontains=source_filter)
@@ -1339,7 +1351,9 @@ class AdvancedSummariesView(LoginRequiredMixin, TemplateView):
             filter_datetime = default_datetime
 
         # Build queryset - Filter for status 4 instead of 3
-        queryset = ResearchNote.objects.filter(status=4).order_by('-file_summary_time')
+        queryset = ResearchNote.objects.filter(status=4).exclude(
+            report_type__in=EXCLUDED_REPORT_TYPES
+        ).order_by('-file_summary_time')
 
         # Apply datetime filter - show reports updated after the filter datetime
         queryset = queryset.filter(file_summary_time__gte=filter_datetime)
