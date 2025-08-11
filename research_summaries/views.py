@@ -28,7 +28,7 @@ from agents.models import StockTicker
 logger = logging.getLogger(__name__)
 
 EXCLUDED_REPORT_TYPES = [
-    'Expert Calls',
+    'Expert Call',
     # Add more report types to exclude in the future
     # 'Conference Calls',
     # 'Management Meetings',
