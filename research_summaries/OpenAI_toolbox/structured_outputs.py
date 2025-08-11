@@ -417,7 +417,7 @@ SCHEMAS = {
     "Quarter Review": QUARTER_REVIEW_SCHEMA,
     "Industry Note": INDUSTRY_NOTE_SCHEMA,
     "Macro/Strategy Report": MACRO_REPORT_SCHEMA,
-    "Expert Call Schema": EXPERT_CALL_SCHEMA,
+    "Expert Call": EXPERT_CALL_SCHEMA,
 }
 
 # ── ADVANCED SCHEMAS ─────────────────────────────────────────
