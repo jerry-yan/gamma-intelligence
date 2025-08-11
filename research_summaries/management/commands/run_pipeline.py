@@ -73,8 +73,6 @@ class Command(BaseCommand):
                     self.style.SUCCESS(f'✅ Pipeline completed in {elapsed.total_seconds():.1f}s')
                 )
 
-
-
                 # Short sleep between cycles when there's active work
                 self.stdout.write('😴 Sleeping for 1 minute before next cycle...')
                 time.sleep(60)  # 5 minutes

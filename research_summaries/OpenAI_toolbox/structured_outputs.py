@@ -372,6 +372,44 @@ MACRO_REPORT_SCHEMA = {
             },
         }
 
+EXPERT_CALL_SCHEMA = {
+    "format": {
+        "type": "json_schema",
+        "name": "report_summary",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "stock_ticker": {
+                    "type": "string",
+                    "description": "Explicit stock ticker symbol from the call (e.g., GOOGL)."
+                },
+                "title": {
+                    "type": "string",
+                    "description": "Exact title of the provided call."
+                },
+                "source": {
+                    "type": "string",
+                    "description": "The name and/or role of the expert being interviewed in the call."
+                },
+                "sentiment": {
+                    "type": "string",
+                    "enum": ["Positive", "Neutral", "Negative"],
+                    "description": "Overall sentiment or opinion of the expert towards the stock."
+                },
+                "summary": {
+                    "type": "string",
+                    "description": "Concise general summary of key points from the call, including important events, developments, and main findings."
+                },
+            },
+            "required": [
+                "stock_ticker", "title", "source", "sentiment", "summary"
+            ],
+            "additionalProperties": False
+        }
+    }
+}
+
 SCHEMAS = {
     "Initiation Report": INITIATION_REPORT_SCHEMA,
     "Company Update": COMPANY_UPDATE_SCHEMA,
@@ -379,6 +417,7 @@ SCHEMAS = {
     "Quarter Review": QUARTER_REVIEW_SCHEMA,
     "Industry Note": INDUSTRY_NOTE_SCHEMA,
     "Macro/Strategy Report": MACRO_REPORT_SCHEMA,
+    "Expert Call Schema": EXPERT_CALL_SCHEMA,
 }
 
 # ── ADVANCED SCHEMAS ─────────────────────────────────────────

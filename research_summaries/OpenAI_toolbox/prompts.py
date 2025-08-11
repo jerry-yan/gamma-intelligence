@@ -295,6 +295,16 @@ and your goal will be to output a summary of around 450 words that contains the 
 - Bullet points on strategic recommendations (if any)
 '''
 
+EXPERT_CALL_INSTRUCTION = '''
+You are a helpful financial assistant. You will be provided with an expert call,
+and your goal will be to output a summary of around 300 words that contains the following information:
+- Expert Call Title: The title of the expert call and not the file name
+- Stock ticker: Clearly indicated and the subject of the call
+- Source: The title and/or name of the expert being interviewed in the call
+- Sentiment: How the expert feels about the stock
+- Detailed executive summary of the call. Put this under 'summary' for the JSON output and do not include details already given under other JSON keys such as the report title.
+'''
+
 # key = report_type produced by categorization (e.g., "Company Update")
 SUMMARY_INSTRUCTIONS = {
     "Initiation Report": INITIATION_REPORT_INSTRUCTION,
@@ -303,6 +313,7 @@ SUMMARY_INSTRUCTIONS = {
     "Quarter Review": QUARTER_REVIEW_INSTRUCTION,
     "Industry Note": INDUSTRY_NOTE_INSTRUCTION,
     "Macro/Strategy Report": MACRO_REPORT_INSTRUCTION,
+    "Expert Call": EXPERT_CALL_INSTRUCTION,
 }
 
 DEFAULT_SUMMARY_PROMPT = """<Fallback prompt if report_type not in SUMMARY_QUERIES>"""
