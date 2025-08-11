@@ -133,11 +133,6 @@
                         {% endif %}
                         <span class="text-muted fs-6">({{ notes|length }} call{{ notes|length|pluralize }})</span>
                     </h4>
-                    {% if ticker != 'Other' %}
-                        <button class="btn btn-sm btn-outline-primary ms-3" onclick="generateAggregateSummary('{{ ticker }}')">
-                            🤖 Generate Aggregate Summary
-                        </button>
-                    {% endif %}
                 </div>
 
                 {% for note in notes %}
@@ -266,28 +261,6 @@
     </div>
 </div>
 
-<!-- Aggregate Summary Modal -->
-<div class="modal fade" id="aggregateModal" tabindex="-1" aria-labelledby="aggregateModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="aggregateModalLabel">Aggregate Summary</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div id="aggregateContent">
-                    <!-- Content will be loaded here -->
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="openInNewTab" style="display: none;">
-                    🔗 Open in New Tab
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- PDF Viewer Modal -->
 <div class="modal fade" id="pdfModal" tabindex="-1" aria-labelledby="pdfModalLabel" aria-hidden="true">
@@ -429,109 +402,52 @@ function markAsRead() {
 
 // View PDF
 function viewPDF(fileDirectory, noteId) {
-    const modal = new bootstrap.Modal(document.getElementById('pdfModal'));
-    const viewer = document.getElementById('pdfViewer');
-    
-    // Get PDF URL from backend
-    fetch(`/research_summaries/pdf/${noteId}/`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.url) {
-                viewer.src = data.url;
-                modal.show();
-            } else {
-                alert('PDF not available');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error loading PDF');
-        });
-}
-
-// Generate aggregate summary
-function generateAggregateSummary(ticker) {
-    if (!ticker) {
-        alert('No ticker specified');
-        return;
-    }
-
-    const modal = new bootstrap.Modal(document.getElementById('aggregateModal'));
-    const content = document.getElementById('aggregateContent');
-    const openNewTabBtn = document.getElementById('openInNewTab');
-    
     // Show loading state
-    content.innerHTML = `
-        <div class="text-center py-5">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <h5 class="mt-3">Generating Aggregate Summary for ${ticker}...</h5>
-            <p class="text-muted">This may take a moment...</p>
-        </div>
-    `;
-    
-    modal.show();
-    
-    // Get current filters
-    const params = new URLSearchParams(window.location.search);
-    params.append('stream', 'true');
-    
-    // Create EventSource for streaming
-    const eventSource = new EventSource(`/research_summaries/aggregate-summary-stream/${ticker}/?${params.toString()}`);
-    
-    let summaryUrl = null;
-    
-    eventSource.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-        
-        if (data.type === 'info' || data.type === 'progress') {
-            content.innerHTML = `
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <h5 class="mt-3">${data.message}</h5>
-                </div>
-            `;
-        } else if (data.type === 'error') {
-            content.innerHTML = `
-                <div class="alert alert-danger" role="alert">
-                    <h5>Error</h5>
-                    <p>${data.message}</p>
-                </div>
-            `;
-            eventSource.close();
-        } else if (data.type === 'complete') {
-            content.innerHTML = `
-                <div class="aggregate-summary-content">
-                    <h4>${data.ticker} - Aggregate Summary</h4>
-                    <p class="text-muted">Based on ${data.notes_count} expert calls</p>
-                    <hr>
-                    ${data.summary_html}
-                </div>
-            `;
-            
-            // Show open in new tab button
-            summaryUrl = `/research_summaries/aggregate-summary/${ticker}/?fullpage=true&${params.toString()}`;
-            openNewTabBtn.style.display = 'block';
-            openNewTabBtn.onclick = function() {
-                window.open(summaryUrl, '_blank');
-            };
-            
-            eventSource.close();
+    const originalText = event.target.innerHTML;
+    const button = event.target;
+    button.innerHTML = '⏳ Loading...';
+    button.disabled = true;
+
+    // Use noteId if available (preferred method)
+    if (noteId) {
+        fetch(`/research/pdf/${noteId}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Open PDF in new tab
+                    const newWindow = window.open(data.url, '_blank');
+                    if (!newWindow) {
+                        alert('Pop-up blocked! Please allow pop-ups for this site and try again.');
+                    }
+                } else {
+                    alert('Error loading PDF: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to load PDF. Please try again.');
+            })
+            .finally(() => {
+                // Restore button state
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
+    } else {
+        // Fallback for direct URLs (if somehow noteId is not available)
+        if (fileDirectory) {
+            if (fileDirectory.startsWith('http')) {
+                window.open(fileDirectory, '_blank');
+            } else {
+                alert('Invalid PDF URL format');
+            }
+        } else {
+            alert('No PDF file available');
         }
-    };
-    
-    eventSource.onerror = function() {
-        content.innerHTML = `
-            <div class="alert alert-danger" role="alert">
-                <h5>Connection Error</h5>
-                <p>Failed to generate summary. Please try again.</p>
-            </div>
-        `;
-        eventSource.close();
-    };
+
+        // Restore button state
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
 }
 
 // Search input enter key handler
