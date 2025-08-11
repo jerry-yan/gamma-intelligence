@@ -1,0 +1,79 @@
+<!-- Expert Call Summary Display Component -->
+{% if summary %}
+    {% with summary_data=summary %}
+        <div class="expert-call-summary">
+            <!-- Ticker and Sentiment Row -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    {% if summary_data.stock_ticker %}
+                        <p class="mb-2">
+                            <strong>Stock Ticker:</strong>
+                            <span class="badge bg-primary">{{ summary_data.stock_ticker }}</span>
+                        </p>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    {% if summary_data.sentiment %}
+                        <p class="mb-2">
+                            <strong>Sentiment:</strong>
+                            <span class="badge
+                                {% if summary_data.sentiment == 'Positive' %}bg-success{% elif summary_data.sentiment == 'Negative' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                {{ summary_data.sentiment }}
+                            </span>
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Call Title -->
+            {% if summary_data.title %}
+                <div class="mb-3">
+                    <h6 class="text-primary">Call Title</h6>
+                    <p class="ms-3">{{ summary_data.title }}</p>
+                </div>
+            {% endif %}
+
+            <!-- Expert Information -->
+            {% if summary_data.source %}
+                <div class="mb-3">
+                    <h6 class="text-primary">Expert</h6>
+                    <p class="ms-3">{{ summary_data.source }}</p>
+                </div>
+            {% endif %}
+
+            <!-- Call Summary -->
+            {% if summary_data.summary %}
+                <div class="mb-3">
+                    <h6 class="text-primary">Key Insights</h6>
+                    <div class="ms-3 summary-text">
+                        {{ summary_data.summary|linebreaksbr }}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    {% endwith %}
+{% else %}
+    <div class="alert alert-info" role="alert">
+        <p class="mb-0">Summary content not available for this expert call.</p>
+    </div>
+{% endif %}
+
+<style>
+.expert-call-summary {
+    font-size: 0.95rem;
+}
+
+.expert-call-summary h6 {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.summary-text {
+    line-height: 1.6;
+    text-align: justify;
+}
+
+.expert-call-summary .badge {
+    font-size: 0.9rem;
+}
+</style>

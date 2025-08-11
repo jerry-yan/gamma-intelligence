@@ -1702,3 +1702,167 @@ def api_research_notes_data(request):
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+class ExpertCallsView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
+    template_name = 'research_summaries/expert_calls.html'
+    login_url = '/accounts/login/'
+    permission_required = 'accounts.can_view_research_summaries'
+
+    def get_context_data(self, **kwargs):
+        from django.utils import timezone
+        from datetime import timedelta
+        context = super().get_context_data(**kwargs)
+
+        # Get user's last read time for default datetime filter
+        user_profile = self.request.user.profile
+        if user_profile.last_read_time:
+            default_datetime = user_profile.last_read_time
+        else:
+            default_datetime = timezone.now() - timedelta(hours=24)
+
+        # Get query parameters for filtering and search
+        source_filter = self.request.GET.get('source', '')
+        search_query = self.request.GET.get('search', '')
+        datetime_filter = self.request.GET.get('datetime', '')
+
+        # Parse datetime filter or use default
+        if datetime_filter:
+            try:
+                from django.utils.dateparse import parse_datetime
+                filter_datetime = parse_datetime(datetime_filter)
+                if not filter_datetime:
+                    # Try parsing as date and convert to datetime
+                    from django.utils.dateparse import parse_date
+                    filter_date = parse_date(datetime_filter)
+                    if filter_date:
+                        filter_datetime = timezone.make_aware(
+                            timezone.datetime.combine(filter_date, timezone.datetime.min.time())
+                        )
+                    else:
+                        filter_datetime = default_datetime
+            except:
+                filter_datetime = default_datetime
+        else:
+            filter_datetime = default_datetime
+
+        # Base queryset - only show Expert Call reports
+        queryset = ResearchNote.objects.filter(
+            status=3,
+            report_type='Expert Call',
+            report_summary__isnull=False
+        ).order_by('-file_summary_time')
+
+        # Apply datetime filter - show reports updated after the filter datetime
+        queryset = queryset.filter(file_summary_time__gte=filter_datetime)
+
+        # Apply other filters
+        if source_filter:
+            queryset = queryset.filter(source__icontains=source_filter)
+
+        if search_query:
+            queryset = queryset.filter(
+                Q(raw_title__icontains=search_query) |
+                Q(raw_author__icontains=search_query) |
+                Q(raw_companies__icontains=search_query) |
+                Q(parsed_ticker__icontains=search_query)
+            )
+
+        # Group the results
+        from collections import defaultdict, OrderedDict
+
+        # Get all results for grouping (limit to reasonable number for performance)
+        all_results = list(queryset[:400])  # Limit to 400 most recent results
+
+        # Group all reports by ticker (including those without tickers)
+        ticker_groups = defaultdict(list)
+        no_ticker_reports = []
+
+        for note in all_results:
+            if note.parsed_ticker:
+                ticker_groups[note.parsed_ticker].append(note)
+            else:
+                no_ticker_reports.append(note)
+
+        # Sort ticker groups alphabetically and sort reports within each group by summary time
+        sorted_ticker_groups = OrderedDict()
+        for ticker in sorted(ticker_groups.keys()):
+            sorted_ticker_groups[ticker] = sorted(
+                ticker_groups[ticker],
+                key=lambda x: x.file_summary_time or timezone.now(),
+                reverse=True  # Most recent first within each ticker
+            )
+
+        # Add no-ticker reports at the end if any exist
+        if no_ticker_reports:
+            sorted_ticker_groups['Other'] = sorted(
+                no_ticker_reports,
+                key=lambda x: x.file_summary_time or timezone.now(),
+                reverse=True
+            )
+
+        # Calculate total results
+        total_results = len(all_results)
+        total_available = queryset.count()
+
+        # Simple result info (no complex pagination for grouped results)
+        results_info = {
+            'showing_count': total_results,
+            'total_available': total_available,
+            'limited': total_results < total_available
+        }
+
+        # Get status counts specific to Expert Calls
+        expert_call_base = ResearchNote.objects.filter(report_type='Expert Call')
+        status_counts = {
+            'total': expert_call_base.count(),
+            'not_downloaded': expert_call_base.filter(status=0).count(),
+            'downloaded': expert_call_base.filter(status=1).count(),
+            'preprocessed': expert_call_base.filter(status=2).count(),
+            'summarized': expert_call_base.filter(status=3).count(),
+            'filtered_count': total_results,
+        }
+
+        # Get unique sources for filter dropdown (from Expert Calls only)
+        sources = ResearchNote.objects.filter(
+            status=3,
+            report_type='Expert Call'
+        ).values_list('source', flat=True).exclude(
+            source__isnull=True
+        ).exclude(source='').distinct().order_by('source')
+
+        # Recent Expert Call summaries
+        recent_summaries = ResearchNote.objects.filter(
+            status=3,
+            report_type='Expert Call'
+        ).order_by('-file_summary_time')[:5]
+
+        # Get latest report time from all results for "Mark as Read" functionality
+        latest_report_time = None
+        if all_results:
+            latest_report_time = max(
+                note.file_summary_time for note in all_results
+                if note.file_summary_time
+            )
+
+        # Format datetime for HTML input (remove microseconds and timezone info for display)
+        formatted_datetime = filter_datetime.strftime('%Y-%m-%dT%H:%M') if filter_datetime else ''
+
+        context.update({
+            'ticker_groups': sorted_ticker_groups,
+            'results_info': results_info,
+            'status_counts': status_counts,
+            'sources': sorted(sources),
+            'recent_summaries': recent_summaries,
+            'current_filters': {
+                'source': source_filter,
+                'search': search_query,
+                'datetime': datetime_filter,
+            },
+            'filter_datetime': filter_datetime,
+            'formatted_datetime': formatted_datetime,
+            'latest_report_time': latest_report_time,
+            'user_last_read_time': user_profile.last_read_time,
+        })
+
+        return context

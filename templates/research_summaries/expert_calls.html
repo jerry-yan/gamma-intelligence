@@ -1,0 +1,545 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}Expert Calls - Gamma Intelligence{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<!-- Header Section -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="mb-0">Expert Calls</h2>
+                <p class="text-muted">Expert interviews and call transcripts</p>
+            </div>
+            <div>
+                <a href="{% url 'research_summaries:research_summaries' %}" class="btn btn-outline-secondary">
+                    📊 Research Summaries
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Dashboard -->
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-3">
+                <h4 class="text-success mb-0">{{ status_counts.filtered_count }}</h4>
+                <small class="text-muted">Filtered Results</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-3">
+                <h4 class="text-primary mb-0">{{ status_counts.summarized }}</h4>
+                <small class="text-muted">Total Expert Calls</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-3">
+                <h4 class="text-secondary mb-0">{{ status_counts.total }}</h4>
+                <small class="text-muted">All Expert Call Records</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Section -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label for="sourceFilter" class="form-label">Source</label>
+                        <select class="form-select" id="sourceFilter">
+                            <option value="">All Sources</option>
+                            {% for source in sources %}
+                                <option value="{{ source }}" {% if current_filters.source == source %}selected{% endif %}>{{ source }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="searchInput" class="form-label">Search</label>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search expert calls..." value="{{ current_filters.search }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="datetimeFilter" class="form-label">Show Calls After</label>
+                        <input type="datetime-local" class="form-control" id="datetimeFilter" value="{{ formatted_datetime }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div>
+                            <button class="btn btn-primary" onclick="applyFilters()">Apply Filters</button>
+                            <button class="btn btn-outline-secondary ms-2" onclick="resetFilters()">Reset</button>
+                        </div>
+                    </div>
+                </div>
+                {% if user_last_read_time %}
+                <div class="row mt-2">
+                    <div class="col-md-12">
+                        <small class="text-muted">
+                            Last marked as read: {{ user_last_read_time|date:"M d, Y H:i" }}
+                            {% if latest_report_time %}
+                                | Latest call in view: {{ latest_report_time|date:"M d, Y H:i" }}
+                            {% endif %}
+                        </small>
+                        {% if latest_report_time %}
+                            <button class="btn btn-sm btn-outline-success ms-2" id="markAsReadBtn" onclick="markAsRead()">
+                                ✓ Mark All as Read
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Results Info -->
+{% if results_info %}
+<div class="row mb-3">
+    <div class="col-md-12">
+        <p class="text-muted">
+            Showing {{ results_info.showing_count }} of {{ results_info.total_available }} expert calls
+            {% if results_info.limited %}
+                <span class="text-warning">(limited to most recent {{ results_info.showing_count }} for performance)</span>
+            {% endif %}
+        </p>
+    </div>
+</div>
+{% endif %}
+
+<!-- Main Content Area -->
+<div class="row">
+    <div class="col-md-9">
+        {% if ticker_groups %}
+            <!-- Ticker Groups -->
+            {% for ticker, notes in ticker_groups.items %}
+            <div class="mb-4">
+                <div class="d-flex align-items-center mb-3">
+                    <h4 class="mb-0">
+                        {% if ticker != 'Other' %}
+                            <span class="badge bg-primary fs-6 me-2">{{ ticker }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary fs-6 me-2">Uncategorized</span>
+                        {% endif %}
+                        <span class="text-muted fs-6">({{ notes|length }} call{{ notes|length|pluralize }})</span>
+                    </h4>
+                    {% if ticker != 'Other' %}
+                        <button class="btn btn-sm btn-outline-primary ms-3" onclick="generateAggregateSummary('{{ ticker }}')">
+                            🤖 Generate Aggregate Summary
+                        </button>
+                    {% endif %}
+                </div>
+
+                {% for note in notes %}
+                <div class="card mb-3 ms-3 expert-call-card" data-note-id="{{ note.id }}">
+                    <div class="card-body">
+                        <!-- Collapsed View (Default) -->
+                        <div class="collapsed-view">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-grow-1 cursor-pointer card-expand-trigger">
+                                            <strong class="text-primary">{{ note.source|default:"Unknown Source" }}</strong>
+                                            <span class="mx-2">•</span>
+                                            {% if note.publication_date %}
+                                                <span class="text-muted">{{ note.publication_date|date:"Y-m-d" }}</span>
+                                                <span class="mx-2">•</span>
+                                            {% endif %}
+                                            <span>{{ note.raw_title|default:"Untitled Expert Call" }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <span class="badge bg-info">Expert Call</span>
+                                    <button class="btn btn-sm btn-outline-primary ms-2 expand-btn">
+                                        ▼ Expand
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Expanded View (Initially Hidden) -->
+                        <div class="expanded-view" style="display: none;">
+                            <div class="card mt-3">
+                                <div class="card-body">
+                                    <!-- Header with collapse button -->
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div>
+                                            <h5 class="card-title">{{ note.raw_title|default:"Untitled Expert Call" }}</h5>
+                                            <div class="text-muted small">
+                                                <strong>{{ note.source|default:"Unknown Source" }}</strong>
+                                                {% if note.publication_date %} • {{ note.publication_date|date:"Y-m-d" }}{% endif %}
+                                                {% if note.raw_author %} • {{ note.raw_author }}{% endif %}
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-secondary card-collapse-trigger">
+                                            ✕ Collapse
+                                        </button>
+                                    </div>
+
+                                    <!-- Summary Content -->
+                                    {% if note.report_summary %}
+                                        <div class="summary-content mb-3">
+                                            {% include 'research_summaries/components/summary_content_expert_call.html' with summary=note.report_summary %}
+                                        </div>
+                                    {% else %}
+                                        <p class="text-muted">Summary content not available.</p>
+                                    {% endif %}
+
+                                    <!-- Action Buttons -->
+                                    <div class="border-top pt-3">
+                                        <div class="btn-group gap-2">
+                                            <a href="{% url 'research_summaries:note_detail' note.id %}" class="btn btn-primary">
+                                                📄 View Full Details
+                                            </a>
+                                            
+                                            {% if note.file_directory %}
+                                                <button class="btn btn-outline-primary" onclick="viewPDF('{{ note.file_directory }}', {{ note.id }})">
+                                                    📎 View PDF
+                                                </button>
+                                            {% endif %}
+                                            
+                                            {% if note.download_link %}
+                                                <a href="{{ note.download_link }}" target="_blank" class="btn btn-outline-secondary">
+                                                    🔗 Original Link
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+
+        {% else %}
+            <!-- No Results -->
+            <div class="text-center py-5">
+                <h4 class="text-muted">No Expert Calls Found</h4>
+                <p class="text-muted">
+                    {% if current_filters.source or current_filters.search or current_filters.datetime %}
+                        Try adjusting your filters to see more results.
+                    {% else %}
+                        No expert calls found in the system.
+                    {% endif %}
+                </p>
+                <a href="{% url 'research_summaries:expert_calls' %}" class="btn btn-outline-primary">
+                    Reset Filters
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-header">
+                <h6>Recent Expert Calls</h6>
+            </div>
+            <div class="card-body recent-calls-list">
+                {% for note in recent_summaries %}
+                    <div class="mb-2 pb-2 border-bottom">
+                        <small>
+                            <strong>{{ note.parsed_ticker|default:"N/A" }}</strong><br>
+                            {{ note.raw_title|truncatechars:50 }}<br>
+                            <span class="text-muted">{{ note.file_summary_time|date:"M d, H:i" }}</span>
+                        </small>
+                    </div>
+                {% empty %}
+                    <p class="text-muted small">No recent expert calls</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Aggregate Summary Modal -->
+<div class="modal fade" id="aggregateModal" tabindex="-1" aria-labelledby="aggregateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="aggregateModalLabel">Aggregate Summary</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="aggregateContent">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="openInNewTab" style="display: none;">
+                    🔗 Open in New Tab
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PDF Viewer Modal -->
+<div class="modal fade" id="pdfModal" tabindex="-1" aria-labelledby="pdfModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="pdfModalLabel">PDF Viewer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <iframe id="pdfViewer" style="width: 100%; height: 80vh; border: none;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.expert-call-card .collapsed-view:hover {
+    background-color: #f8f9fa;
+}
+
+.expert-call-card .collapsed-view {
+    transition: background-color 0.2s ease;
+}
+
+.expanded-view .btn-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.text-justify {
+    text-align: justify;
+}
+
+.card-expand-trigger:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+    border-radius: 4px;
+    padding: 2px;
+}
+
+.recent-calls-list {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.summary-content {
+    line-height: 1.6;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Card expand/collapse functionality
+    document.querySelectorAll('.expert-call-card').forEach(card => {
+        const expandTrigger = card.querySelector('.card-expand-trigger');
+        const expandBtn = card.querySelector('.expand-btn');
+        const collapseTrigger = card.querySelector('.card-collapse-trigger');
+        const collapsedView = card.querySelector('.collapsed-view');
+        const expandedView = card.querySelector('.expanded-view');
+
+        function expandCard() {
+            collapsedView.style.display = 'none';
+            expandedView.style.display = 'block';
+        }
+
+        function collapseCard() {
+            collapsedView.style.display = 'block';
+            expandedView.style.display = 'none';
+        }
+
+        if (expandTrigger) {
+            expandTrigger.addEventListener('click', expandCard);
+        }
+        if (expandBtn) {
+            expandBtn.addEventListener('click', expandCard);
+        }
+        if (collapseTrigger) {
+            collapseTrigger.addEventListener('click', collapseCard);
+        }
+    });
+});
+
+// Filter functions
+function applyFilters() {
+    const source = document.getElementById('sourceFilter').value;
+    const search = document.getElementById('searchInput').value;
+    const datetime = document.getElementById('datetimeFilter').value;
+    
+    const params = new URLSearchParams();
+    if (source) params.append('source', source);
+    if (search) params.append('search', search);
+    if (datetime) params.append('datetime', datetime);
+    
+    window.location.href = '{% url "research_summaries:expert_calls" %}' + (params.toString() ? '?' + params.toString() : '');
+}
+
+function resetFilters() {
+    window.location.href = '{% url "research_summaries:expert_calls" %}';
+}
+
+// Mark as read functionality
+function markAsRead() {
+    const latestTime = '{{ latest_report_time|date:"c" }}';
+    if (!latestTime) {
+        alert('No reports to mark as read');
+        return;
+    }
+
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch('{% url "research_summaries:mark_as_read" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            last_read_time: latestTime
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Successfully marked all expert calls as read!');
+            location.reload();
+        } else {
+            alert('Error marking as read: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error marking as read');
+    });
+}
+
+// View PDF
+function viewPDF(fileDirectory, noteId) {
+    const modal = new bootstrap.Modal(document.getElementById('pdfModal'));
+    const viewer = document.getElementById('pdfViewer');
+    
+    // Get PDF URL from backend
+    fetch(`/research_summaries/pdf/${noteId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.url) {
+                viewer.src = data.url;
+                modal.show();
+            } else {
+                alert('PDF not available');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error loading PDF');
+        });
+}
+
+// Generate aggregate summary
+function generateAggregateSummary(ticker) {
+    if (!ticker) {
+        alert('No ticker specified');
+        return;
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('aggregateModal'));
+    const content = document.getElementById('aggregateContent');
+    const openNewTabBtn = document.getElementById('openInNewTab');
+    
+    // Show loading state
+    content.innerHTML = `
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <h5 class="mt-3">Generating Aggregate Summary for ${ticker}...</h5>
+            <p class="text-muted">This may take a moment...</p>
+        </div>
+    `;
+    
+    modal.show();
+    
+    // Get current filters
+    const params = new URLSearchParams(window.location.search);
+    params.append('stream', 'true');
+    
+    // Create EventSource for streaming
+    const eventSource = new EventSource(`/research_summaries/aggregate-summary-stream/${ticker}/?${params.toString()}`);
+    
+    let summaryUrl = null;
+    
+    eventSource.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'info' || data.type === 'progress') {
+            content.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h5 class="mt-3">${data.message}</h5>
+                </div>
+            `;
+        } else if (data.type === 'error') {
+            content.innerHTML = `
+                <div class="alert alert-danger" role="alert">
+                    <h5>Error</h5>
+                    <p>${data.message}</p>
+                </div>
+            `;
+            eventSource.close();
+        } else if (data.type === 'complete') {
+            content.innerHTML = `
+                <div class="aggregate-summary-content">
+                    <h4>${data.ticker} - Aggregate Summary</h4>
+                    <p class="text-muted">Based on ${data.notes_count} expert calls</p>
+                    <hr>
+                    ${data.summary_html}
+                </div>
+            `;
+            
+            // Show open in new tab button
+            summaryUrl = `/research_summaries/aggregate-summary/${ticker}/?fullpage=true&${params.toString()}`;
+            openNewTabBtn.style.display = 'block';
+            openNewTabBtn.onclick = function() {
+                window.open(summaryUrl, '_blank');
+            };
+            
+            eventSource.close();
+        }
+    };
+    
+    eventSource.onerror = function() {
+        content.innerHTML = `
+            <div class="alert alert-danger" role="alert">
+                <h5>Connection Error</h5>
+                <p>Failed to generate summary. Please try again.</p>
+            </div>
+        `;
+        eventSource.close();
+    };
+}
+
+// Search input enter key handler
+document.getElementById('searchInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        applyFilters();
+    }
+});
+</script>
+
+{% endblock %}
