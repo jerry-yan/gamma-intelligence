@@ -411,7 +411,7 @@ EXPERT_CALL_SCHEMA = {
                 },
             },
             "required": [
-                "stock_ticker", "title", "source", "sentiment", "summary"
+                "stock_ticker", "title", "source", "sentiment", "summary", "vector_group_id"
             ],
             "additionalProperties": False
         }
