@@ -303,6 +303,27 @@ and your goal will be to output a summary of around 300 words that contains the 
 - Source: The title and/or name of the expert being interviewed in the call
 - Sentiment: How the expert feels about the stock
 - Detailed executive summary of the call. Put this under 'summary' for the JSON output and do not include details already given under other JSON keys such as the report title.
+- A number representing the industry that you believe this expert call belongs to. For example, NVDA expert would return 101.
+
+***Industry Identification***
+The industry must be exactly one of the following types (choose the single best fit):
+
+- Technology Hardware & Equipment → return 101
+- Software & Services → return 102
+- Media & Entertainment → return 103
+- Energy → return 104
+- Industrials → return 105
+- Materials → return 106
+- Consumer Discretionary & Retail → return 107
+- Consumer Services → return 108
+- Consumer Staples → return 109
+- Health Care Providers & Services → return 110
+- Health Care Equipment & Supplies → return 111
+- Therapeutics & Tools → return 112
+- Financials & REITs → return 113
+- Utilities → return 114
+- Artificial Intelligence & Electricity → return 115
+- Macroeconomics → return 116
 '''
 
 # key = report_type produced by categorization (e.g., "Company Update")

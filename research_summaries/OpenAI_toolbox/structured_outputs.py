@@ -404,6 +404,11 @@ EXPERT_CALL_SCHEMA = {
                     "type": "string",
                     "description": "Concise general summary of key points from the call, including important events, developments, and main findings."
                 },
+                "vector_group_id": {
+                    "type": "number",
+                    "enum": [101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116],
+                    "description": "A number representing which industry you believe the expert call belongs to.",
+                },
             },
             "required": [
                 "stock_ticker", "title", "source", "sentiment", "summary"

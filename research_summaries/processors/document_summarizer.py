@@ -265,6 +265,13 @@ def summarize_documents():
 
             summary_json = summarize_document(client, MODEL, file_id, summary_instructions, summary_schema)
 
+            # Check if note.vector_group_id is empty and summary_json contains one
+            if not note.vector_group_id and summary_json.get("vector_group_id"):
+                note.vector_group_id = summary_json.get("vector_group_id")
+                # Remove vector_group_id from summary_json since we're storing it separately
+                summary_json.pop("vector_group_id", None)
+                print(f"📍 Extracted vector_group_id {note.vector_group_id} from summary")
+
             ticker = clean_ticker(summary_json.get("stock_ticker"))
             note.report_summary = summary_json
             note.parsed_ticker = ticker
@@ -272,8 +279,9 @@ def summarize_documents():
             note.file_summary_time = now()
             note.save(update_fields=[
                 "report_summary", "parsed_ticker",
-                "status", "file_summary_time"
+                "status", "file_summary_time", "vector_group_id"  # Added vector_group_id to update_fields
             ])
+
             success_count += 1
             print(f"✅ Summarized {note.file_id}")
 
@@ -346,6 +354,13 @@ def process_single_document(note):
 
         summary_json = summarize_document(client, MODEL, file_id, summary_instructions, summary_schema)
 
+        # Check if note.vector_group_id is empty and summary_json contains one
+        if not note.vector_group_id and summary_json.get("vector_group_id"):
+            note.vector_group_id = summary_json.get("vector_group_id")
+            # Remove vector_group_id from summary_json since we're storing it separately
+            summary_json.pop("vector_group_id", None)
+            print(f"📍 Extracted vector_group_id {note.vector_group_id} from summary")
+
         ticker = clean_ticker(summary_json.get("stock_ticker"))
         note.report_summary = summary_json
         note.parsed_ticker = ticker
@@ -353,7 +368,7 @@ def process_single_document(note):
         note.file_summary_time = now()
         note.save(update_fields=[
             "report_summary", "parsed_ticker",
-            "status", "file_summary_time"
+            "status", "file_summary_time", "vector_group_id"  # Added vector_group_id to update_fields
         ])
 
         return True
