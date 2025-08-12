@@ -33,9 +33,16 @@
                     </li>
                     {% if user.is_authenticated %}
                         {% if perms.accounts.can_view_research_summaries %}
-                            <li class="nav-item">
-                                <a class="nav-link {% if 'research_summaries' in request.resolver_match.url_name %}active{% endif %}"
-                                   href="{% url 'research_summaries:research_summaries' %}">Research Summaries</a>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle {% if 'research_summaries' in request.resolver_match.namespace %}active{% endif %}"
+                                   href="#" id="researchDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Research Summaries
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="researchDropdown">
+                                    <li><a class="dropdown-item" href="{% url 'research_summaries:research_summaries' %}">Research Summaries</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'research_summaries:advanced_summaries' %}">Advanced Summaries</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'research_summaries:expert_calls' %}">Expert Calls</a></li>
+                                </ul>
                             </li>
                         {% endif %}
                         {% if perms.accounts.can_view_agents %}
