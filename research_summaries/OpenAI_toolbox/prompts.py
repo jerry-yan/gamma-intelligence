@@ -224,8 +224,8 @@ Do not merely repeat content from the primary summary. Instead, thoroughly elabo
 QUARTER_PREVIEW_INSTRUCTION = '''
 You are a helpful financial assistant. You will be provided with a report and asked to produce two sections:
 
-### Section 1: Primary Summary (170-200 words)
-Create a summary strictly between 170 and 200 words containing the following information explicitly:
+### Section 1: Primary Synopsis (170-200 words)
+Create a synopsis strictly between 170 and 200 words containing the following information explicitly:
 - Stock ticker (clearly indicated)
 - Report title (exact title from the report)
 - Source (the firm that published the report)
@@ -233,7 +233,7 @@ Create a summary strictly between 170 and 200 words containing the following inf
 - Sentiment (how the author views the stock)
 - Price target (specific number)
 - Stock rating (Buy, Hold, or Sell if mentioned)
-- General summary of the key points in the report. Put this under 'summary' for the JSON output and do not include details already given under other JSON keys such as the report title.
+- Summary of the key points in the report. Put this under 'summary' for the JSON output and do not include details already given under other JSON keys such as the report title.
 - Detailed summary of any expectations going into earnings (both qualitative and quantitative if possible)
 - Clear bullet points on risks mentioned
 - Clear bullet points on opportunities mentioned

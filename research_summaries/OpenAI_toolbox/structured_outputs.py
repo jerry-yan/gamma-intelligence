@@ -154,7 +154,7 @@ QUARTER_PREVIEW_SCHEMA = {
                 },
                 "summary": {
                     "type": "string",
-                    "description": "Concise general summary of key points from the report, including important events, developments, and main findings (approximately 80-100 words). Do not format this string in JSON format."
+                    "description": "Concise general summary of the key points in the report, including important events, developments, and main findings (approximately 80-100 words). Do not format this string in JSON format. This is not a summary of the summary. Do not put report title, sentiment and details from other headings in here."
                 },
                 "expectations": {
                     "type": "string",
