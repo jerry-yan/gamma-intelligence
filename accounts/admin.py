@@ -9,7 +9,7 @@ class UserProfileInline(admin.StackedInline):
     model = UserProfile
     can_delete = False
     verbose_name_plural = 'Profile'
-    fields = ('last_read_time', 'last_read_time_advanced')
+    fields = ('last_read_time', 'last_read_time_advanced', 'last_read_time_expert')
 
 
 class CustomUserAdmin(UserAdmin):
@@ -62,14 +62,14 @@ admin.site.register(Group, CustomGroupAdmin)
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'last_read_time', 'last_read_time_advanced', 'created_at', 'updated_at')
-    list_filter = ('created_at', 'updated_at', 'last_read_time', 'last_read_time_advanced')
+    list_display = ('user', 'last_read_time', 'last_read_time_advanced', 'last_read_time_expert', 'created_at', 'updated_at')
+    list_filter = ('created_at', 'updated_at', 'last_read_time', 'last_read_time_advanced', 'last_read_time_expert')
     search_fields = ('user__username', 'user__email')
     readonly_fields = ('created_at', 'updated_at')
 
     fieldsets = (
         (None, {
-            'fields': ('user', 'last_read_time', 'last_read_time_advanced')
+            'fields': ('user', 'last_read_time', 'last_read_time_advanced', 'last_read_time_expert')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),

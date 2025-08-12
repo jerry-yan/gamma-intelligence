@@ -365,7 +365,6 @@ function resetFilters() {
     window.location.href = '{% url "research_summaries:expert_calls" %}';
 }
 
-// Mark as read functionality
 function markAsRead() {
     const latestTime = '{{ latest_report_time|date:"c" }}';
     if (!latestTime) {
@@ -374,15 +373,15 @@ function markAsRead() {
     }
 
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-    
-    fetch('{% url "research_summaries:mark_as_read" %}', {
+
+    fetch('{% url "research_summaries:mark_as_read_expert" %}', {
         method: 'POST',
         headers: {
             'X-CSRFToken': csrfToken,
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            last_read_time: latestTime
+            latest_report_time: latestTime
         })
     })
     .then(response => response.json())

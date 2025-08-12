@@ -1716,8 +1716,8 @@ class ExpertCallsView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView)
 
         # Get user's last read time for default datetime filter
         user_profile = self.request.user.profile
-        if user_profile.last_read_time:
-            default_datetime = user_profile.last_read_time
+        if user_profile.last_read_time_expert:
+            default_datetime = user_profile.last_read_time_expert
         else:
             default_datetime = timezone.now() - timedelta(hours=24)
 
@@ -1866,3 +1866,41 @@ class ExpertCallsView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView)
         })
 
         return context
+
+
+@login_required
+def mark_as_read_expert(request):
+    """AJAX endpoint to update user's last_read_time_expert"""
+    if request.method == 'POST':
+        from django.utils import timezone
+        from datetime import timedelta
+        import json
+
+        try:
+            data = json.loads(request.body)
+            latest_report_time_str = data.get('latest_report_time')
+
+            if latest_report_time_str:
+                from django.utils.dateparse import parse_datetime
+                latest_report_time = parse_datetime(latest_report_time_str)
+                if latest_report_time:
+                    # Add 59 seconds to the latest report time
+                    new_last_read_time = latest_report_time + timedelta(seconds=59)
+
+                    # Update user's profile
+                    user_profile = request.user.profile
+                    user_profile.last_read_time_expert = new_last_read_time
+                    user_profile.save()
+
+                    return JsonResponse({
+                        'success': True,
+                        'new_last_read_time': new_last_read_time.isoformat(),
+                        'message': f'Expert calls marked as read up to {new_last_read_time.strftime("%B %d, %Y at %I:%M %p")}'
+                    })
+
+            return JsonResponse({'success': False, 'message': 'Invalid datetime provided'})
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)})
+
+    return JsonResponse({'success': False, 'message': 'Invalid request method'})
