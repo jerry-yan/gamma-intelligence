@@ -76,7 +76,7 @@ class AgentView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
         user_prompts = Prompt.objects.filter(user=self.request.user).values('id', 'name', 'prompt')
         context['user_prompts'] = list(user_prompts)
         # Define privileged users who get access to all models
-        privileged_users = ['dhoang', 'dbastien']
+        privileged_users = ['yuhaoyan', 'dhoang', 'dbastien']
 
         # Check if current user is privileged
         if self.request.user.username in privileged_users:
