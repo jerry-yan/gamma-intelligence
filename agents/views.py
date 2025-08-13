@@ -75,14 +75,34 @@ class AgentView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
         context['user'] = self.request.user
         user_prompts = Prompt.objects.filter(user=self.request.user).values('id', 'name', 'prompt')
         context['user_prompts'] = list(user_prompts)
-        context['available_models'] = [
-            {
-                'key': k,
-                'display_name': v['display_name'],
-                'description': v['description']
-            }
-            for k, v in AVAILABLE_MODELS.items()
-        ]
+        # Define privileged users who get access to all models
+        privileged_users = ['dhoang', 'dbastien']
+
+        # Check if current user is privileged
+        if self.request.user.username in privileged_users:
+            # Show all available models
+            available_models = [
+                {
+                    'key': k,
+                    'display_name': v['display_name'],
+                    'description': v['description']
+                }
+                for k, v in AVAILABLE_MODELS.items()
+            ]
+        else:
+            # Show only o3 and gpt-4o-mini for regular users
+            unrestricted_models = ['o3', 'gpt-4o-mini']
+            available_models = [
+                {
+                    'key': k,
+                    'display_name': v['display_name'],
+                    'description': v['description']
+                }
+                for k, v in AVAILABLE_MODELS.items()
+                if k in unrestricted_models
+            ]
+
+        context['available_models'] = available_models
         return context
 
 
