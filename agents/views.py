@@ -32,19 +32,34 @@ logger = logging.getLogger(__name__)
 AVAILABLE_MODELS = {
     'o3': {
         'api_name': 'o3-2025-04-16',
-        'display_name': 'O3 (Latest)',
+        'display_name': 'o3',
         'description': 'Latest O3 model with advanced reasoning capabilities'
     },
     'gpt-4.1': {
+        'api_name': 'gpt-4.1-2025-04-14',
+        'display_name': 'GPT-4.1',
+        'description': 'Standard GPT-4.1 model for faster responses'
+    },
+    'gpt-4.1-mini': {
         'api_name': 'gpt-4.1-mini-2025-04-14',
         'display_name': 'GPT-4.1 Mini',
-        'description': 'Efficient GPT-4.1 model for faster responses'
+        'description': 'Efficient GPT-4.1-mini model for faster responses'
     },
     'gpt-5': {
-        'api_name': 'gpt-5-preview-2025-01-15',
-        'display_name': 'GPT-5 Preview',
-        'description': 'Preview of the upcoming GPT-5 model'
-    }
+        'api_name': 'gpt-5-2025-08-07',
+        'display_name': 'GPT-5',
+        'description': 'Standard GPT-5 model'
+    },
+    'gpt-5-mini': {
+        'api_name': 'gpt-5-mini-2025-08-07',
+        'display_name': 'GPT-5 Mini',
+        'description': 'Efficient GPT-5-mini model for faster responses'
+    },
+    'gpt-4o-mini': {
+        'api_name': 'gpt-4o-mini-2024-07-18',
+        'display_name': 'GPT-4o Mini',
+        'description': 'Fastest GPT-4o Mini model'
+    },
 }
 
 
