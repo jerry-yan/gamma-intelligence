@@ -131,12 +131,17 @@ def api_chat_stream(request):
         message = data.get('message', '').strip()
         session_id = data.get('session_id')
         knowledge_base_id = data.get('knowledge_base_id')  # Optional
+        selected_model = data.get('model', 'o3')
 
         if not message:
             return JsonResponse({'error': 'Message is required'}, status=400)
 
         if not session_id:
             return JsonResponse({'error': 'Session ID is required'}, status=400)
+
+        # Map the selected model to the actual API model name
+        api_model = AVAILABLE_MODELS.get(selected_model, 'o3').get('api_name')
+        logger.info(f"Using model: {selected_model} -> {api_model}")
 
         # Get session and verify ownership
         try:
@@ -166,7 +171,8 @@ def api_chat_stream(request):
             session=session,
             role='user',
             content=message,
-            knowledge_base=knowledge_base
+            knowledge_base=knowledge_base,
+            metadata={'model_used': api_model}
         )
 
         # Generate title from first message if needed
@@ -201,7 +207,7 @@ def api_chat_stream(request):
 
                 # Build parameters for Responses API
                 stream_params = {
-                    "model": "o3-2025-04-16",
+                    "model": api_model,
                     "instructions": instructions,
                     "input": message,
                     "stream": True,
@@ -212,7 +218,7 @@ def api_chat_stream(request):
                     stream_params["tools"] = [{
                         "type": "file_search",
                         "vector_store_ids": [knowledge_base.vector_store_id],
-                        "max_num_results": 35,
+                        "max_num_results": 50,
                     }]
                     yield f"data: {json.dumps({'type': 'info', 'message': f'Using knowledge base: {knowledge_base.display_name}'})}\n\n"
 

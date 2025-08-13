@@ -1130,6 +1130,17 @@
             const promptSelect = document.getElementById('promptSelect');
             const usePromptBtn = document.getElementById('usePromptBtn');
 
+            // Model selection
+            const modelSelect = document.getElementById('modelSelect');
+
+            // Store current model selection (optional - for UI feedback)
+            let currentModel = 'o3'; // Default model
+
+            modelSelect.addEventListener('change', function() {
+                currentModel = this.value;
+                console.log('Model changed to:', currentModel);
+            });
+
             // Get the prompts data from the JSON script tag
             const promptsDataElement = document.getElementById('user-prompts-data');
             let userPromptsData = {};
@@ -1175,7 +1186,6 @@
                     }
                 }
             });
-
         }
 
         // Create new chat
@@ -1340,6 +1350,8 @@
             if (!message || !currentSession || isStreaming) return;
 
             const knowledgeBaseId = elements.knowledgeBaseSelect.value;
+            const selectedModel = document.getElementById('modelSelect').value;
+
             const knowledgeBase = knowledgeBaseId ? {
                 id: knowledgeBaseId,
                 name: elements.knowledgeBaseSelect.selectedOptions[0].text
@@ -1365,7 +1377,8 @@
             try {
                 const body = {
                     message: message,
-                    session_id: currentSession
+                    session_id: currentSession,
+                    model: selectedModel
                 };
 
                 if (knowledgeBaseId) {
