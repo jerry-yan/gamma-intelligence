@@ -29,6 +29,24 @@ import re
 
 logger = logging.getLogger(__name__)
 
+AVAILABLE_MODELS = {
+    'o3': {
+        'api_name': 'o3-2025-04-16',
+        'display_name': 'O3 (Latest)',
+        'description': 'Latest O3 model with advanced reasoning capabilities'
+    },
+    'gpt-4.1': {
+        'api_name': 'gpt-4.1-mini-2025-04-14',
+        'display_name': 'GPT-4.1 Mini',
+        'description': 'Efficient GPT-4.1 model for faster responses'
+    },
+    'gpt-5': {
+        'api_name': 'gpt-5-preview-2025-01-15',
+        'display_name': 'GPT-5 Preview',
+        'description': 'Preview of the upcoming GPT-5 model'
+    }
+}
+
 
 class AgentView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
     """Main chatbot interface view"""
@@ -42,7 +60,25 @@ class AgentView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
         context['user'] = self.request.user
         user_prompts = Prompt.objects.filter(user=self.request.user).values('id', 'name', 'prompt')
         context['user_prompts'] = list(user_prompts)
+        context['available_models'] = [
+            {
+                'key': k,
+                'display_name': v['display_name'],
+                'description': v['description']
+            }
+            for k, v in AVAILABLE_MODELS.items()
+        ]
         return context
+
+
+def get_api_model_name(model_key):
+    """Get the API model name from the model key"""
+    return AVAILABLE_MODELS.get(model_key, AVAILABLE_MODELS['o3'])['api_name']
+
+
+def get_model_display_name(model_key):
+    """Get the display name from the model key"""
+    return AVAILABLE_MODELS.get(model_key, AVAILABLE_MODELS['o3'])['display_name']
 
 
 @login_required
