@@ -30,7 +30,7 @@
             padding: 40px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
             width: 100%;
-            max-width: 600px;
+            max-width: 700px;
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
@@ -67,15 +67,16 @@
             font-size: 0.95rem;
         }
 
-        .form-group input,
+        .form-group input[type="text"],
+        .form-group input[type="number"],
         .form-group textarea {
             width: 100%;
-            padding: 14px 16px;
+            padding: 12px 15px;
             border: 2px solid #e2e8f0;
-            border-radius: 12px;
+            border-radius: 10px;
             font-size: 1rem;
             transition: all 0.3s ease;
-            background: #ffffff;
+            background: white;
         }
 
         .form-group input:focus,
@@ -83,47 +84,124 @@
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            transform: translateY(-1px);
         }
 
         .form-group textarea {
             resize: vertical;
             min-height: 100px;
-            font-family: inherit;
         }
 
-        .form-group input::placeholder,
-        .form-group textarea::placeholder {
-            color: #a0aec0;
+        .field-description {
+            margin-top: 5px;
+            font-size: 0.85rem;
+            color: #718096;
+        }
+
+        .required {
+            color: #f56565;
+        }
+
+        /* Retention Period Selector Styles */
+        .retention-selector {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .retention-input-group {
+            display: flex;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .retention-value {
+            width: 100px;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .retention-unit {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .retention-unit:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .retention-presets {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .preset-btn {
+            padding: 6px 12px;
+            background: #f7fafc;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: #4a5568;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .preset-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .retention-display {
+            padding: 10px 15px;
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #4a5568;
+            margin-top: 10px;
+        }
+
+        .retention-display strong {
+            color: #2d3748;
         }
 
         .submit-btn {
             width: 100%;
+            padding: 15px;
             background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
             border: none;
-            padding: 16px;
-            border-radius: 12px;
+            border-radius: 10px;
             font-size: 1.1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
             position: relative;
-            overflow: hidden;
+            margin-top: 10px;
         }
 
-        .submit-btn:hover:not(:disabled) {
+        .submit-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
-        }
-
-        .submit-btn:active {
-            transform: translateY(0);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
         }
 
         .submit-btn:disabled {
             opacity: 0.7;
             cursor: not-allowed;
+            transform: none;
         }
 
         .loading {
@@ -140,28 +218,27 @@
         .spinner {
             width: 20px;
             height: 20px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-top: 2px solid white;
+            border: 3px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
-            animation: spin 1s linear infinite;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            to { transform: rotate(360deg); }
         }
 
         .success-message,
         .error-message {
-            padding: 16px;
-            border-radius: 12px;
+            padding: 15px;
+            border-radius: 10px;
             margin-top: 20px;
-            font-weight: 500;
             display: none;
+            animation: slideIn 0.3s ease;
         }
 
         .success-message {
-            background: #f0fff4;
+            background: #c6f6d5;
             color: #22543d;
             border: 1px solid #9ae6b4;
         }
@@ -175,7 +252,6 @@
         .success-message.show,
         .error-message.show {
             display: block;
-            animation: slideIn 0.3s ease-out;
         }
 
         @keyframes slideIn {
@@ -189,33 +265,21 @@
             }
         }
 
-        .field-description {
-            font-size: 0.85rem;
-            color: #718096;
-            margin-top: 4px;
-        }
-
-        .required {
-            color: #e53e3e;
-        }
-
         .nav-links {
-            text-align: center;
+            display: flex;
+            justify-content: space-between;
             margin-bottom: 20px;
         }
 
         .nav-links a {
             color: #667eea;
             text-decoration: none;
-            margin: 0 15px;
-            padding: 8px 16px;
-            border-radius: 8px;
-            transition: all 0.3s ease;
+            font-weight: 500;
+            transition: color 0.2s ease;
         }
 
         .nav-links a:hover {
-            background: rgba(102, 126, 234, 0.1);
-            color: #5a67d8;
+            color: #764ba2;
         }
     </style>
 </head>
@@ -267,6 +331,49 @@
             </div>
 
             <div class="form-group">
+                <label for="retentionValue">
+                    File Retention Period
+                </label>
+                <div class="retention-selector">
+                    <div class="retention-input-group">
+                        <input
+                            type="number"
+                            id="retentionValue"
+                            name="retentionValue"
+                            class="retention-value"
+                            min="1"
+                            max="300"
+                            value="2"
+                            placeholder="2"
+                        >
+                        <select id="retentionUnit" name="retentionUnit" class="retention-unit">
+                            <option value="days">Days</option>
+                            <option value="weeks">Weeks</option>
+                            <option value="months">Months</option>
+                            <option value="years" selected>Years</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="retention-presets">
+                    <button type="button" class="preset-btn" data-value="1" data-unit="days">1 Day</button>
+                    <button type="button" class="preset-btn" data-value="1" data-unit="weeks">1 Week</button>
+                    <button type="button" class="preset-btn" data-value="1" data-unit="months">1 Month</button>
+                    <button type="button" class="preset-btn" data-value="6" data-unit="months">6 Months</button>
+                    <button type="button" class="preset-btn" data-value="1" data-unit="years">1 Year</button>
+                    <button type="button" class="preset-btn" data-value="2" data-unit="years">2 Years</button>
+                    <button type="button" class="preset-btn" data-value="5" data-unit="years">5 Years</button>
+                    <button type="button" class="preset-btn" data-value="10" data-unit="years">10 Years</button>
+                    <button type="button" class="preset-btn" data-value="100" data-unit="years">100 Years</button>
+                </div>
+                <div class="retention-display" id="retentionDisplay">
+                    Files will be retained for: <strong>2 years (730 days)</strong>
+                </div>
+                <div class="field-description">
+                    How long files should be kept in the vector database (default: 2 years, max: 300 years)
+                </div>
+            </div>
+
+            <div class="form-group">
                 <label for="description">
                     Description
                 </label>
@@ -294,6 +401,50 @@
     </div>
 
     <script>
+        // Calculate days from value and unit
+        function calculateDays(value, unit) {
+            const multipliers = {
+                'days': 1,
+                'weeks': 7,
+                'months': 30,
+                'years': 365
+            };
+            return value * multipliers[unit];
+        }
+
+        // Update retention display
+        function updateRetentionDisplay() {
+            const value = parseInt(document.getElementById('retentionValue').value) || 0;
+            const unit = document.getElementById('retentionUnit').value;
+            const days = calculateDays(value, unit);
+
+            let displayText = '';
+            if (value === 1) {
+                displayText = `1 ${unit.slice(0, -1)}`;
+            } else {
+                displayText = `${value} ${unit}`;
+            }
+
+            document.getElementById('retentionDisplay').innerHTML =
+                `Files will be retained for: <strong>${displayText} (${days} days)</strong>`;
+        }
+
+        // Handle preset buttons
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const value = this.getAttribute('data-value');
+                const unit = this.getAttribute('data-unit');
+                document.getElementById('retentionValue').value = value;
+                document.getElementById('retentionUnit').value = unit;
+                updateRetentionDisplay();
+            });
+        });
+
+        // Update display when inputs change
+        document.getElementById('retentionValue').addEventListener('input', updateRetentionDisplay);
+        document.getElementById('retentionUnit').addEventListener('change', updateRetentionDisplay);
+
+        // Form submission
         document.getElementById('knowledgeBaseForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
@@ -309,10 +460,15 @@
 
             // Get form data
             const formData = new FormData(this);
+            const retentionValue = parseInt(formData.get('retentionValue'));
+            const retentionUnit = formData.get('retentionUnit');
+            const retentionDays = calculateDays(retentionValue, retentionUnit);
+
             const data = {
                 displayName: formData.get('displayName').trim(),
                 vectorGroupId: formData.get('vectorGroupId'),
-                description: formData.get('description').trim()
+                description: formData.get('description').trim(),
+                fileRetention: retentionDays
             };
 
             // Validate required fields
@@ -328,31 +484,37 @@
                 return;
             }
 
+            // Validate retention period
+            if (retentionDays < 1 || retentionDays > 109500) {
+                showError('File retention must be between 1 day and 300 years.');
+                return;
+            }
+
             // Show loading state
             submitBtn.disabled = true;
             btnText.style.display = 'none';
             loadingSpinner.classList.add('active');
 
             try {
-                // Validate required fields
-                if (!data.displayName || !data.vectorGroupId) {
-                    showError('Please fill in all required fields.');
-                    return;
-                }
-
                 // Create KnowledgeBase via API
                 const response = await createKnowledgeBase({
                     display_name: data.displayName,
                     vector_group_id: parseInt(data.vectorGroupId),
-                    description: data.description
+                    description: data.description,
+                    file_retention: data.fileRetention
                 });
 
                 if (response.success) {
                     const kbData = response.data;
-                    showSuccess(`KnowledgeBase "${kbData.display_name}" created successfully! Vector Store ID: ${kbData.vector_store_id}`);
+                    showSuccess(`KnowledgeBase "${kbData.display_name}" created successfully!
+                        Vector Store ID: ${kbData.vector_store_id} |
+                        Retention: ${kbData.retention_display}`);
 
                     // Reset form
                     document.getElementById('knowledgeBaseForm').reset();
+                    document.getElementById('retentionValue').value = 2;
+                    document.getElementById('retentionUnit').value = 'years';
+                    updateRetentionDisplay();
                 } else {
                     showError(response.error || 'Failed to create knowledge base');
                 }
@@ -436,6 +598,9 @@
             const value = parseInt(this.value);
             this.style.borderColor = (!isNaN(value) && value > 0) ? '#667eea' : '#e2e8f0';
         });
+
+        // Initialize retention display
+        updateRetentionDisplay();
     </script>
 </body>
 </html>

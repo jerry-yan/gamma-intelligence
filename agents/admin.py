@@ -5,11 +5,17 @@ from .models import KnowledgeBase, ChatSession, ChatMessage, StockTicker, Prompt
 
 @admin.register(KnowledgeBase)
 class KnowledgeBaseAdmin(admin.ModelAdmin):
-    list_display = ['display_name', 'name', 'vector_group_id', 'vector_store_id', 'is_active', 'created_at']
-    list_filter = ['is_active', 'created_at']
+    list_display = ['display_name', 'name', 'vector_group_id', 'vector_store_id', 'retention_display', 'is_active', 'created_at']
+    list_filter = ['is_active', 'file_retention', 'created_at']
     search_fields = ['display_name', 'name', 'vector_store_id', 'vector_group_id', 'description']
     readonly_fields = ['created_at', 'updated_at']
 
+    def retention_display(self, obj):
+        """Display retention period in human-readable format for list view"""
+        return obj.get_retention_display()
+
+    retention_display.short_description = 'File Retention'
+    retention_display.admin_order_field = 'file_retention'
 
 @admin.register(ChatSession)
 class ChatSessionAdmin(admin.ModelAdmin):

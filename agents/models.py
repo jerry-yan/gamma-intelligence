@@ -1,6 +1,7 @@
 # agents/models.py
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.core.validators import MinValueValidator, MaxValueValidator
 import uuid
 
 User = get_user_model()
@@ -13,6 +14,14 @@ class KnowledgeBase(models.Model):
     vector_store_id = models.CharField(max_length=100, unique=True, help_text="OpenAI Vector Store ID")
     vector_group_id = models.PositiveIntegerField(unique=True, help_text="Unique identifier matching ResearchNote vector_group_id")
     description = models.TextField(blank=True)
+    file_retention = models.PositiveIntegerField(
+        default=730,  # 2 years = 730 days
+        validators=[
+            MinValueValidator(1),  # Minimum 1 day
+            MaxValueValidator(109500)  # Maximum 300 years = 109500 days
+        ],
+        help_text="File retention period in days (default: 2 years = 730 days)"
+    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -28,6 +37,23 @@ class KnowledgeBase(models.Model):
 
     def __str__(self):
         return f"{self.display_name} (Group {self.vector_group_id})"
+
+    def get_retention_display(self):
+        """Get human-readable retention period"""
+        days = self.file_retention
+        if days == 1:
+            return "1 day"
+        elif days < 7:
+            return f"{days} days"
+        elif days < 30:
+            weeks = days // 7
+            return f"{weeks} week{'s' if weeks > 1 else ''}"
+        elif days < 365:
+            months = days // 30
+            return f"{months} month{'s' if months > 1 else ''}"
+        else:
+            years = days // 365
+            return f"{years} year{'s' if years > 1 else ''}"
 
 
 class ChatSession(models.Model):

@@ -6,7 +6,6 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.core.exceptions import ValidationError
 from .models import KnowledgeBase
 from research_summaries.openai_utils import get_openai_client
 
@@ -24,7 +23,8 @@ def api_create_knowledge_base(request):
     {
         "display_name": "My Knowledge Base",
         "vector_group_id": 123,
-        "description": "Optional description"
+        "description": "Optional description",
+        "file_retention": 730  # Optional, defaults to 730 days (2 years)
     }
     """
     try:
@@ -35,6 +35,7 @@ def api_create_knowledge_base(request):
         display_name = data.get('display_name', '').strip()
         vector_group_id = data.get('vector_group_id')
         description = data.get('description', '').strip()
+        file_retention = data.get('file_retention', 730)
 
         # Validation
         if not display_name:
@@ -57,6 +58,18 @@ def api_create_knowledge_base(request):
             return JsonResponse({
                 'success': False,
                 'error': 'vector_group_id must be a positive integer'
+            }, status=400)
+
+        try:
+            file_retention = int(file_retention)
+            if file_retention < 1:
+                raise ValueError("Too small")
+            if file_retention > 109500:  # 300 years
+                raise ValueError("Too large")
+        except (ValueError, TypeError):
+            return JsonResponse({
+                'success': False,
+                'error': 'file_retention must be an integer between 1 and 109500 days (1 day to 300 years)'
             }, status=400)
 
         # Check for existing records
@@ -104,6 +117,7 @@ def api_create_knowledge_base(request):
                     vector_store_id=vector_store.id,
                     vector_group_id=vector_group_id,
                     description=description,
+                    file_retention=file_retention,
                     is_active=True
                 )
 
@@ -118,6 +132,7 @@ def api_create_knowledge_base(request):
                         'vector_store_id': knowledge_base.vector_store_id,
                         'vector_group_id': knowledge_base.vector_group_id,
                         'description': knowledge_base.description,
+                        'file_retention': knowledge_base.file_retention,
                         'is_active': knowledge_base.is_active,
                         'created_at': knowledge_base.created_at.isoformat()
                     },
@@ -161,7 +176,7 @@ def api_list_knowledge_bases(request):
     try:
         knowledge_bases = KnowledgeBase.objects.filter(is_active=True).values(
             'id', 'name', 'display_name', 'vector_store_id',
-            'vector_group_id', 'description', 'created_at'
+            'vector_group_id', 'description', 'file_retention', 'created_at'
         )
 
         return JsonResponse({

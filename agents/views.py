@@ -269,6 +269,9 @@ def api_chat_stream(request):
                 for chunk in response:
                     chunk_count += 1
 
+                    # Todo: Uncomment this and debug gpt-5 timeout
+                    # logger.info(f"[CHUNK]: {chunk}")
+
                     # Log every 10th chunk to avoid log spam
                     if chunk_count % 100 == 0:
                         logger.info(
