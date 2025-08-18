@@ -35,6 +35,11 @@ class ResearchNote(models.Model):
         help_text="Whether this is an evergreen/persistent document (True) or standard/temporary (False)"
     )
 
+    is_active = models.BooleanField(
+        default=False,
+        help_text="Whether this document is still in an Agent"
+    )
+
     # --- Timestamps
     file_download_time = models.DateTimeField(null=True, blank=True)
     file_update_time = models.DateTimeField(null=True, blank=True)

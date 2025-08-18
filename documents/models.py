@@ -55,6 +55,11 @@ class Document(models.Model):
         help_text="Whether this document has been added to a vector store"
     )
 
+    is_active = models.BooleanField(
+        default=False,
+        help_text="Whether this document is still in an Agent"
+    )
+
     is_persistent_document = models.BooleanField(
         default=False,
         help_text="Whether this is an evergreen/persistent document (True) or standard/temporary (False)"

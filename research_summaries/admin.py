@@ -33,6 +33,7 @@ class ResearchNoteAdmin(admin.ModelAdmin):
         'report_type',
         'is_advanced_summary',
         'is_vectorized',
+        'is_active',
         'is_persistent_document',
         'vector_group_id',
         'publication_date',
@@ -59,7 +60,7 @@ class ResearchNoteAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Core Information', {
-            'fields': ('source', 'provider', 'file_id', 'download_link')
+            'fields': ('source', 'provider', 'file_id', 'download_link', 'is_active')
         }),
         ('Content Details', {
             'fields': (

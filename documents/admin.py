@@ -22,6 +22,7 @@ class DocumentAdmin(admin.ModelAdmin):
     list_filter = [
         'report_type',
         'is_vectorized',
+        'is_active',
         # 'is_persistent_document',
         'expiration_rule',
         'upload_date',
@@ -59,6 +60,7 @@ class DocumentAdmin(admin.ModelAdmin):
                 'publication_date',
                 # 'is_persistent_document',
                 'expiration_rule',
+                'is_active',
                 'upload_date',
             )
         }),
