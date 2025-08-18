@@ -56,8 +56,8 @@ class Document(models.Model):
     )
 
     is_active = models.BooleanField(
-        default=False,
-        help_text="Whether this document is still in an Agent"
+        default=True,
+        help_text="Whether this document is still active"
     )
 
     is_persistent_document = models.BooleanField(

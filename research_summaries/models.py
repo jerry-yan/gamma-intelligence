@@ -36,8 +36,8 @@ class ResearchNote(models.Model):
     )
 
     is_active = models.BooleanField(
-        default=False,
-        help_text="Whether this document is still in an Agent"
+        default=True,
+        help_text="Whether this document is still active"
     )
 
     # --- Timestamps
