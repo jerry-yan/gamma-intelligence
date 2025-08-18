@@ -9,10 +9,19 @@ User = get_user_model()
 
 class KnowledgeBase(models.Model):
     """Represents a vector store in OpenAI"""
+
+    class Purpose(models.IntegerChoices):
+        INDUSTRY = 0, 'Industry'
+        USER = 1, 'User'
+        # Add more purposes here in the future
+        # CUSTOM = 2, 'Custom'
+        # RESEARCH = 3, 'Research'
+
     name = models.CharField(max_length=100, unique=True)
     display_name = models.CharField(max_length=200)
     vector_store_id = models.CharField(max_length=100, unique=True, help_text="OpenAI Vector Store ID")
-    vector_group_id = models.PositiveIntegerField(unique=True, help_text="Unique identifier matching ResearchNote vector_group_id")
+    vector_group_id = models.PositiveIntegerField(unique=True,
+                                                  help_text="Unique identifier matching ResearchNote vector_group_id")
     description = models.TextField(blank=True)
     file_retention = models.PositiveIntegerField(
         default=730,  # 2 years = 730 days
@@ -21,6 +30,11 @@ class KnowledgeBase(models.Model):
             MaxValueValidator(109500)  # Maximum 300 years = 109500 days
         ],
         help_text="File retention period in days (default: 2 years = 730 days)"
+    )
+    purpose = models.IntegerField(
+        choices=Purpose.choices,
+        default=Purpose.INDUSTRY,
+        help_text="Purpose of this knowledge base"
     )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -33,6 +47,7 @@ class KnowledgeBase(models.Model):
         indexes = [
             models.Index(fields=['vector_group_id']),
             models.Index(fields=['is_active', 'vector_group_id']),
+            models.Index(fields=['purpose']),  # Index for purpose field
         ]
 
     def __str__(self):
