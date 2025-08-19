@@ -33,6 +33,7 @@ def clean_temporary_documents(hours_threshold: int = 12):
     temp_docs = Document.objects.filter(
         expiration_rule=2,  # Temporary
         is_vectorized=True,
+        is_active=True,
         upload_date__lt=cutoff_time
     )
 
@@ -76,7 +77,8 @@ def clean_temporary_documents(hours_threshold: int = 12):
 
             # Mark as not vectorized
             doc.is_vectorized = False
-            doc.save(update_fields=['is_vectorized', 'updated_at'])
+            doc.is_active = False
+            doc.save(update_fields=['is_vectorized', 'is_active', 'updated_at'])
             success_count += 1
 
             logger.info(f"✅ Cleaned temporary document: {doc.filename}")

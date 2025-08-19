@@ -55,6 +55,7 @@ class KnowledgeBaseMetricsView(LoginRequiredMixin, TemplateView):
             # Get Documents for this KnowledgeBase
             documents = Document.objects.filter(
                 is_vectorized=True,
+                is_active=True,
                 vector_group_id=kb.vector_group_id
             ).order_by('-publication_date', 'filename')
 
@@ -64,6 +65,7 @@ class KnowledgeBaseMetricsView(LoginRequiredMixin, TemplateView):
             # First, get notes that directly have this vector_group_id
             direct_notes = ResearchNote.objects.filter(
                 is_vectorized=True,
+                is_active=True,
                 vector_group_id=kb.vector_group_id
             )
 
@@ -76,6 +78,7 @@ class KnowledgeBaseMetricsView(LoginRequiredMixin, TemplateView):
             # Find notes with these tickers
             ticker_based_notes = ResearchNote.objects.filter(
                 is_vectorized=True,
+                is_active=True,
                 parsed_ticker__in=tickers_for_kb
             )
 
