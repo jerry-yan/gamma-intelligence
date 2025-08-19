@@ -1,3 +1,4 @@
+# research_summaries/management/commands/run_pipeline.py
 import time
 from django.core.management.base import BaseCommand
 from django.core.management import call_command
@@ -13,11 +14,17 @@ class Command(BaseCommand):
             self.style.SUCCESS('🚀 Starting continuous research pipeline...')
         )
 
+        loop_counter = 0
+        EXPIRATION_FREQUENCY = 20  # Run expiration every 20 loops
+
         while True:
             try:
+                loop_counter += 1
+
                 # Run the pipeline
                 start_time = timezone.now()
 
+                self.stdout.write(f'\n🔄 Pipeline loop #{loop_counter}')
                 self.stdout.write('📧 Processing emails...')
                 call_command('process_emails')
 
@@ -48,6 +55,17 @@ class Command(BaseCommand):
                 self.stdout.write('🗑️  Cleaning temporary vectorized documents...')
                 call_command('clean_temp_documents', hours=12)
 
+                # Run expiration every N loops
+                if loop_counter % EXPIRATION_FREQUENCY == 0:
+                    self.stdout.write(f'♻️  Expiring old vector files (runs every {EXPIRATION_FREQUENCY} loops)...')
+                    # call_command('expire_vector_files')
+                    # Reset counter to prevent overflow (unlikely but good practice)
+                    if loop_counter >= 10000:
+                        loop_counter = 0
+                else:
+                    remaining = EXPIRATION_FREQUENCY - (loop_counter % EXPIRATION_FREQUENCY)
+                    self.stdout.write(f'⏳ Vector file expiration in {remaining} loops')
+
                 if pending_count == 0:
                     elapsed = timezone.now() - start_time
                     self.stdout.write(
@@ -75,7 +93,7 @@ class Command(BaseCommand):
 
                 # Short sleep between cycles when there's active work
                 self.stdout.write('😴 Sleeping for 1 minute before next cycle...')
-                time.sleep(60)  # 5 minutes
+                time.sleep(60)  # 1 minute
 
             except KeyboardInterrupt:
                 self.stdout.write('🛑 Pipeline stopped')
