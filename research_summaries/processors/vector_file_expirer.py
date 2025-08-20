@@ -66,6 +66,7 @@ def expire_research_notes(client, stats):
     research_notes = ResearchNote.objects.filter(
         is_active=True,
         is_vectorized=True,
+        is_persistent_document=False,
         vector_group_id__isnull=False,
         openai_file_id__isnull=False,
         publication_date__isnull=False
@@ -150,6 +151,8 @@ def expire_documents(client, stats):
         publication_date__isnull=False
     ).exclude(
         openai_file_id__exact=''
+    ).exclude(
+        expiration_rule=1  # Exclude Evergreen (1)
     )
 
     logger.info(f"📄 Found {documents.count()} active documents to check")
