@@ -409,7 +409,7 @@ def upload_user_document(request):
                 # Upload file to OpenAI
                 with open(temp_path, 'rb') as file:
                     openai_file = client.files.create(
-                        file=file,
+                        file=(uploaded_file.name, file),
                         purpose='user_data'
                     )
 
