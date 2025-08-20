@@ -57,9 +57,23 @@
                             </li>
                         {% endif %}
                         {% if perms.accounts.can_view_uploads %}
-                            <li class="nav-item">
-                                <a class="nav-link {% if 'documents' in request.resolver_match.namespace %}active{% endif %}"
-                                   href="{% url 'documents:upload' %}">Upload</a>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle {% if 'documents' in request.resolver_match.namespace %}active{% endif %}"
+                                   href="#" id="uploadDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Upload
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="uploadDropdown">
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'documents:upload' %}">
+                                            <i class="bi bi-cloud-upload"></i> Standard Upload
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'documents:upload_user' %}">
+                                            <i class="bi bi-person-plus-fill"></i> Do not use - Upload
+                                        </a>
+                                    </li>
+                                </ul>
                             </li>
                         {% endif %}
                         {% if perms.accounts.can_view_uploads %}

@@ -6,7 +6,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from botocore.exceptions import ClientError
-from .forms import DocumentUploadForm
+from .forms import DocumentUploadForm, UserDocumentUploadForm
 from .models import Document
 from utils.file_utils import get_s3_client
 import fitz  # PyMuPDF
@@ -372,3 +372,167 @@ def document_list(request):
     """List all documents"""
     documents = Document.objects.all().order_by('-upload_date')
     return render(request, 'documents/list.html', {'documents': documents})
+
+
+@login_required
+@permission_required('accounts.can_view_uploads', raise_exception=True)
+def upload_user_document(request):
+    """
+    Handle direct user document upload to multiple OpenAI vector stores without S3 storage.
+    Creates one Document record per knowledge base, all sharing the same OpenAI file ID.
+    """
+    if request.method == 'POST':
+        form = UserDocumentUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            uploaded_file = request.FILES['file']
+
+            # Create temporary file
+            file_extension = os.path.splitext(uploaded_file.name)[1]
+            with tempfile.NamedTemporaryFile(suffix=file_extension, delete=False) as temp_file:
+                for chunk in uploaded_file.chunks():
+                    temp_file.write(chunk)
+                temp_path = temp_file.name
+
+            try:
+                # Get form data
+                knowledge_bases = form.cleaned_data['knowledge_bases']
+                report_type = form.cleaned_data.get('report_type', 'User Document')
+                expiration_rule = form.get_expiration_rule()
+                metadata = form.cleaned_data.get('metadata', {})
+
+                # Upload file to OpenAI ONCE
+                logger.info(f"📤 Uploading {uploaded_file.name} to OpenAI...")
+
+                # Get OpenAI client
+                client = get_openai_client()
+
+                # Upload file to OpenAI
+                with open(temp_path, 'rb') as file:
+                    openai_file = client.files.create(
+                        file=file,
+                        purpose='user_data'
+                    )
+
+                openai_file_id = openai_file.id
+                logger.info(f"✅ File uploaded to OpenAI with ID: {openai_file_id}")
+
+                # Add base metadata for tracking
+                base_metadata = metadata.copy()
+                base_metadata.update({
+                    'original_filename': uploaded_file.name,
+                    'file_size': uploaded_file.size,
+                    'upload_user': request.user.username,
+                    'upload_timestamp': datetime.now().isoformat(),
+                })
+
+                # Track results for each knowledge base
+                created_documents = []
+                vectorization_results = []
+
+                # Process each knowledge base sequentially
+                for kb in knowledge_bases:
+                    logger.info(f"📊 Processing knowledge base: {kb.display_name}")
+
+                    # Create Document record for this knowledge base
+                    document = Document.objects.create(
+                        filename=uploaded_file.name,
+                        file_directory='',  # Empty
+                        file_hash_id='',  # Empty
+                        openai_file_id=openai_file_id,  # Same file ID for all KBs
+                        vector_group_id=kb.vector_group_id,
+                        upload_date=datetime.now(),
+                        report_type=report_type,
+                        is_persistent_document=(expiration_rule == 1),
+                        expiration_rule=expiration_rule,
+                        metadata={
+                            **base_metadata,
+                            'knowledge_base': kb.display_name,
+                            'knowledge_base_id': kb.id
+                        },
+                        is_active=True,
+                        is_vectorized=False  # Will be set to True after vectorization
+                    )
+
+                    created_documents.append(document)
+                    logger.info(f"📄 Created document record {document.id} for KB: {kb.display_name}")
+
+                    # Add file to this knowledge base's vector store
+                    try:
+                        # Prepare attributes for vector store
+                        attributes = {
+                            "filename": uploaded_file.name,
+                            "report_type": report_type,
+                            "upload_date": datetime.now().isoformat(),
+                        }
+
+                        # Add file to the knowledge base's vector store
+                        success = upload_to_vector_store(
+                            client=client,
+                            vector_store_id=kb.vector_store_id,
+                            file_id=openai_file_id,  # Same OpenAI file ID
+                            attributes=attributes
+                        )
+
+                        if success:
+                            # Update document as vectorized
+                            document.is_vectorized = True
+                            document.save(update_fields=['is_vectorized'])
+                            vectorization_results.append((kb.display_name, True, None))
+                            logger.info(f"✅ Document {document.id} successfully vectorized in {kb.display_name}")
+                        else:
+                            vectorization_results.append((kb.display_name, False, "Vectorization failed"))
+                            logger.warning(f"⚠️ Failed to vectorize document {document.id} in {kb.display_name}")
+
+                    except Exception as e:
+                        error_msg = str(e)
+                        vectorization_results.append((kb.display_name, False, error_msg))
+                        logger.error(f"❌ Error vectorizing in {kb.display_name}: {error_msg}")
+
+                # Generate summary message
+                success_count = sum(1 for _, success, _ in vectorization_results if success)
+                total_count = len(knowledge_bases)
+
+                if success_count == total_count:
+                    messages.success(
+                        request,
+                        f'✅ Document "{uploaded_file.name}" successfully uploaded to all {total_count} '
+                        f'knowledge base(s).'
+                    )
+                elif success_count > 0:
+                    failed_kbs = [kb_name for kb_name, success, _ in vectorization_results if not success]
+                    messages.warning(
+                        request,
+                        f'⚠️ Document uploaded to {success_count}/{total_count} knowledge base(s). '
+                        f'Failed for: {", ".join(failed_kbs)}. These will be processed later.'
+                    )
+                else:
+                    messages.error(
+                        request,
+                        f'❌ Document upload failed for all knowledge bases. '
+                        f'The document will be processed again later.'
+                    )
+
+                # Log detailed results
+                for kb_name, success, error in vectorization_results:
+                    if not success and error:
+                        logger.error(f"  {kb_name}: {error}")
+
+                return redirect('documents:upload_user')
+
+            except Exception as e:
+                logger.error(f"❌ Error uploading document: {str(e)}")
+                messages.error(request, f'Error uploading document: {str(e)}')
+
+            finally:
+                # Clean up temp file
+                try:
+                    os.unlink(temp_path)
+                except:
+                    pass
+    else:
+        form = UserDocumentUploadForm()
+
+    return render(request, 'documents/upload_user_document.html', {
+        'form': form,
+        'page_title': 'Upload User Document to Knowledge Bases'
+    })

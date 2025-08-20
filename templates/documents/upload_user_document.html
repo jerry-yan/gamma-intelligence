@@ -1,0 +1,401 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Upload User Document - Research Hub{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <h2 class="mb-4">📤 Upload User Document to Knowledge Bases</h2>
+            <p class="text-muted mb-4">Upload documents directly to user knowledge bases for AI vector search. No S3 storage required.</p>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data" id="user-upload-form">
+                {% csrf_token %}
+
+                <!-- File Upload Section -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">📁 Select File</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="file-upload-zone" id="file-upload-zone">
+                            <div class="upload-content text-center py-4">
+                                <i class="bi bi-cloud-upload fs-1 text-primary mb-3"></i>
+                                <p class="mb-2">Drag & drop a file here or click to browse</p>
+                                <p class="text-muted small">Supported formats: PDF, DOC, DOCX, TXT, XLS, XLSX, CSV</p>
+                            </div>
+                            {{ form.file }}
+                        </div>
+                        <div class="file-selected mt-3" id="file-selected" style="display: none;">
+                            <div class="alert alert-info d-flex align-items-center">
+                                <i class="bi bi-file-earmark-text me-2"></i>
+                                <div>
+                                    <span class="file-name fw-bold"></span>
+                                    <span class="file-size text-muted ms-2"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Knowledge Bases Selection -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">🗂️ Select Knowledge Bases</h5>
+                    </div>
+                    <div class="card-body">
+                        <label for="{{ form.knowledge_bases.id_for_label }}" class="form-label">
+                            {{ form.knowledge_bases.label }}
+                            <span class="text-danger">*</span>
+                        </label>
+                        <div class="knowledge-base-selector">
+                            <button type="button" class="btn btn-outline-primary dropdown-toggle w-100 text-start"
+                                    id="kb-dropdown-btn"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false">
+                                <span class="selected-count">None selected</span>
+                            </button>
+                            <div class="dropdown-menu p-3" style="max-height: 400px; overflow-y: auto; width: 100%;">
+                                <div class="mb-2 d-flex justify-content-between">
+                                    <button type="button" class="btn btn-sm btn-link p-0" id="select-all-kb">Select All</button>
+                                    <button type="button" class="btn btn-sm btn-link p-0" id="clear-all-kb">Clear All</button>
+                                </div>
+                                <hr class="my-2">
+                                <div class="kb-checkbox-list">
+                                    {% for checkbox in form.knowledge_bases %}
+                                        <div class="form-check mb-2">
+                                            {{ checkbox.tag }}
+                                            <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                                                {{ checkbox.choice_label }}
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">{{ form.knowledge_bases.help_text }}</small>
+                        {% if form.knowledge_bases.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.knowledge_bases.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Document Details -->
+                <div class="card mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">📋 Document Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Document Type -->
+                        <div class="mb-3">
+                            <label for="{{ form.report_type.id_for_label }}" class="form-label">
+                                {{ form.report_type.label }}
+                            </label>
+                            {{ form.report_type }}
+                            {% if form.report_type.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.report_type.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Expiration Rule -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                {{ form.expiration_rule.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            <div class="expiration-rules-options">
+                                {% for radio in form.expiration_rule %}
+                                    <div class="form-check">
+                                        {{ radio.tag }}
+                                        <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                            {{ radio.choice_label }}
+                                            {% if radio.choice_value == "0" %}
+                                                <small class="text-muted">(Default retention period)</small>
+                                            {% elif radio.choice_value == "1" %}
+                                                <small class="text-muted">(Never expires)</small>
+                                            {% elif radio.choice_value == "2" %}
+                                                <small class="text-muted">(Short-term retention)</small>
+                                            {% endif %}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if form.expiration_rule.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.expiration_rule.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hidden metadata field -->
+                {{ form.metadata }}
+
+                <!-- Submit Buttons -->
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{% url 'documents:list' %}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-upload" id="upload-btn">
+                        <i class="bi bi-cloud-upload"></i> Upload to Knowledge Bases
+                    </button>
+                </div>
+            </form>
+
+            <!-- Upload Progress (hidden by default) -->
+            <div class="upload-progress mt-4" id="upload-progress" style="display: none;">
+                <div class="alert alert-info">
+                    <div class="d-flex align-items-center">
+                        <div class="spinner-border spinner-border-sm me-2" role="status">
+                            <span class="visually-hidden">Uploading...</span>
+                        </div>
+                        <span id="progress-text">Uploading document to knowledge bases...</span>
+                    </div>
+                    <div class="progress mt-2">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .file-upload-zone {
+        border: 2px dashed #dee2e6;
+        border-radius: 0.5rem;
+        padding: 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        position: relative;
+        background-color: #f8f9fa;
+    }
+
+    .file-upload-zone:hover {
+        border-color: #0d6efd;
+        background-color: #e7f1ff;
+    }
+
+    .file-upload-zone.drag-over {
+        border-color: #0d6efd;
+        background-color: #e7f1ff;
+        box-shadow: 0 0 10px rgba(13, 110, 253, 0.25);
+    }
+
+    .file-upload-zone input[type="file"] {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .knowledge-base-selector .dropdown-menu {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        border: 1px solid #dee2e6;
+    }
+
+    .kb-checkbox-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .kb-checkbox-list .form-check {
+        padding-left: 1.5rem;
+    }
+
+    .expiration-rules-options {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.25rem;
+        border: 1px solid #dee2e6;
+    }
+
+    .card-header {
+        font-weight: 600;
+    }
+    
+    .card-header.bg-primary {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%) !important;
+    }
+    
+    .card-header.bg-secondary {
+        background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
+    }
+
+    .file-selected .alert {
+        margin-bottom: 0;
+    }
+
+    .selected-count {
+        font-weight: 500;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.querySelector('input[type="file"]');
+    const fileUploadZone = document.getElementById('file-upload-zone');
+    const fileSelected = document.getElementById('file-selected');
+    const fileName = fileSelected.querySelector('.file-name');
+    const fileSize = fileSelected.querySelector('.file-size');
+    const uploadForm = document.getElementById('user-upload-form');
+    const uploadBtn = document.getElementById('upload-btn');
+    const uploadProgress = document.getElementById('upload-progress');
+    const progressText = document.getElementById('progress-text');
+
+    // Knowledge Base Multi-select
+    const kbDropdownBtn = document.getElementById('kb-dropdown-btn');
+    const kbCheckboxes = document.querySelectorAll('input[name="knowledge_bases"]');
+    const selectAllBtn = document.getElementById('select-all-kb');
+    const clearAllBtn = document.getElementById('clear-all-kb');
+
+    // Format file size
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+
+    // Update selected count for knowledge bases
+    function updateKBSelectedCount() {
+        const checkedCount = document.querySelectorAll('input[name="knowledge_bases"]:checked').length;
+        const selectedCountSpan = kbDropdownBtn.querySelector('.selected-count');
+
+        if (checkedCount === 0) {
+            selectedCountSpan.textContent = 'None selected';
+            kbDropdownBtn.classList.remove('btn-primary');
+            kbDropdownBtn.classList.add('btn-outline-primary');
+        } else if (checkedCount === 1) {
+            selectedCountSpan.textContent = '1 knowledge base selected';
+            kbDropdownBtn.classList.remove('btn-outline-primary');
+            kbDropdownBtn.classList.add('btn-primary');
+        } else {
+            selectedCountSpan.textContent = `${checkedCount} knowledge bases selected`;
+            kbDropdownBtn.classList.remove('btn-outline-primary');
+            kbDropdownBtn.classList.add('btn-primary');
+        }
+    }
+
+    // Knowledge base checkbox listeners
+    kbCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateKBSelectedCount);
+    });
+
+    // Select All / Clear All functionality
+    selectAllBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        kbCheckboxes.forEach(checkbox => checkbox.checked = true);
+        updateKBSelectedCount();
+    });
+
+    clearAllBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        kbCheckboxes.forEach(checkbox => checkbox.checked = false);
+        updateKBSelectedCount();
+    });
+
+    // Prevent dropdown from closing when clicking inside
+    document.querySelector('.knowledge-base-selector .dropdown-menu').addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+
+    // File input change handler
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileSelected.style.display = 'block';
+            fileUploadZone.querySelector('.upload-content').style.opacity = '0.7';
+        }
+    });
+
+    // Drag and drop handlers
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        fileUploadZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        fileUploadZone.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        fileUploadZone.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight(e) {
+        fileUploadZone.classList.add('drag-over');
+    }
+
+    function unhighlight(e) {
+        fileUploadZone.classList.remove('drag-over');
+    }
+
+    fileUploadZone.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        fileInput.files = files;
+        const event = new Event('change', { bubbles: true });
+        fileInput.dispatchEvent(event);
+    }
+
+    // Form submission handler
+    uploadForm.addEventListener('submit', function(e) {
+        const checkedCount = document.querySelectorAll('input[name="knowledge_bases"]:checked').length;
+        
+        // Show progress indicator
+        uploadBtn.disabled = true;
+        uploadProgress.style.display = 'block';
+        
+        // Update progress text based on number of KBs
+        if (checkedCount > 1) {
+            progressText.textContent = `Uploading to ${checkedCount} knowledge bases...`;
+        } else {
+            progressText.textContent = 'Uploading document to knowledge base...';
+        }
+        
+        // Add metadata if needed
+        const metadataField = document.querySelector('input[name="metadata"]');
+        if (metadataField) {
+            const metadata = {
+                'upload_timestamp': new Date().toISOString(),
+                'knowledge_bases_selected': checkedCount
+            };
+            metadataField.value = JSON.stringify(metadata);
+        }
+    });
+
+    // Initialize the count on page load
+    updateKBSelectedCount();
+});
+</script>
+{% endblock %}
