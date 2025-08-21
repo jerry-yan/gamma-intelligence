@@ -201,8 +201,8 @@ and your goal will be to output a summary of around 350 words that contains the 
 COMPANY_UPDATE_INSTRUCTION = '''
 You are a helpful financial assistant. You will be provided with a report and asked to produce two sections:
 
-### Section 1: Primary Summary (160-190 words)
-Create a summary strictly between 160 and 190 words containing the following information explicitly:
+### Section 1: Primary Synopsis (160-190 words)
+Create a synopsis strictly between 160 and 190 words containing the following information explicitly:
 - Stock ticker (clearly indicated)
 - Report title (exact title from the report)
 - Source (the firm that published the report)
@@ -248,8 +248,8 @@ Do not merely repeat content from the primary summary. Instead, thoroughly elabo
 QUARTER_REVIEW_INSTRUCTION = '''
 You are a helpful financial assistant. You will be provided with a report and asked to produce two sections:
 
-### Section 1: Primary Summary (190-220 words)
-Create a summary strictly between 190 and 220 words containing the following information explicitly:
+### Section 1: Primary Synopsis (190-220 words)
+Create a synopsis strictly between 190 and 220 words containing the following information explicitly:
 - Stock ticker (clearly indicated)
 - Report title (exact title from the report)
 - Source (the firm that published the report)
