@@ -15,7 +15,7 @@ class Command(BaseCommand):
         )
 
         loop_counter = 0
-        EXPIRATION_FREQUENCY = 16  # Run expiration every 20 loops
+        EXPIRATION_FREQUENCY = 1  # Run expiration every 20 loops
 
         while True:
             try:
