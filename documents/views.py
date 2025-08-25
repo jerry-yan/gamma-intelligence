@@ -6,6 +6,8 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from botocore.exceptions import ClientError
+from django.utils import timezone
+
 from .forms import DocumentUploadForm, UserDocumentUploadForm
 from .models import Document
 from utils.file_utils import get_s3_client
@@ -433,14 +435,18 @@ def upload_user_document(request):
                 for kb in knowledge_bases:
                     logger.info(f"📊 Processing knowledge base: {kb.display_name}")
 
+                    file_hash_id = hashlib.sha256(
+                        f"{uploaded_file.name}-{datetime.now().isoformat()}".encode("utf-8")
+                    ).hexdigest()
+
                     # Create Document record for this knowledge base
                     document = Document.objects.create(
                         filename=uploaded_file.name,
                         file_directory='',  # Empty
-                        file_hash_id=f"{uploaded_file.name}-{datetime.now()}",
+                        file_hash_id=file_hash_id,
                         openai_file_id=openai_file_id,  # Same file ID for all KBs
                         vector_group_id=kb.vector_group_id,
-                        upload_date=datetime.now(),
+                        publication_date=timezone.localdate(),
                         report_type=report_type,
                         is_persistent_document=(expiration_rule == 1),
                         expiration_rule=expiration_rule,
