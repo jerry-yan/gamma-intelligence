@@ -437,7 +437,7 @@ def upload_user_document(request):
                     document = Document.objects.create(
                         filename=uploaded_file.name,
                         file_directory='',  # Empty
-                        file_hash_id='',  # Empty
+                        file_hash_id=f"{uploaded_file.name}-{datetime.now()}",
                         openai_file_id=openai_file_id,  # Same file ID for all KBs
                         vector_group_id=kb.vector_group_id,
                         upload_date=datetime.now(),
