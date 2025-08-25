@@ -15,7 +15,7 @@ class Command(BaseCommand):
         )
 
         loop_counter = 0
-        EXPIRATION_FREQUENCY = 20  # Run expiration every 20 loops
+        EXPIRATION_FREQUENCY = 16  # Run expiration every 20 loops
 
         while True:
             try:
@@ -58,7 +58,7 @@ class Command(BaseCommand):
                 # Run expiration every N loops
                 if loop_counter % EXPIRATION_FREQUENCY == 0:
                     self.stdout.write(f'♻️  Expiring old vector files (runs every {EXPIRATION_FREQUENCY} loops)...')
-                    # call_command('expire_vector_files')
+                    call_command('expire_vector_files')
                     # Reset counter to prevent overflow (unlikely but good practice)
                     if loop_counter >= 10000:
                         loop_counter = 0
