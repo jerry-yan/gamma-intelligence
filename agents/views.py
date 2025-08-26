@@ -930,3 +930,46 @@ class AgentView2(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
             {'id': 'gpt-4.1', 'name': 'GPT-4.1'},
         ]
         return context
+
+
+class AgentView3(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
+    """Main chatbot interface view"""
+    template_name = 'agents/chat_v3.html'
+    login_url = '/accounts/login/'
+    permission_required = 'accounts.can_view_agents'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['knowledge_bases'] = KnowledgeBase.objects.filter(is_active=True)
+        context['user'] = self.request.user
+        user_prompts = Prompt.objects.filter(user=self.request.user).values('id', 'name', 'prompt')
+        context['user_prompts'] = list(user_prompts)
+        # Define privileged users who get access to all models
+        privileged_users = ['yuhaoyan', 'dhoang', 'dbastien', 'dwang']
+
+        # Check if current user is privileged
+        if self.request.user.username in privileged_users:
+            # Show all available models
+            available_models = [
+                {
+                    'key': k,
+                    'display_name': v['display_name'],
+                    'description': v['description']
+                }
+                for k, v in AVAILABLE_MODELS.items()
+            ]
+        else:
+            # Show only o3 and gpt-4o-mini for regular users
+            unrestricted_models = ['o3', 'gpt-4o-mini']
+            available_models = [
+                {
+                    'key': k,
+                    'display_name': v['display_name'],
+                    'description': v['description']
+                }
+                for k, v in AVAILABLE_MODELS.items()
+                if k in unrestricted_models
+            ]
+
+        context['available_models'] = available_models
+        return context
