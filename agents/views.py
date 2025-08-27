@@ -973,3 +973,317 @@ class AgentView3(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
 
         context['available_models'] = available_models
         return context
+
+@login_required
+@csrf_exempt
+
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_chat_stream_new(request):
+    try:
+        data = json.loads(request.body)
+        message = data.get('message', '').strip()
+        session_id = data.get('session_id')
+        knowledge_base_id = data.get('knowledge_base_id')  # Optional
+        selected_model = data.get('model', 'o3')
+        selected_file_ids = data.get('file_ids', [])
+
+        if not message:
+            return JsonResponse({'error': 'Message is required'}, status=400)
+
+        if not session_id:
+            return JsonResponse({'error': 'Session ID is required'}, status=400)
+
+        # Map the selected model to the actual API model name
+        api_model = AVAILABLE_MODELS.get(selected_model, 'o3').get('api_name')
+        logger.info(f"Using model: {selected_model} -> {api_model}")
+
+        # Get session and verify ownership
+        try:
+            session = ChatSession.objects.get(
+                session_id=session_id,
+                user=request.user
+            )
+        except ChatSession.DoesNotExist:
+            return JsonResponse({'error': 'Session not found or unauthorized'}, status=404)
+
+        # Update last activity
+        session.last_activity = timezone.now()
+        session.save(update_fields=['last_activity'])
+
+        # Get knowledge base if specified
+        knowledge_base = None
+        if knowledge_base_id:
+            try:
+                knowledge_base = KnowledgeBase.objects.get(id=knowledge_base_id, is_active=True)
+                logger.info(
+                    f"Using knowledge base: {knowledge_base.display_name} (Group {knowledge_base.vector_group_id})")
+            except KnowledgeBase.DoesNotExist:
+                return JsonResponse({'error': 'Knowledge base not found'}, status=404)
+
+        # Save user message with optional knowledge base
+        ChatMessage.objects.create(
+            session=session,
+            role='user',
+            content=message,
+            knowledge_base=knowledge_base,
+            metadata={
+                'model_used': api_model,
+                'attached_file_ids': selected_file_ids,
+            }
+        )
+
+        # Generate title from first message if needed
+        if not session.title:
+            session.generate_title()
+
+        def event_stream():
+            """Generate SSE events for streaming response"""
+            # Variables to accumulate the response
+            assistant_message = ""
+            response_id = None
+            tool_uses = []
+            citations = []
+            last_save_length = 0
+            assistant_msg_obj = None
+            chunk_count = 0
+            stream_start_time = timezone.now()
+
+            logger.info(f"[STREAM START] Session {session.session_id} - User: {request.user.username}")
+
+            try:
+                # Get OpenAI client
+                client = get_openai_client()
+
+                today_str = date.today().strftime("%B %d, %Y")
+
+                instructions = (
+                    "You are a veteran portfolio manager with 20 years experience, you now write investment commentaries that result in people making huge sums of money with your timely and accurate insights. \n"
+                    "You are instrumental to helping your clients find investment opportunities and avoid blowups. \n"
+                    f"Today's date is {today_str}."
+                )
+
+                if selected_file_ids:
+                    content_list = [{"type": "input_text", "text": message}]
+
+                    for file_id in selected_file_ids:
+                        content_list.append({"type": "input_file", "file_id": file_id},)
+
+                    input_message = [
+                        {
+                            "role": "user",
+                            "content": content_list
+                        }
+                    ]
+
+                else:
+                    input_message = message
+
+                # Build parameters for Responses API
+                stream_params = {
+                    "model": api_model,
+                    "instructions": instructions,
+                    "input": input_message,
+                    "stream": True,
+                }
+
+                # Add tools only if knowledge base is specified
+                if knowledge_base:
+                    stream_params["tools"] = [{
+                        "type": "file_search",
+                        "vector_store_ids": [knowledge_base.vector_store_id],
+                        "max_num_results": 50,
+                    }]
+                    yield f"data: {json.dumps({'type': 'info', 'message': f'Using knowledge base: {knowledge_base.display_name}'})}\n\n"
+
+                # Add response_id if continuing conversation
+                if session.response_id:
+                    stream_params["previous_response_id"] = session.response_id
+
+                logger.info(f"[OPENAI REQUEST] Session {session.session_id} - Starting OpenAI stream")
+
+                # Stream the response
+                response = client.responses.create(**stream_params)
+
+                for chunk in response:
+                    chunk_count += 1
+
+                    # Todo: Uncomment this and debug gpt-5 timeout
+                    # logger.info(f"[CHUNK]: {chunk}")
+
+                    # Log every 10th chunk to avoid log spam
+                    if chunk_count % 100 == 0:
+                        logger.info(
+                            f"[CHUNK {chunk_count}] Session {session.session_id} - Message length: {len(assistant_message)}")
+
+                    # Check if client is still connected
+                    try:
+                        # Capture response ID
+                        if hasattr(chunk, 'response') and hasattr(chunk.response, 'id'):
+                            response_id = chunk.response.id
+                            logger.info(f"[RESPONSE ID] Session {session.session_id} - Got response_id: {response_id}")
+
+                        # Handle different event types from Responses API
+                        if hasattr(chunk, 'type'):
+                            # Log specific event types
+                            if chunk.type in ['response.output_text.delta', 'response.done',
+                                              'response.tool_call.delta']:
+                                logger.debug(f"[EVENT] Session {session.session_id} - Type: {chunk.type}")
+
+                            # Handle text delta events
+                            if chunk.type == 'response.output_text.delta' and hasattr(chunk, 'delta'):
+                                assistant_message += chunk.delta
+                                yield f"data: {json.dumps({'type': 'content', 'content': chunk.delta})}\n\n"
+
+                                # Periodically save the message in case of disconnection
+                                # if len(assistant_message) - last_save_length > 500:  # Save every 500 chars
+                                #     logger.info(
+                                #         f"[PERIODIC SAVE] Session {session.session_id} - Saving at {len(assistant_message)} chars")
+
+                            # Handle tool use events (file search)
+                            elif chunk.type == 'response.tool_call.delta' and hasattr(chunk, 'tool_call'):
+                                if chunk.tool_call.type == 'file_search':
+                                    tool_uses.append('file_search')
+                                    logger.info(f"[TOOL USE] Session {session.session_id} - File search initiated")
+                                    yield f"data: {json.dumps({'type': 'tool_use', 'tool': 'file_search', 'status': 'searching'})}\n\n"
+
+                            # Handle citation events if available
+                            elif chunk.type == 'response.citation' and hasattr(chunk, 'citation'):
+                                citations.append({
+                                    'file_id': chunk.citation.file_id,
+                                    'quote': chunk.citation.quote
+                                })
+
+                            # === REASONING EVENTS (keep connection alive) ===
+                            elif chunk.type == 'response.reasoning_summary_part.added':
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_part_added'})}\n\n"
+
+                            elif chunk.type == 'response.reasoning_summary_part.done':
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_part_done'})}\n\n"
+
+                            elif chunk.type == 'response.reasoning_summary_text.delta':
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_text_delta'})}\n\n"
+
+                            elif chunk.type == 'response.reasoning_summary_text.done':
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'summary_text_done'})}\n\n"
+
+                            elif chunk.type == 'response.reasoning.delta':
+                                if chunk_count % 5 == 0:  # Log every 5th reasoning event
+                                    logger.info(f"[REASONING] Session {session.session_id} - Reasoning in progress")
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_delta'})}\n\n"
+
+                            elif chunk.type == 'response.reasoning.done':
+                                logger.info(f"[REASONING DONE] Session {session.session_id}")
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_done'})}\n\n"
+
+                            elif chunk.type == 'response.reasoning_summary.delta':
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_summary_delta'})}\n\n"
+
+                            elif chunk.type == 'response.reasoning_summary.done':
+                                yield f"data: {json.dumps({'type': 'reasoning', 'status': 'reasoning_summary_done'})}\n\n"
+
+                            # === OUTPUT ITEM EVENTS ===
+                            elif chunk.type == 'response.output_item.added':
+                                yield f"data: {json.dumps({'type': 'output', 'status': 'item_added'})}\n\n"
+
+                            elif chunk.type == 'response.output_item.done':
+                                yield f"data: {json.dumps({'type': 'output', 'status': 'item_done'})}\n\n"
+
+                            # === CONTENT PART EVENTS ===
+                            elif chunk.type == 'response.content_part.added':
+                                yield f"data: {json.dumps({'type': 'content_part', 'status': 'added'})}\n\n"
+
+                            elif chunk.type == 'response.content_part.done':
+                                yield f"data: {json.dumps({'type': 'content_part', 'status': 'done'})}\n\n"
+
+                            # === TOOL CALL DELTA EVENTS (updated) ===
+                            elif chunk.type == 'response.output_tool_calls.delta':
+                                if hasattr(chunk, 'delta') and hasattr(chunk.delta, 'tool_calls'):
+                                    for tool_call in chunk.delta.tool_calls:
+                                        if tool_call.type == 'file_search':
+                                            tool_uses.append('file_search')
+                                            yield f"data: {json.dumps({'type': 'tool_use', 'tool': 'file_search', 'status': 'searching'})}\n\n"
+
+                    except Exception as e:
+                        logger.warning(
+                            f"[CLIENT DISCONNECT] Session {session.session_id} - Chunk {chunk_count} - Error: {str(e)}")
+                        logger.warning(
+                            f"[DISCONNECT STATS] Message length: {len(assistant_message)}, Chunks: {chunk_count}")
+                        # Continue processing even if client disconnected
+                        continue
+
+                logger.info(
+                    f"[STREAM COMPLETE] Session {session.session_id} - Total chunks: {chunk_count}, Message length: {len(assistant_message)}")
+
+                # Update session with response ID
+                if response_id and response_id != session.response_id:
+                    session.response_id = response_id
+                    session.save(update_fields=['response_id'])
+                    logger.info(f"[SESSION UPDATE] Session {session.session_id} - Updated response_id: {response_id}")
+
+                # Save assistant message with knowledge base reference
+                if assistant_message:
+                    metadata = {
+                        'tool_uses': tool_uses,
+                        'response_id': response_id
+                    }
+                    if citations:
+                        metadata['citations'] = citations
+
+                    ChatMessage.objects.create(
+                        session=session,
+                        role='assistant',
+                        content=assistant_message,
+                        knowledge_base=knowledge_base,  # Store which KB was used (if any)
+                        metadata=metadata
+                    )
+
+                # Send completion signal
+                yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                logger.info(f"[DONE SENT] Session {session.session_id}")
+
+            except Exception as e:
+                logger.error(f"[STREAM ERROR] Session {session.session_id} - Error: {str(e)}", exc_info=True)
+                logger.error(f"[ERROR STATS] Chunks: {chunk_count}, Message length: {len(assistant_message)}")
+
+                # Save whatever we have so far
+                if assistant_message:
+                    try:
+                        if not assistant_msg_obj:
+                            ChatMessage.objects.create(
+                                session=session,
+                                role='assistant',
+                                content=assistant_message + "\n\n[Response interrupted due to error]",
+                                knowledge_base=knowledge_base,
+                                metadata={
+                                    'error': str(e),
+                                    'partial': True,
+                                    'response_id': response_id,
+                                    'chunks_received': chunk_count,
+                                    'error_time': timezone.now().isoformat()
+                                }
+                            )
+                            logger.info(f"[ERROR SAVE] Session {session.session_id} - Saved partial message on error")
+                    except Exception as save_error:
+                        logger.error(
+                            f"[SAVE ERROR] Session {session.session_id} - Failed to save on error: {str(save_error)}")
+
+                yield f"data: {json.dumps({'type': 'error', 'error': 'An error occurred while generating the response.'})}\n\n"
+
+        # Return streaming response with keep-alive headers
+        response = StreamingHttpResponse(
+            event_stream(),
+            content_type='text/event-stream'
+        )
+        response['Cache-Control'] = 'no-cache'
+        response['Connection'] = 'keep-alive'  # Critical for Heroku
+        response['X-Accel-Buffering'] = 'no'
+        return response
+
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON in request body'}, status=400)
+    except Exception as e:
+        logger.error(f"Chat error: {str(e)}", exc_info=True)
+        return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
