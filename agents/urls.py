@@ -32,6 +32,11 @@ urlpatterns = [
     path('api/knowledge-bases/list/', api_views.api_list_knowledge_bases, name='api_list_knowledge_bases'),
     path('api/knowledge-bases/<int:kb_id>/delete/', api_views.api_delete_knowledge_base, name='api_delete_knowledge_base'),
 
+    # Chat file management endpoints
+    path('api/chat-files/', views.api_get_chat_files, name='api_get_chat_files'),
+    path('api/upload-chat-file/', views.api_upload_chat_file, name='api_upload_chat_file'),
+    path('api/delete-chat-file/<int:document_id>/', views.api_delete_chat_file, name='api_delete_chat_file'),
+
     # Prompts
     path('prompts/', prompt_views.PromptListView.as_view(), name='prompt_list'),
     path('prompts/create/', prompt_views.PromptCreateView.as_view(), name='prompt_create'),
