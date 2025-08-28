@@ -257,7 +257,7 @@ Create a synopsis strictly between 190 and 220 words containing the following in
 - Sentiment (how the author views the stock)
 - Price target (specific number)
 - Stock rating (Buy, Hold, or Sell if mentioned)
-- Brief recap of the key points discussed in the report. Put this under 'recap' for the JSON output and do not include details already given under other JSON keys such as the report title.
+- Recap of the key points discussed in the report. Put this under 'recap' for the JSON output and do not include details already given under other JSON keys such as the report title.
 - Clear bullet points of bullish arguments mentioned
 - Clear bullet points of bearish arguments mentioned
 - Summary of valuation analysis provided by the report
