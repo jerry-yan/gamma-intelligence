@@ -10,7 +10,7 @@ class DocumentUploadForm(forms.ModelForm):
     file = forms.FileField(
         label='Select File',
         help_text='Upload a PDF or other document file',
-        widget=forms.FileInput(attrs={'accept': '.pdf,.doc,.docx,.txt,.xlsx,.xls'})
+        widget=forms.FileInput(attrs={'accept': '.pdf,.doc,.docx,.txt,.xlsx,.xls,.htm,.html'})
     )
 
     # Multiple Knowledge Base selection with checkboxes

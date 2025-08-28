@@ -32,7 +32,7 @@ def clean_temporary_documents(hours_threshold: int = 12):
     # Find all temporary documents that are vectorized and older than threshold
     temp_docs = Document.objects.filter(
         expiration_rule=2,  # Temporary
-        is_vectorized=True,
+        # is_vectorized=True,
         is_active=True,
         upload_date__lt=cutoff_time
     )

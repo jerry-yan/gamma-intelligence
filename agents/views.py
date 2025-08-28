@@ -14,18 +14,20 @@ from django.utils import timezone
 from django.urls import reverse_lazy
 from django.db import transaction
 from .models import KnowledgeBase, ChatSession, ChatMessage, StockTicker, Prompt
+from documents.models import Document
 from research_summaries.openai_utils import get_openai_client
 from .forms import ExcelUploadForm
 from io import BytesIO
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
-from reportlab.platypus.tableofcontents import TableOfContents
 from reportlab.lib.enums import TA_LEFT, TA_CENTER
 import html
 import re
+import hashlib
+import tempfile
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -1287,3 +1289,164 @@ def api_chat_stream_new(request):
     except Exception as e:
         logger.error(f"Chat error: {str(e)}", exc_info=True)
         return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_get_chat_files(request):
+    """Get all available chat input files for the current user"""
+    try:
+        # Get active chat input documents (not cleaned up yet)
+        documents = Document.objects.filter(
+            report_type='Chat Input',
+            is_active=True,
+            metadata__user=request.user.username
+        ).order_by('-upload_date')
+
+        files = []
+        for doc in documents:
+            files.append({
+                'id': doc.id,
+                'openai_file_id': doc.openai_file_id,
+                'filename': doc.filename,
+                'upload_date': doc.upload_date.isoformat(),
+            })
+
+        return JsonResponse({
+            'success': True,
+            'files': files
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching chat files: {e}")
+        return JsonResponse({'success': False, 'error': 'Failed to load files'}, status=500)
+
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_upload_chat_file(request):
+    """Upload a file directly to OpenAI for chat use"""
+    try:
+        if 'file' not in request.FILES:
+            return JsonResponse({'error': 'No file provided'}, status=400)
+
+        uploaded_file = request.FILES['file']
+
+        # Validate file size (10MB max)
+        if uploaded_file.size > 10 * 1024 * 1024:
+            return JsonResponse({'error': 'File too large (max 10MB)'}, status=400)
+
+        # Validate file type
+        allowed_extensions = ['.pdf', '.doc', '.docx', '.txt', '.csv', '.xlsx', '.xls']
+        file_extension = os.path.splitext(uploaded_file.name)[1].lower()
+        if file_extension not in allowed_extensions:
+            return JsonResponse({'error': f'File type {file_extension} not supported'}, status=400)
+
+        # Create temporary file
+        with tempfile.NamedTemporaryFile(suffix=file_extension, delete=False) as temp_file:
+            for chunk in uploaded_file.chunks():
+                temp_file.write(chunk)
+            temp_path = temp_file.name
+
+        try:
+            # Calculate file hash -- might need to implement smart user hash here
+            with open(temp_path, 'rb') as f:
+                file_hash = hashlib.sha256(f.read()).hexdigest()[:64]
+
+            # Check if file already exists for this user
+            existing_doc = Document.objects.filter(
+                file_hash_id=file_hash,
+                report_type='Chat Input',
+                is_active=True,
+                metadata__user=request.user.username
+            ).first()
+
+            if existing_doc:
+                return JsonResponse({
+                    'success': True,
+                    'file_id': existing_doc.openai_file_id,
+                    'document_id': existing_doc.id,
+                    'message': 'File already exists'
+                })
+
+            # Upload to OpenAI
+            client = get_openai_client()
+            with open(temp_path, 'rb') as file:
+                openai_file = client.files.create(
+                    file=(uploaded_file.name, file),
+                    purpose='user_data'
+                )
+
+            # Create Document record
+            doc = Document.objects.create(
+                file_directory='chat_uploads',
+                file_hash_id=file_hash,
+                openai_file_id=openai_file.id,
+                filename=uploaded_file.name,
+                expiration_rule=2,  # Temporary
+                is_active=True,
+                report_type='Chat Input',
+                metadata={
+                    'user': request.user.username,
+                    'file_size': uploaded_file.size,
+                    'upload_timestamp': timezone.now().isoformat(),
+                    'file_extension': file_extension
+                }
+            )
+
+            logger.info(f"User {request.user.username} uploaded chat file: {uploaded_file.name}")
+
+            return JsonResponse({
+                'success': True,
+                'file_id': openai_file.id,
+                'document_id': doc.id,
+                'filename': uploaded_file.name
+            })
+
+        finally:
+            # Clean up temp file
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+
+    except Exception as e:
+        logger.error(f"Error uploading chat file: {e}")
+        return JsonResponse({'error': 'Failed to upload file'}, status=500)
+
+
+@login_required
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def api_delete_chat_file(request, document_id):
+    """Delete a chat file from OpenAI and mark document as inactive"""
+    try:
+        # Get document and verify ownership
+        doc = Document.objects.get(
+            id=document_id,
+            report_type='Chat Input',
+            metadata__user=request.user.username
+        )
+
+        # Delete from OpenAI
+        if doc.openai_file_id:
+            try:
+                client = get_openai_client()
+                client.files.delete(doc.openai_file_id)
+                logger.info(f"Deleted OpenAI file: {doc.openai_file_id}")
+            except Exception as e:
+                logger.error(f"Error deleting OpenAI file: {e}")
+                # Continue even if OpenAI deletion fails
+
+        # Mark document as inactive
+        doc.is_active = False
+        doc.save(update_fields=['is_active', 'updated_at'])
+
+        return JsonResponse({'success': True})
+
+    except Document.DoesNotExist:
+        return JsonResponse({'error': 'File not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error deleting chat file: {e}")
+        return JsonResponse({'error': 'Failed to delete file'}, status=500)
