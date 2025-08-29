@@ -230,7 +230,7 @@ QUARTER_REVIEW_SCHEMA = {
                 },
                 "recap": {
                     "type": "string",
-                    "description": "A concise, clearly written recap of the key points of the report, including recent developments, key financial or market updates, and relevant analysis. Approximately 100-150 words. Do not format this string in JSON format."
+                    "description": "A concise, clearly written recap of the key points of the report, including recent developments, key financial or market updates, and relevant analysis. Approximately 100-150 words. Do not put report title, sentiment and details from other headings in here."
                 },
                 "bull_points": {
                     "type": "array",
