@@ -1250,7 +1250,7 @@
 
                             <div class="file-upload-section">
                                 <input type="file" id="fileUploadInput" style="display: none;"
-                                       multiple accept=".pdf,.doc,.docx,.txt,.csv,.xlsx,.xls,.png,.jpeg,.jpg">
+                                       multiple accept=".pdf,.doc,.docx,.txt,.csv,.xlsx,.xls">
                                 <button type="button" class="upload-new-btn" id="uploadNewBtn">
                                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1265,7 +1265,7 @@
                             </div>
 
                             <div class="file-selection-info">
-                                <span id="selectedFilesCount">0 files selected</span>
+                                <span id="selectedFilesCount">0 files selected (max 3)</span>
                             </div>
                         </div>
 
@@ -2082,9 +2082,7 @@
         // File Manager Variables and Functions
         let availableFiles = [];
         let selectedFileIds = new Set();
-        let selectedFileSizes = new Map();
         let isFileManagerOpen = false;
-        const MAX_TOTAL_SIZE = 32 * 1024 * 1024; // 32MB in bytes
 
         // Initialize file manager
         function initializeFileManager() {
@@ -2230,27 +2228,14 @@
 
         // Toggle file selection
         function toggleFileSelection(fileId) {
-            const file = availableFiles.find(f => f.openai_file_id === fileId);
-            if (!file) return;
-
             if (selectedFileIds.has(fileId)) {
                 selectedFileIds.delete(fileId);
-                selectedFileSizes.delete(fileId);
             } else {
-                // Calculate total size with this file
-                let totalSize = file.file_size || 0;
-                for (let size of selectedFileSizes.values()) {
-                    totalSize += size;
-                }
-
-                // Check if adding this file would exceed limit
-                if (totalSize > MAX_TOTAL_SIZE) {
-                    showNotification(`Cannot add file: Total size would exceed 32MB limit (Current: ${formatFileSize(totalSize)})`, 'warning');
+                if (selectedFileIds.size >= 3) {
+                    showNotification('Maximum 3 files can be selected', 'warning');
                     return;
                 }
-
                 selectedFileIds.add(fileId);
-                selectedFileSizes.set(fileId, file.file_size || 0);
             }
 
             const card = document.querySelector(`.file-card[data-file-id="${fileId}"]`);
@@ -2269,18 +2254,10 @@
         // Update selected files count
         function updateSelectedCount() {
             const count = selectedFileIds.size;
-            let totalSize = 0;
-            for (let size of selectedFileSizes.values()) {
-                totalSize += size;
-            }
 
             const infoText = document.getElementById('selectedFilesCount');
             if (infoText) {
-                if (count > 0) {
-                    infoText.textContent = `${count} file${count !== 1 ? 's' : ''} selected (${formatFileSize(totalSize)} / 32MB)`;
-                } else {
-                    infoText.textContent = `0 files selected`;
-                }
+                infoText.textContent = `${count} file${count !== 1 ? 's' : ''} selected (max 3)`;
             }
 
             const badge = document.getElementById('selectedFilesBadge');
