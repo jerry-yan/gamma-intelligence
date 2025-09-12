@@ -1338,7 +1338,7 @@ def api_upload_chat_file(request):
             return JsonResponse({'error': 'File too large (max 10MB)'}, status=400)
 
         # Validate file type
-        allowed_extensions = ['.pdf', '.doc', '.docx', '.txt', '.csv', '.xlsx', '.xls', '.png', '.jpeg']
+        allowed_extensions = ['.pdf', '.doc', '.docx', '.txt', '.csv', '.xlsx', '.xls', '.png', '.jpeg', 'jpg']
         file_extension = os.path.splitext(uploaded_file.name)[1].lower()
         if file_extension not in allowed_extensions:
             return JsonResponse({'error': f'File type {file_extension} not supported'}, status=400)
