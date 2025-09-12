@@ -1310,6 +1310,7 @@ def api_get_chat_files(request):
                 'openai_file_id': doc.openai_file_id,
                 'filename': doc.filename,
                 'upload_date': doc.upload_date.isoformat(),
+                'file_size': doc.metadata.get('file_size', 0)
             })
 
         return JsonResponse({
