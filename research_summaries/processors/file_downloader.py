@@ -242,16 +242,26 @@ def download_documents():
     Generator function that yields status updates during file downloading
     Ultra-conservative version for Heroku free tier
     """
+
+    # Temporary Fix for AlphaSense Rate Limitations
+    excluded_report_types = [
+        'Expert Call',
+    ]
+
     try:
         # Process only 1 file at a time to minimize memory issues
         BATCH_SIZE = 8
-        queue = ResearchNote.objects.filter(status=0).order_by("id")[:BATCH_SIZE]
+        queue = ResearchNote.objects.filter(status=0).exclude(
+            report_type__in=excluded_report_types
+        ).order_by("id")[:BATCH_SIZE]
 
         if not queue.exists():
             yield {"status": "info", "message": "✅ No documents to download"}
             return
 
-        total_pending = ResearchNote.objects.filter(status=0).count()
+        total_pending = ResearchNote.objects.filter(status=0).exclude(
+            report_type__in=excluded_report_types
+        ).count()
         yield {"status": "info", "message": f"📑 Processing {queue.count()} file"}
         yield {"status": "info", "message": f"📊 Total pending downloads: {total_pending}"}
 
