@@ -143,7 +143,9 @@ class ResearchSummariesView(LoginRequiredMixin, PermissionRequiredMixin, Templat
         # Get status counts for dashboard (still show all statuses for reference)
         status_counts = {
             'total': ResearchNote.objects.count(),
-            'not_downloaded': ResearchNote.objects.filter(status=0).count(),
+            'not_downloaded': ResearchNote.objects.filter(status=0).exclude(
+                report_type__in=EXCLUDED_REPORT_TYPES
+            ).count(),
             'downloaded': ResearchNote.objects.filter(status=1).count(),
             'preprocessed': ResearchNote.objects.filter(status=2).count(),
             'summarized': ResearchNote.objects.filter(status=3).count(),
