@@ -1265,7 +1265,7 @@
                             </div>
 
                             <div class="file-selection-info">
-                                <span id="selectedFilesCount">0 files selected (max 3)</span>
+                                <span id="selectedFilesCount">0 files selected</span>
                             </div>
                         </div>
 
@@ -2231,10 +2231,10 @@
             if (selectedFileIds.has(fileId)) {
                 selectedFileIds.delete(fileId);
             } else {
-                if (selectedFileIds.size >= 3) {
-                    showNotification('Maximum 3 files can be selected', 'warning');
-                    return;
-                }
+                // if (selectedFileIds.size >= 3) {
+                //     showNotification('Maximum 3 files can be selected', 'warning');
+                //     return;
+                // }
                 selectedFileIds.add(fileId);
             }
 
@@ -2257,7 +2257,7 @@
 
             const infoText = document.getElementById('selectedFilesCount');
             if (infoText) {
-                infoText.textContent = `${count} file${count !== 1 ? 's' : ''} selected (max 3)`;
+                infoText.textContent = `${count} file${count !== 1 ? 's' : ''} selected`;
             }
 
             const badge = document.getElementById('selectedFilesBadge');
