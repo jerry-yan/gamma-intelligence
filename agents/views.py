@@ -1071,6 +1071,9 @@ def api_chat_stream_new(request):
                     content_list = [{"type": "input_text", "text": message}]
 
                     for file_id in selected_file_ids:
+
+                        file_extension = '.pdf'
+
                         try:
                             # Fetch the Document object
                             document = Document.objects.get(openai_file_id=file_id)
@@ -1088,7 +1091,10 @@ def api_chat_stream_new(request):
                         except Exception as e:
                             logger.error(f"Error processing document {file_id}: {str(e)}")
 
-                        content_list.append({"type": "input_file", "file_id": file_id})
+                        if file_extension in ['.png', '.jpg', '.jpeg', '.webp', '.gif']:
+                            content_list.append({"type": "input_image", "file_id": file_id})
+                        else:
+                            content_list.append({"type": "input_file", "file_id": file_id})
 
                     input_message = [
                         {
