@@ -1071,7 +1071,24 @@ def api_chat_stream_new(request):
                     content_list = [{"type": "input_text", "text": message}]
 
                     for file_id in selected_file_ids:
-                        content_list.append({"type": "input_file", "file_id": file_id},)
+                        try:
+                            # Fetch the Document object
+                            document = Document.objects.get(openai_file_id=file_id)
+
+                            # Extract file extension from filename
+                            filename = document.filename
+                            file_extension = os.path.splitext(filename)[1].lower()
+
+                            # Log the file type
+                            logger.info(f"Processing file: {filename} (type: {file_extension}, openai_id: {file_id})")
+
+                        except Document.DoesNotExist:
+                            logger.error(f"Document with ID {file_id} not found")
+
+                        except Exception as e:
+                            logger.error(f"Error processing document {file_id}: {str(e)}")
+
+                        content_list.append({"type": "input_file", "file_id": file_id})
 
                     input_message = [
                         {
