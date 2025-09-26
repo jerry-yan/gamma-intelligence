@@ -52,7 +52,7 @@
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="agentsDropdown">
                                     <li><a class="dropdown-item" href="{% url 'agents:chat_v3' %}">Chat</a></li>
-                                    <li><a class="dropdown-item" href="{% url 'agents:knowledge_base_metrics' %}">Knowledge Base Metrics</a></li>
+<!--                                    <li><a class="dropdown-item" href="{% url 'agents:knowledge_base_metrics' %}">Knowledge Base Metrics</a></li>-->
                                 </ul>
                             </li>
                         {% endif %}
@@ -82,6 +82,7 @@
                                     Tools
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="toolsDropdown">
+                                     <li><a class="dropdown-item" href="{% url 'agents:knowledge_base_metrics' %}">Knowledge Base Metrics</a></li>
                                     <li><a class="dropdown-item" href="{% url 'research_summaries:manage_persistence' %}">Manage Evergreen</a></li>
                                     {% if perms.accounts.can_view_agents %}
                                         <li><a class="dropdown-item" href="{% url 'agents:prompt_list' %}">My Prompts</a></li>
