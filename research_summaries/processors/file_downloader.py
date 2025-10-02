@@ -245,7 +245,7 @@ def download_documents():
 
     # Temporary Fix for AlphaSense Rate Limitations
     excluded_report_types = [
-        'Expert Call',
+        # 'Expert Call',
     ]
 
     try:
