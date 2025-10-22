@@ -25,6 +25,8 @@ TICKER_OVERRIDES = {
     "2330": "TSMC",
     "2330 TT": "TSMC",
     "2330.TW": "TSMC",
+    "9988": "BABA",
+    "9988.HK": "BABA",
     "ABI": "BUD", # A‑B InBev ADR code often appears as ABBI
 }
 
