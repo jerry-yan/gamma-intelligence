@@ -1,6 +1,6 @@
 # EDGAR_bot/admin.py
 from django.contrib import admin
-from .models import ProcessedFiling, ProcessedFile
+from .models import ProcessedFiling, ProcessedFile, Watchlist
 
 
 @admin.register(ProcessedFiling)
@@ -37,3 +37,11 @@ class ProcessedFileAdmin(admin.ModelAdmin):
     @admin.display(description="file_id")
     def file_id_short(self, obj):
         return obj.file_id[:12] + "…"
+
+
+@admin.register(Watchlist)
+class WatchlistAdmin(admin.ModelAdmin):
+    list_display = ['ticker', 'earnings_date', 'is_active', 'cik']
+    list_filter = ['is_active', 'earnings_date']
+    search_fields = ['ticker']
+    list_editable = ['is_active']
