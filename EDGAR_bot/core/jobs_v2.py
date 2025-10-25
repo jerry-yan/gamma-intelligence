@@ -9,6 +9,9 @@ import logging
 from pathlib import Path
 from typing import Dict, List
 
+from django.db import models
+from asgiref.sync import sync_to_async
+
 from EDGAR_bot.core import config, edgar_client, ticker_map
 from EDGAR_bot.core.state import StateDB
 from EDGAR_bot.core.utils import _as_date
@@ -18,10 +21,10 @@ LOGGER = logging.getLogger("jobs_v2")
 
 
 async def _handle_ticker(
-        sem: asyncio.Semaphore,
-        state: StateDB,
-        ticker: str,
-        cik: str,
+    sem: asyncio.Semaphore,
+    state: StateDB,
+    ticker: str,
+    cik: str,
 ) -> None:
     """
     Process one ticker (list → download → ingest).
@@ -81,19 +84,15 @@ async def _handle_ticker(
             asyncio.create_task(ingest_openai.ingest(ticker, paths))
 
 
-def get_watchlist_tickers() -> List[str]:
+@sync_to_async
+def get_watchlist_tickers_sync() -> List[str]:
     """
-    Retrieve active tickers from the Watchlist model.
+    Retrieve active tickers from the Watchlist model (synchronous version).
 
     Returns:
         List of ticker symbols from the watchlist, or empty list if none.
     """
     try:
-        # Import Django settings to ensure models are ready
-        import django
-        if not django.apps.apps.ready:
-            django.setup()
-
         # Query active watchlist tickers
         watchlist_tickers = list(
             Watchlist.objects
@@ -113,7 +112,17 @@ def get_watchlist_tickers() -> List[str]:
         return []
 
 
-def load_target_tickers_with_watchlist(is_earnings_period: bool) -> List[str]:
+async def get_watchlist_tickers() -> List[str]:
+    """
+    Retrieve active tickers from the Watchlist model (async wrapper).
+
+    Returns:
+        List of ticker symbols from the watchlist, or empty list if none.
+    """
+    return await get_watchlist_tickers_sync()
+
+
+async def load_target_tickers_with_watchlist(is_earnings_period: bool) -> List[str]:
     """
     Load target tickers based on the current period.
 
@@ -139,7 +148,7 @@ def load_target_tickers_with_watchlist(is_earnings_period: bool) -> List[str]:
         return full_tickers
 
     # Earnings period: check Watchlist first
-    watchlist_tickers = get_watchlist_tickers()
+    watchlist_tickers = await get_watchlist_tickers()
 
     if watchlist_tickers:
         # Filter to only include tickers that are in both Watchlist and CSV
@@ -193,8 +202,8 @@ async def run_once(is_earnings_period: bool = False) -> None:
     # Build the SEC map (always needed for CIK lookups)
     sec_map: Dict[str, str] = ticker_map.build_ticker_to_cik_map()
 
-    # Load tickers based on current period
-    tickers: List[str] = load_target_tickers_with_watchlist(is_earnings_period)
+    # Load tickers based on current period (now async)
+    tickers: List[str] = await load_target_tickers_with_watchlist(is_earnings_period)
 
     # Check for missing CIK mappings
     missing = [t for t in tickers if t not in sec_map]
