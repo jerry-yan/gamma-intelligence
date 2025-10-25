@@ -20,6 +20,7 @@ if not django.apps.apps.ready:
 from agents.models import StockTicker, KnowledgeBase
 from EDGAR_bot.core import utils                       # normalise_for_openai
 from EDGAR_bot.core.state import StateDB
+from EDGAR_bot.models import ProcessedFile
 
 # ── globals ─────────────────────────────────────────────────────────────────
 log       = logging.getLogger("edgar_ingest")
@@ -35,22 +36,29 @@ async def _vector_store_has_file(store_id: str, identifier: str) -> bool:
     loop = asyncio.get_running_loop()
 
     def _blocking() -> bool:
-        page = router.files.list(vector_store_id=store_id)
-        while True:
-            for obj in page.data:
-                if hasattr(obj, "file_id") and obj.file_id == identifier:
-                    return True
-                if hasattr(obj, "filename") and obj.filename == identifier:
-                    return True
-                if hasattr(obj, "file_id"):
-                    meta = CLIENT.files.retrieve(obj.file_id)
-                    if meta.filename == identifier:
-                        return True
-            if page.has_next_page():
-                page = page.get_next_page()
-            else:
-                break
-        return False
+        exists = ProcessedFile.objects.filter(filename=identifier, vector_group_id=store_id).exists()
+
+        if exists:
+            log.debug("File already exists in ProcessedFile (skipping OpenAI API check)")
+            return True
+        else:
+            return False
+
+        # page = router.files.list(vector_store_id=store_id)
+        # while True:
+        #     for obj in page.data:
+        #         if hasattr(obj, "file_id") and obj.file_id == identifier:
+        #             return True
+        #         if hasattr(obj, "filename") and obj.filename == identifier:
+        #             return True
+        #         if hasattr(obj, "file_id"):
+        #             meta = CLIENT.files.retrieve(obj.file_id)
+        #             if meta.filename == identifier:
+        #                 return True
+        #     if page.has_next_page():
+        #         page = page.get_next_page()
+        #     else:
+        #         break
 
     return await loop.run_in_executor(None, _blocking)
 

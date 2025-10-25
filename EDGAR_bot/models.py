@@ -46,3 +46,26 @@ class ProcessedFile(models.Model):
 
     def __str__(self) -> str:
         return self.filename
+
+
+class Watchlist(models.Model):
+    """
+    Watchlist of tickers to monitor for EDGAR filings.
+    """
+    id            = models.BigAutoField(primary_key=True)
+    ticker        = models.CharField(max_length=12, unique=True)
+    earnings_date = models.DateField(null=True, blank=True)
+    cik           = models.CharField(max_length=10, null=True, blank=True)  # Optional: store CIK for quick lookups
+    is_active     = models.BooleanField(default=True)  # Allow toggling on/off
+
+    class Meta:
+        db_table = "watchlist"
+        ordering = ["ticker"]
+        indexes = [
+            models.Index(fields=["ticker"]),
+            models.Index(fields=["earnings_date"]),
+            models.Index(fields=["is_active"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.ticker}" + (f" (Earnings: {self.earnings_date})" if self.earnings_date else "")
