@@ -145,7 +145,10 @@ async def ingest(ticker: str, saved_paths: list[pathlib.Path]) -> None:
     )()
     store_to_group = {sid: gid for sid, gid in kb_rows}
     store_ids = set(store_to_group)
-    log.info("These are the store_group", store_to_group)
+    log.info("These are vec_ids:", vec_ids)
+    log.info("These are kb_rows:", kb_rows)
+    log.info("These are the store_group:", store_to_group)
+    log.info("These are the store ids:", store_ids)
 
     if not store_ids:
         log.warning("No active KnowledgeBase for %s (groups=%s)", ticker, sorted(vec_ids))
