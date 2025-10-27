@@ -63,13 +63,13 @@ async def _vector_store_has_file(store_id: str, vector_group_id: int, accession:
     return await loop.run_in_executor(None, _blocking)
 
 
-async def _get_or_upload_file(path: pathlib.Path) -> str:
+async def _get_or_upload_file(path: pathlib.Path, accession: str) -> str:
     """Return OpenAI *file_id* for *path*, uploading if necessary."""
     loop = asyncio.get_running_loop()
 
     def _blocking() -> str:
         # Check ProcessedFile table first
-        pf = ProcessedFile.objects.filter(filename=path.name).first()
+        pf = ProcessedFile.objects.filter(filename=path.name, accession=accession).first()
         if pf:
             log.debug("Found file %s in ProcessedFile table with id %s", path.name, pf.file_id)
             return pf.file_id
@@ -120,7 +120,7 @@ async def _attach_files_for_store(store_id: str, vector_group_id: int, file_map:
 
 
 # ── public coroutine ───────────────────────────────────────────────────────
-async def ingest(ticker: str, saved_paths: list[pathlib.Path]) -> None:
+async def ingest(ticker: str, accession: str, saved_paths: list[pathlib.Path]) -> None:
     if not saved_paths:
         return
 
@@ -156,7 +156,7 @@ async def ingest(ticker: str, saved_paths: list[pathlib.Path]) -> None:
     for p in saved_paths:
         norm = utils.normalise_for_openai(p)
         try:
-            fid = await _get_or_upload_file(norm)
+            fid = await _get_or_upload_file(norm, accession.replace("-", ""))
             file_map[norm] = fid             # Path → file_id
         except Exception as exc:
             log.warning("Upload failure %s: %s", norm.name, exc)

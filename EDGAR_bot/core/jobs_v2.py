@@ -81,7 +81,7 @@ async def _handle_ticker(
 
             # fire-and-forget OpenAI ingestion
             from EDGAR_bot.core import ingest_openai
-            asyncio.create_task(ingest_openai.ingest(ticker, paths))
+            asyncio.create_task(ingest_openai.ingest(ticker, r["accession"], paths))
 
 
 @sync_to_async
