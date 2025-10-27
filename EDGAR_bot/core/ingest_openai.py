@@ -68,16 +68,23 @@ async def _get_or_upload_file(path: pathlib.Path) -> str:
     loop = asyncio.get_running_loop()
 
     def _blocking() -> str:
+        # Check ProcessedFile table first
+        pf = ProcessedFile.objects.filter(filename=path.name).first()
+        if pf:
+            log.debug("Found file %s in ProcessedFile table with id %s", path.name, pf.file_id)
+            return pf.file_id
+
         # search by filename
-        page = CLIENT.files.list(purpose="assistants")
-        while True:
-            for f in page.data:
-                if f.filename == path.name:
-                    return f.id
-            if page.has_next_page():
-                page = page.get_next_page()
-            else:
-                break
+        # page = CLIENT.files.list(purpose="assistants")
+        # while True:
+        #     for f in page.data:
+        #         if f.filename == path.name:
+        #             return f.id
+        #     if page.has_next_page():
+        #         page = page.get_next_page()
+        #     else:
+        #         break
+
         # upload once
         with path.open("rb") as fh:
             f = CLIENT.files.create(file=fh, purpose="assistants")
