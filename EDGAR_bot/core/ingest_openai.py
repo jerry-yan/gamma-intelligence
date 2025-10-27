@@ -31,12 +31,12 @@ if router is None:
     raise RuntimeError(f"OpenAI SDK {openai.__version__} lacks vector‑store API")
 
 # ── helpers ────────────────────────────────────────────────────────────────
-async def _vector_store_has_file(store_id: str, identifier: str) -> bool:
+async def _vector_store_has_file(store_id: str, vector_group_id: int, identifier: str) -> bool:
     """identifier may be file_id *or* filename"""
     loop = asyncio.get_running_loop()
 
     def _blocking() -> bool:
-        exists = ProcessedFile.objects.filter(filename=identifier, vector_group_id=store_id).exists()
+        exists = ProcessedFile.objects.filter(filename=identifier, vector_group_id=vector_group_id ).exists()
 
         if exists:
             log.debug("File already exists in ProcessedFile (skipping OpenAI API check)")
@@ -93,8 +93,8 @@ async def _get_or_upload_file(path: pathlib.Path) -> str:
     return await loop.run_in_executor(None, _blocking)
 
 
-async def _attach_file_to_store(store_id: str, file_id: str, filename: str) -> None:
-    if await _vector_store_has_file(store_id, file_id) or await _vector_store_has_file(store_id, filename):
+async def _attach_file_to_store(store_id: str, vector_group_id: int, file_id: str, filename: str) -> None:
+    if await _vector_store_has_file(store_id, vector_group_id, file_id) or await _vector_store_has_file(store_id, vector_group_id, filename):
         return
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(
@@ -106,7 +106,7 @@ async def _attach_file_to_store(store_id: str, file_id: str, filename: str) -> N
 async def _attach_files_for_store(store_id: str, vector_group_id: int, file_map: dict[pathlib.Path, str],) -> None:
     for path, fid in file_map.items():
         try:
-            await _attach_file_to_store(store_id, fid, path.name)
+            await _attach_file_to_store(store_id, vector_group_id, fid, path.name)
             log.info("Attached %s → %s", path.name, store_id)
 
             # ── NEW: remember in processed_files table ──
@@ -145,10 +145,6 @@ async def ingest(ticker: str, saved_paths: list[pathlib.Path]) -> None:
     )()
     store_to_group = {sid: gid for sid, gid in kb_rows}
     store_ids = set(store_to_group)
-    log.info("These are vec_ids: %s", vec_ids)
-    log.info("These are kb_rows: %s", kb_rows)
-    log.info("These are the store_group: %s", store_to_group)
-    log.info("These are the store ids: %s", store_ids)
 
     if not store_ids:
         log.warning("No active KnowledgeBase for %s (groups=%s)", ticker, sorted(vec_ids))
