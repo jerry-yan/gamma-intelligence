@@ -31,12 +31,12 @@ if router is None:
     raise RuntimeError(f"OpenAI SDK {openai.__version__} lacks vector‑store API")
 
 # ── helpers ────────────────────────────────────────────────────────────────
-async def _vector_store_has_file(store_id: str, vector_group_id: int, identifier: str) -> bool:
+async def _vector_store_has_file(store_id: str, vector_group_id: int, accession: str, identifier: str) -> bool:
     """identifier may be file_id *or* filename"""
     loop = asyncio.get_running_loop()
 
     def _blocking() -> bool:
-        exists = ProcessedFile.objects.filter(filename=identifier, vector_group_id=vector_group_id ).exists()
+        exists = ProcessedFile.objects.filter(filename=identifier, accession=accession, vector_group_id=vector_group_id).exists()
 
         if exists:
             log.debug("File already exists in ProcessedFile (skipping OpenAI API check)")
@@ -93,8 +93,8 @@ async def _get_or_upload_file(path: pathlib.Path) -> str:
     return await loop.run_in_executor(None, _blocking)
 
 
-async def _attach_file_to_store(store_id: str, vector_group_id: int, file_id: str, filename: str) -> None:
-    if await _vector_store_has_file(store_id, vector_group_id, file_id) or await _vector_store_has_file(store_id, vector_group_id, filename):
+async def _attach_file_to_store(store_id: str, vector_group_id: int, accession: str, file_id: str, filename: str) -> None:
+    if await _vector_store_has_file(store_id, vector_group_id, accession, file_id) or await _vector_store_has_file(store_id, vector_group_id, accession, filename):
         return
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(
@@ -106,11 +106,12 @@ async def _attach_file_to_store(store_id: str, vector_group_id: int, file_id: st
 async def _attach_files_for_store(store_id: str, vector_group_id: int, file_map: dict[pathlib.Path, str],) -> None:
     for path, fid in file_map.items():
         try:
-            await _attach_file_to_store(store_id, vector_group_id, fid, path.name)
-            log.info("Attached %s → %s", path.name, store_id)
-
             # ── NEW: remember in processed_files table ──
             cik, accession, _ = path.parts[-3:]
+
+            await _attach_file_to_store(store_id, vector_group_id, accession, fid, path.name)
+            log.info("Attached %s → %s", path.name, store_id)
+
             await STATE.add_file_id(
                 cik, accession, path.name, fid, vector_group_id
             )
