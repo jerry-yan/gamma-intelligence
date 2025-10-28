@@ -38,7 +38,7 @@ EARNINGS_PERIODS = [
 
 # Interval configuration
 EARNINGS_INTERVAL_SECONDS = 10
-COOLDOWN_INTERVAL_MINUTES = 30
+COOLDOWN_INTERVAL_MINUTES = 10
 
 
 def is_earnings_period(dt: Optional[datetime.datetime] = None) -> bool:
