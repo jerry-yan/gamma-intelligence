@@ -28,6 +28,7 @@ TICKER_OVERRIDES = {
     "9988": "BABA",
     "9988.HK": "BABA",
     "ABI": "BUD", # A‑B InBev ADR code often appears as ABBI
+    "RR/LN": "RR",
 }
 
 
