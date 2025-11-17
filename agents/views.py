@@ -298,10 +298,9 @@ def api_chat_stream(request):
                             logger.info(
                                 f"[HEARTBEAT TIMEOUT] Session {session.session_id} - No chunks for {heartbeat_max_duration} seconds")
                             raise TimeoutError("No response received from OpenAI within 5 minutes.")
-
-                        yield f"data: {json.dumps({'type': 'heartbeat', 'status': 'waiting'})}\n\n"
                         logger.info(
                             f"[HEARTBEAT] Session {session.session_id} - Sent heartbeat after {inactivity:.2f}s of inactivity")
+                        yield f"data: {json.dumps({'type': 'heartbeat', 'status': 'waiting'})}\n\n"
                         continue
 
                     if item_type == 'done':
