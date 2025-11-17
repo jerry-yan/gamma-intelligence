@@ -1033,6 +1033,9 @@ def api_chat_stream_new(request):
         knowledge_base_id = data.get('knowledge_base_id')  # Optional
         selected_model = data.get('model', 'o3')
         selected_file_ids = data.get('file_ids', [])
+        reasoning_effort = data.get('reasoning', 'none')
+
+        logger.info(f"Reasoning Effort: {reasoning_effort}")
 
         if not message:
             return JsonResponse({'error': 'Message is required'}, status=400)
@@ -1217,9 +1220,9 @@ def api_chat_stream_new(request):
                     chunk_count += 1
 
                     # Todo: Uncomment this and debug gpt-5 timeout
-                    logger.info(f"[CHUNK]: {chunk}")
+                    # logger.info(f"[CHUNK]: {chunk}")
 
-                    # Log every 10th chunk to avoid log spam
+                    # Log every 100th chunk to avoid log spam
                     if chunk_count % 100 == 0:
                         logger.info(
                             f"[CHUNK {chunk_count}] Session {session.session_id} - Message length: {len(assistant_message)}")
