@@ -1753,6 +1753,9 @@
                                     case 'info':
                                         console.log('Info:', data.message);
                                         break;
+                                    case 'heartbeat':
+                                        console.log('Heartbeat:', data.status);
+                                        break;
                                     case 'error':
                                         showError(data.error);
                                         break;

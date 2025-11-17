@@ -295,12 +295,12 @@ def api_chat_stream(request):
                     except Empty:
                         inactivity = time.monotonic() - last_message_time
                         if inactivity >= heartbeat_max_duration:
-                            logger.error(
+                            logger.info(
                                 f"[HEARTBEAT TIMEOUT] Session {session.session_id} - No chunks for {heartbeat_max_duration} seconds")
                             raise TimeoutError("No response received from OpenAI within 5 minutes.")
 
                         yield f"data: {json.dumps({'type': 'heartbeat', 'status': 'waiting'})}\n\n"
-                        logger.debug(
+                        logger.info(
                             f"[HEARTBEAT] Session {session.session_id} - Sent heartbeat after {inactivity:.2f}s of inactivity")
                         continue
 
