@@ -2,7 +2,10 @@
 import json
 import logging
 import pandas as pd
-from datetime import date
+from datetime import date, timedelta
+import threading
+import time
+from queue import Queue, Empty
 from django.http import JsonResponse, StreamingHttpResponse, FileResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -268,7 +271,47 @@ def api_chat_stream(request):
                 # Stream the response
                 response = client.responses.create(**stream_params)
 
-                for chunk in response:
+                chunk_queue = Queue()
+
+                def response_reader():
+                    try:
+                        for chunk in response:
+                            chunk_queue.put(('chunk', chunk))
+                    except Exception as stream_error:
+                        chunk_queue.put(('error', stream_error))
+                    finally:
+                        chunk_queue.put(('done', None))
+
+                threading.Thread(target=response_reader, daemon=True).start()
+
+                heartbeat_interval = 5  # seconds
+                heartbeat_max_duration = timedelta(minutes=5).total_seconds()
+                last_message_time = time.monotonic()
+
+                streaming_active = True
+                while streaming_active:
+                    try:
+                        item_type, payload = chunk_queue.get(timeout=heartbeat_interval)
+                    except Empty:
+                        inactivity = time.monotonic() - last_message_time
+                        if inactivity >= heartbeat_max_duration:
+                            logger.error(
+                                f"[HEARTBEAT TIMEOUT] Session {session.session_id} - No chunks for {heartbeat_max_duration} seconds")
+                            raise TimeoutError("No response received from OpenAI within 5 minutes.")
+
+                        yield f"data: {json.dumps({'type': 'heartbeat', 'status': 'waiting'})}\n\n"
+                        logger.debug(
+                            f"[HEARTBEAT] Session {session.session_id} - Sent heartbeat after {inactivity:.2f}s of inactivity")
+                        continue
+
+                    if item_type == 'done':
+                        break
+
+                    if item_type == 'error':
+                        raise payload
+
+                    chunk = payload
+                    last_message_time = time.monotonic()
                     chunk_count += 1
 
                     # Todo: Uncomment this and debug gpt-5 timeout
