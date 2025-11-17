@@ -1,4 +1,5 @@
 # agents/views.py
+import asyncio
 import json
 import logging
 import pandas as pd
@@ -28,6 +29,7 @@ import re
 import hashlib
 import tempfile
 import os
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -983,7 +985,7 @@ class AgentView3(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
 @login_required
 @csrf_exempt
 @require_http_methods(["POST"])
-def api_chat_stream_new(request):
+async def api_chat_stream_new(request):
     try:
         data = json.loads(request.body)
         message = data.get('message', '').strip()
@@ -1041,19 +1043,68 @@ def api_chat_stream_new(request):
         if not session.title:
             session.generate_title()
 
-        def event_stream():
+        async def event_stream():
             """Generate SSE events for streaming response"""
             # Variables to accumulate the response
             assistant_message = ""
             response_id = None
             tool_uses = []
             citations = []
-            last_save_length = 0
             assistant_msg_obj = None
             chunk_count = 0
-            stream_start_time = timezone.now()
+
+            # Heartbeat control variables
+            streaming_active = True
+            last_chunk_time = time.time()
+            stream_start_time = time.time()
+            heartbeat_duration = 300  # 5 minutes
+            heartbeat_stopped = False
+            heartbeat_task = None
 
             logger.info(f"[STREAM START] Session {session.session_id} - User: {request.user.username}")
+
+            # Heartbeat coroutine
+            async def send_heartbeats():
+                nonlocal heartbeat_stopped, last_chunk_time
+
+                while streaming_active:
+                    try:
+                        await asyncio.sleep(5)  # Every 5 seconds
+
+                        current_time = time.time()
+                        elapsed_time = current_time - stream_start_time
+
+                        # Stop after 5 minutes
+                        if elapsed_time > heartbeat_duration:
+                            if not heartbeat_stopped:
+                                heartbeat_stopped = True
+                                heartbeat_message = {
+                                    'type': 'heartbeat_stopping',
+                                    'message': 'Response taking longer than expected (5 minutes). Connection may timeout soon if processing continues.',
+                                    'elapsed_minutes': 5
+                                }
+                                yield f"event: heartbeat_stopping\ndata: {json.dumps(heartbeat_message)}\n\n"
+                                logger.warning(f"[HEARTBEAT STOPPED] Session {session_id} - 5 minute limit reached")
+                            break
+
+                        # Send heartbeat if no recent activity
+                        if current_time - last_chunk_time > 4:
+                            heartbeat_data = {
+                                'type': 'heartbeat',
+                                'timestamp': current_time,
+                                'elapsed_seconds': int(elapsed_time)
+                            }
+                            yield f"event: heartbeat\ndata: {json.dumps(heartbeat_data)}\n\n"
+
+                            # Log every 30 seconds
+                            if int(elapsed_time) % 30 == 0:
+                                logger.info(f"[HEARTBEAT] Session {session_id} - {int(elapsed_time)}s elapsed")
+
+                    except asyncio.CancelledError:
+                        break
+                    except Exception as e:
+                        logger.error(f"[HEARTBEAT ERROR] {e}")
+                        break
 
             try:
                 # Get OpenAI client
@@ -1129,10 +1180,13 @@ def api_chat_stream_new(request):
 
                 logger.info(f"[OPENAI REQUEST] Session {session.session_id} - Starting OpenAI stream")
 
-                # Stream the response
-                response = client.responses.create(**stream_params)
+                # Start heartbeat task
+                heartbeat_task = asyncio.create_task(send_heartbeats())
 
-                for chunk in response:
+                # Stream the response
+                response = await client.responses.create(**stream_params)
+
+                async for chunk in response:
                     chunk_count += 1
 
                     # Todo: Uncomment this and debug gpt-5 timeout
@@ -1297,9 +1351,28 @@ def api_chat_stream_new(request):
 
                 yield f"data: {json.dumps({'type': 'error', 'error': 'An error occurred while generating the response.'})}\n\n"
 
+            finally:
+                streaming_active = False
+                if heartbeat_task:
+                    heartbeat_task.cancel()
+                    try:
+                        await heartbeat_task
+                    except asyncio.CancelledError:
+                        pass
+
+                # Log if timeout occurred after heartbeat stopped
+                if heartbeat_stopped and time.time() - stream_start_time > heartbeat_duration + 30:
+                    logger.warning(
+                        f"[TIMEOUT AFTER HEARTBEAT] Session {session_id} - Connection timed out after heartbeat period")
+
+        # Merge heartbeat stream with main stream
+        async def combined_stream():
+            async for item in event_stream():
+                yield item
+
         # Return streaming response with keep-alive headers
         response = StreamingHttpResponse(
-            event_stream(),
+            combined_stream(),
             content_type='text/event-stream'
         )
         response['Cache-Control'] = 'no-cache'
