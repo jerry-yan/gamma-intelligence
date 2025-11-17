@@ -55,6 +55,11 @@ AVAILABLE_MODELS = {
         'display_name': 'GPT-5',
         'description': 'Standard GPT-5 model'
     },
+    'gpt-5.1': {
+        'api_name': 'gpt-5.1-2025-11-13',
+        'display_name': 'GPT-5.1',
+        'description': 'Standard GPT-5.1 model'
+    },
     'gpt-5-mini': {
         'api_name': 'gpt-5-mini-2025-08-07',
         'display_name': 'GPT-5 Mini',
@@ -1035,8 +1040,6 @@ def api_chat_stream_new(request):
         selected_file_ids = data.get('file_ids', [])
         reasoning_effort = data.get('reasoning', 'none')
 
-        logger.info(f"Reasoning Effort: {reasoning_effort}")
-
         if not message:
             return JsonResponse({'error': 'Message is required'}, status=400)
 
@@ -1045,7 +1048,7 @@ def api_chat_stream_new(request):
 
         # Map the selected model to the actual API model name
         api_model = AVAILABLE_MODELS.get(selected_model, 'o3').get('api_name')
-        logger.info(f"Using model: {selected_model} -> {api_model}")
+        logger.info(f"Using model: {selected_model} -> {api_model} (Reasoning: {reasoning_effort})")
 
         # Get session and verify ownership
         try:
@@ -1171,6 +1174,10 @@ def api_chat_stream_new(request):
                 # Add response_id if continuing conversation
                 if session.response_id:
                     stream_params["previous_response_id"] = session.response_id
+
+                # Add reasoning logic
+                if api_model.startswith("gpt-5") and reasoning_effort.lower() != "none":
+                    stream_params["reasoning"] = {"effort": reasoning_effort}
 
                 logger.info(f"[OPENAI REQUEST] Session {session.session_id} - Starting OpenAI stream")
 
