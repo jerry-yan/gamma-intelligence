@@ -34,6 +34,8 @@ EARNINGS_PAT = re.compile(
     r"|investor"
     r"|presentation"
     r"|transcript"
+    r"|q[1-4]\s*fy\d{2}"
+    r"|fy\d{2}\s*q[1-4]"
     r")",
     re.I,
 )
