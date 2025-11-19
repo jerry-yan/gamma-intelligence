@@ -82,6 +82,7 @@ def _looks_like_earnings(text: str) -> bool:
 
 def _dir_has_earnings(dir_items: List[Dict]) -> bool:
     for it in dir_items:
+        log.info("These are the fields: %s", it)
         blob = f"{it['name']} {it.get('description','')} {it.get('type','')}"
         if _looks_like_earnings(blob):
             return True
