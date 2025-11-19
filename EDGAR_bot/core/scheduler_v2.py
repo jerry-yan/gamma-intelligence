@@ -33,7 +33,7 @@ EST = pytz.timezone('US/Eastern')
 # Earnings period configuration (in EST)
 EARNINGS_PERIODS = [
     (datetime.time(6, 0), datetime.time(9, 30)),  # 6:00 AM - 9:30 AM EST
-    (datetime.time(16, 0), datetime.time(18, 30)),  # 4:00 PM - 5:30 PM EST
+    (datetime.time(16, 0), datetime.time(17, 30)),  # 4:00 PM - 5:30 PM EST
 ]
 
 # Interval configuration

@@ -78,13 +78,11 @@ def _list_directory(cik: str, accession: str) -> List[Dict]:
 
 
 def _looks_like_earnings(text: str) -> bool:
-    log.info("Checking this blob: %s", text)
     return bool(EARNINGS_PAT.search(text))
 
 
 def _dir_has_earnings(dir_items: List[Dict]) -> bool:
     for it in dir_items:
-        log.info("These are the fields: %s", it)
         blob = f"{it['name']} {it.get('description','')} {it.get('type','')}"
         if _looks_like_earnings(blob):
             return True
