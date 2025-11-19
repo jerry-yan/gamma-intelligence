@@ -76,6 +76,7 @@ def _list_directory(cik: str, accession: str) -> List[Dict]:
 
 
 def _looks_like_earnings(text: str) -> bool:
+    log.info("Checking this blob: %s", text)
     return bool(EARNINGS_PAT.search(text))
 
 
