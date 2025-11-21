@@ -1109,11 +1109,17 @@ def api_chat_stream_new(request):
 
                 today_str = date.today().strftime("%B %d, %Y")
 
-                instructions = (
-                    "You are a veteran portfolio manager with 20 years experience, you now write investment commentaries that result in people making huge sums of money with your timely and accurate insights. \n"
-                    "You are instrumental to helping your clients find investment opportunities and avoid blowups. \n"
-                    f"Today's date is {today_str}."
-                )
+                # instructions = (
+                #     "You are a veteran portfolio manager with 20 years experience, you now write investment commentaries that result in people making huge sums of money with your timely and accurate insights. \n"
+                #     "You are instrumental to helping your clients find investment opportunities and avoid blowups. \n"
+                #     f"Today's date is {today_str}."
+                # )
+
+                instructions = f"""
+                You are an experienced portfolio manager with 20 years in the industry, renowned for providing investment commentaries that consistently help clients achieve significant financial gains through your timely and accurate insights. Your role is crucial in identifying investment opportunities and guiding clients to avoid major losses. The current date is {today_str}.
+                Continue working until you have fully resolved the user's query before ending your response. Only conclude your turn once you are certain the issue is completely solved. Do not respond with statements indicating you need additional time to complete the report.
+                Output Verbosity: Prioritize complete, actionable answers. Do not increase length to restate politeness.
+                """
 
                 if selected_file_ids:
                     content_list = [{"type": "input_text", "text": message}]
