@@ -35,6 +35,11 @@ import os
 logger = logging.getLogger(__name__)
 
 AVAILABLE_MODELS = {
+    'gpt-5.1': {
+        'api_name': 'gpt-5.1-2025-11-13',
+        'display_name': 'GPT-5.1',
+        'description': 'Standard GPT-5.1 model'
+    },
     'o3': {
         'api_name': 'o3-2025-04-16',
         'display_name': 'o3',
@@ -54,11 +59,6 @@ AVAILABLE_MODELS = {
         'api_name': 'gpt-5-2025-08-07',
         'display_name': 'GPT-5',
         'description': 'Standard GPT-5 model'
-    },
-    'gpt-5.1': {
-        'api_name': 'gpt-5.1-2025-11-13',
-        'display_name': 'GPT-5.1',
-        'description': 'Standard GPT-5.1 model'
     },
     'gpt-5-mini': {
         'api_name': 'gpt-5-mini-2025-08-07',
@@ -1049,7 +1049,7 @@ def api_chat_stream_new(request):
 
         # Map the selected model to the actual API model name
         api_model = AVAILABLE_MODELS.get(selected_model, 'o3').get('api_name')
-        logger.info(f"Using model: {selected_model} -> {api_model} (Reasoning: {reasoning_effort}, Priority{priority})")
+        logger.info(f"Using model: {selected_model} -> {api_model} (Reasoning: {reasoning_effort}, Priority: {priority})")
 
         # Get session and verify ownership
         try:
