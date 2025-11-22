@@ -1182,6 +1182,10 @@ def api_chat_stream_new(request):
                 if session.response_id:
                     stream_params["previous_response_id"] = session.response_id
 
+                # Priority Processings
+                if priority:
+                    stream_params["service_tier"] = "priority"
+
                 # Add reasoning logic
                 if api_model.startswith("gpt-5") and reasoning_effort.lower() != "none":
                     stream_params["reasoning"] = {"effort": reasoning_effort}
