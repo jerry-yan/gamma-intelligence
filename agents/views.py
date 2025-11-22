@@ -1039,6 +1039,7 @@ def api_chat_stream_new(request):
         selected_model = data.get('model', 'o3')
         selected_file_ids = data.get('file_ids', [])
         reasoning_effort = data.get('reasoning', 'none')
+        priority = data.get('priority', False)
 
         if not message:
             return JsonResponse({'error': 'Message is required'}, status=400)
@@ -1048,7 +1049,7 @@ def api_chat_stream_new(request):
 
         # Map the selected model to the actual API model name
         api_model = AVAILABLE_MODELS.get(selected_model, 'o3').get('api_name')
-        logger.info(f"Using model: {selected_model} -> {api_model} (Reasoning: {reasoning_effort})")
+        logger.info(f"Using model: {selected_model} -> {api_model} (Reasoning: {reasoning_effort}, Priority{priority})")
 
         # Get session and verify ownership
         try:
