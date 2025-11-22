@@ -1365,7 +1365,7 @@
                                 <select id="modelSelect" class="model-select">
                                     {% for model in available_models %}
                                         <option value="{{ model.key }}"
-                                                {% if model.key == 'o3' %}selected{% endif %}
+                                                {% if model.key == 'gpt-5.1' %}selected{% endif %}
                                                 title="{{ model.description }}">
                                             {{ model.display_name }}
                                         </option>

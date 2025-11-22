@@ -101,7 +101,7 @@ class AgentView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
             ]
         else:
             # Show only o3 and gpt-4o-mini for regular users
-            unrestricted_models = ['o3', 'gpt-4o-mini']
+            unrestricted_models = ['o3', 'gpt-4o-mini', 'gpt-5', 'gpt-5-mini', 'gpt-5.1']
             available_models = [
                 {
                     'key': k,
