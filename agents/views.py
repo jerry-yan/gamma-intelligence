@@ -1209,7 +1209,7 @@ def api_chat_stream_new(request):
                 threading.Thread(target=response_reader, daemon=True).start()
 
                 heartbeat_interval = 5  # seconds
-                heartbeat_max_duration = timedelta(minutes=5).total_seconds()
+                heartbeat_max_duration = timedelta(minutes=8).total_seconds()
                 last_message_time = time.monotonic()
 
                 streaming_active = True
