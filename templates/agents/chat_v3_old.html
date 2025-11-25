@@ -112,42 +112,6 @@
             transform: rotate(-45deg);
         }
 
-        /* Mobile Input Toggle */
-        .mobile-input-toggle {
-            display: none;
-            position: absolute;
-            top: -12px;
-            right: 1rem;
-            z-index: 101;
-            width: 32px;
-            height: 24px;
-            background-color: var(--bg-primary);
-            border: 1px solid var(--border);
-            border-radius: 0.5rem 0.5rem 0 0;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-        }
-
-        .mobile-input-toggle:hover {
-            background-color: var(--bg-tertiary);
-        }
-
-        .mobile-input-toggle .toggle-arrow {
-            width: 0;
-            height: 0;
-            border-left: 6px solid transparent;
-            border-right: 6px solid transparent;
-            border-top: 6px solid var(--text-secondary);
-            transition: transform 0.3s ease;
-        }
-
-        .mobile-input-toggle.collapsed .toggle-arrow {
-            transform: rotate(180deg);
-        }
-
         /* Sidebar */
         .sidebar {
             width: 280px;
@@ -1240,22 +1204,6 @@
             background-color: var(--bg-primary);
             padding: 1rem;
             box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease;
-        }
-
-        .mobile-input-toggle {
-            display: flex;
-        }
-
-        .input-container.collapsed {
-            transform: translateY(calc(100% - 24px));
-        }
-
-        .input-container.collapsed .mobile-input-toggle {
-            top: -24px;
-            height: 24px;
-            border-radius: 0.5rem 0.5rem 0 0;
-            box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.15);
         }
 
         .kb-selector {
@@ -1369,11 +1317,6 @@
                 </div>
 
                 <div class="input-container">
-                    <!-- Mobile Input Toggle Button -->
-                    <div class="mobile-input-toggle" id="mobileInputToggle">
-                        <div class="toggle-arrow"></div>
-                    </div>
-
                     <div style="max-width: 50rem; margin: 0 auto; position: relative;">
                         <!-- File Manager Panel (Initially Hidden) -->
                         <div class="file-manager-panel" id="fileManagerPanel">
@@ -1528,7 +1471,6 @@
         const elements = {
             sidebar: document.getElementById('sidebar'),
             mobileMenuToggle: document.getElementById('mobileMenuToggle'),
-            mobileInputToggle: document.getElementById('mobileInputToggle'),
             sidebarOverlay: document.getElementById('sidebarOverlay'),
             newChatButton: document.getElementById('newChatButton'),
             welcomeNewChatButton: document.getElementById('welcomeNewChatButton'),
@@ -1559,17 +1501,6 @@
         function setupMobileMenu() {
             elements.mobileMenuToggle.addEventListener('click', toggleSidebar);
             elements.sidebarOverlay.addEventListener('click', closeSidebar);
-
-            // Mobile input toggle
-            if (elements.mobileInputToggle) {
-                elements.mobileInputToggle.addEventListener('click', toggleMobileInput);
-            }
-        }
-
-        function toggleMobileInput() {
-            const inputContainer = document.querySelector('.input-container');
-            inputContainer.classList.toggle('collapsed');
-            elements.mobileInputToggle.classList.toggle('collapsed');
         }
 
         function toggleSidebar() {
